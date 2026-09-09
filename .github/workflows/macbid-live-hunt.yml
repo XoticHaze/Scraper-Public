@@ -1,0 +1,56 @@
+name: MAC.BID San Antonio Live Hunt
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/macbid_live_hunt.py'
+      - '.github/workflows/macbid-live-hunt.yml'
+
+permissions:
+  contents: read
+
+# Public catalog workload only. Do not add account cookies, login state,
+# authorization headers, private payloads, or user-specific MAC.BID data.
+jobs:
+  hunt:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11.16'
+
+      - name: Install fixed browser dependency
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'playwright==1.55.0'
+          python -m playwright install --with-deps chromium
+
+      - name: Hunt San Antonio and Schertz public catalog
+        run: |
+          set -euo pipefail
+          python scripts/macbid_live_hunt.py
+
+      - name: Show sanitized live report
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f results/macbid-live-hunt.json ]; then
+            python -m json.tool results/macbid-live-hunt.json
+          else
+            echo 'No live hunt report was produced.'
+          fi
+
+      - name: Upload sanitized live report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-live-hunt
+          path: results/macbid-live-hunt.json
+          if-no-files-found: warn
+          retention-days: 2
