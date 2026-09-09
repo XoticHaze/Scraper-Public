@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from deal_engine.scoring import (
+    estimated_post_tax_total,
     estimated_pre_tax_total,
     hours_until_close,
     provisional_max_bid,
@@ -12,6 +13,12 @@ def test_fee_math():
     assert estimated_pre_tax_total(50, premium_rate=0.15, lot_fee=3) == 60.5
 
 
+def test_post_tax_math():
+    tax, total = estimated_post_tax_total(50, premium_rate=0.15, lot_fee=3, sales_tax_rate=0.0825)
+    assert tax == 4.99
+    assert total == 65.49
+
+
 def test_zero_bid_is_valid_price():
     scored = score_lot(
         {
@@ -21,9 +28,12 @@ def test_zero_bid_is_valid_price():
             "unique_bidders": 0,
             "total_bids": 0,
             "expected_close_date": "2026-09-10",
-        }
+        },
+        sales_tax_rate=0.0825,
     )
     assert scored["estimated_pre_tax_total"] == 3.0
+    assert scored["estimated_sales_tax"] == 0.25
+    assert scored["estimated_post_tax_total"] == 3.25
     assert "missing usable retail/current bid" not in scored["reasons"]
 
 
@@ -33,6 +43,15 @@ def test_provisional_ceiling_is_condition_aware():
     assert like_new == 58.26
     assert open_box == 40.87
     assert like_new > open_box
+
+
+def test_tax_aware_ceiling_backs_tax_out_of_all_in_target():
+    no_tax = provisional_max_bid(200, "LIKE NEW", premium_rate=0.15, lot_fee=3, sales_tax_rate=0.0)
+    taxed = provisional_max_bid(200, "LIKE NEW", premium_rate=0.15, lot_fee=3, sales_tax_rate=0.0825)
+    assert taxed == 53.64
+    assert taxed < no_tax
+    _, all_in = estimated_post_tax_total(taxed, premium_rate=0.15, lot_fee=3, sales_tax_rate=0.0825)
+    assert all_in is not None and all_in <= 70.01
 
 
 def test_hours_until_close_iso():
