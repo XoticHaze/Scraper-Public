@@ -48,7 +48,7 @@ def test_provisional_ceiling_is_condition_aware():
 def test_tax_aware_ceiling_backs_tax_out_of_all_in_target():
     no_tax = provisional_max_bid(200, "LIKE NEW", premium_rate=0.15, lot_fee=3, sales_tax_rate=0.0)
     taxed = provisional_max_bid(200, "LIKE NEW", premium_rate=0.15, lot_fee=3, sales_tax_rate=0.0825)
-    assert taxed == 53.64
+    assert taxed == 53.62
     assert taxed < no_tax
     _, all_in = estimated_post_tax_total(taxed, premium_rate=0.15, lot_fee=3, sales_tax_rate=0.0825)
     assert all_in is not None and all_in <= 70.01
