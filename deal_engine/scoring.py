@@ -1,0 +1,178 @@
+from __future__ import annotations
+
+import math
+from datetime import datetime, timezone
+from typing import Any
+
+
+def number(value: Any) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        text = value.replace("$", "").replace(",", "").strip()
+        try:
+            return float(text)
+        except ValueError:
+            return None
+    return None
+
+
+def estimated_pre_tax_total(current_bid: Any, premium_rate: float = 0.15, lot_fee: float = 3.0) -> float | None:
+    bid = number(current_bid)
+    if bid is None or bid < 0:
+        return None
+    return round(bid * (1.0 + premium_rate) + lot_fee, 2)
+
+
+def provisional_max_bid(
+    retail_price: Any,
+    condition: str,
+    premium_rate: float = 0.15,
+    lot_fee: float = 3.0,
+    like_new_ratio: float = 0.35,
+    open_box_ratio: float = 0.25,
+) -> float | None:
+    """Preliminary ceiling derived only from MAC.BID's stated retail.
+
+    This is deliberately conservative and MUST be treated as provisional until
+    the product's real current market price and exact model are verified.
+    """
+    retail = number(retail_price)
+    if retail is None or retail <= 0:
+        return None
+    c = (condition or "").strip().upper()
+    ratio = like_new_ratio if c == "LIKE NEW" else open_box_ratio
+    target_total = retail * ratio
+    bid = (target_total - lot_fee) / (1.0 + premium_rate)
+    return round(max(0.0, bid), 2)
+
+
+def parse_close(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        # Handle seconds or milliseconds since epoch.
+        raw = float(value)
+        if raw > 10_000_000_000:
+            raw /= 1000.0
+        try:
+            return datetime.fromtimestamp(raw, tz=timezone.utc)
+        except (ValueError, OSError, OverflowError):
+            return None
+    if isinstance(value, str):
+        text = value.strip().replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(text)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
+def hours_until_close(value: Any, now: datetime | None = None) -> float | None:
+    close = parse_close(value)
+    if close is None:
+        return None
+    current = now or datetime.now(timezone.utc)
+    return (close - current).total_seconds() / 3600.0
+
+
+def score_lot(
+    lot: dict[str, Any],
+    *,
+    premium_rate: float = 0.15,
+    lot_fee: float = 3.0,
+    low_value_retail_floor: float = 40.0,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    condition = str(lot.get("condition") or "").strip().upper()
+    retail = number(lot.get("retail_price") or lot.get("retail"))
+    bid = number(lot.get("current_bid") or lot.get("current_price") or lot.get("price"))
+    total = estimated_pre_tax_total(bid, premium_rate=premium_rate, lot_fee=lot_fee)
+    bidders = int(number(lot.get("unique_bidders")) or 0)
+    bids = int(number(lot.get("total_bids")) or 0)
+    hours = hours_until_close(lot.get("expected_close_date") or lot.get("closing_date") or lot.get("end_time"), now=now)
+
+    score = 0.0
+    reasons: list[str] = []
+
+    # Condition quality. Damaged/unknown should normally be filtered before scoring.
+    if condition == "LIKE NEW":
+        score += 16
+        reasons.append("like-new condition")
+    elif condition == "OPEN BOX":
+        score += 8
+        reasons.append("open-box condition")
+    else:
+        score -= 25
+        reasons.append("non-preferred condition")
+
+    discount_pct = None
+    savings = None
+    if retail is not None and retail > 0 and total is not None:
+        discount_pct = max(-1.0, min(1.0, 1.0 - (total / retail)))
+        savings = retail - total
+        # Main value signal: percentage spread plus meaningful absolute dollars.
+        score += max(-20.0, min(42.0, discount_pct * 48.0))
+        if savings > 0:
+            score += min(24.0, math.log1p(savings) * 4.0)
+        if retail < low_value_retail_floor:
+            score -= 12.0
+            reasons.append("low stated retail")
+        if discount_pct >= 0.70:
+            reasons.append("70%+ below stated retail before tax")
+        elif discount_pct >= 0.50:
+            reasons.append("50%+ below stated retail before tax")
+    else:
+        score -= 8.0
+        reasons.append("missing usable retail/current bid")
+
+    # Less competition is valuable, especially shortly before close.
+    if bidders == 0:
+        score += 10
+        reasons.append("no bidders yet")
+    elif bidders == 1:
+        score += 8
+        reasons.append("one bidder")
+    elif bidders <= 3:
+        score += 5
+    elif bidders >= 8:
+        score -= 5
+        reasons.append("high bidder competition")
+
+    if bids >= 20:
+        score -= 4
+
+    # Urgency is intentionally small. Ending Soon is a separate primary view.
+    if hours is not None:
+        if 0 <= hours <= 6:
+            score += 5
+            reasons.append("closes within 6h")
+        elif 0 <= hours <= 24:
+            score += 3
+            reasons.append("closes within 24h")
+        elif hours < 0:
+            score -= 50
+
+    ceiling = provisional_max_bid(
+        retail,
+        condition,
+        premium_rate=premium_rate,
+        lot_fee=lot_fee,
+    )
+
+    return {
+        "deal_score": round(score, 2),
+        "estimated_pre_tax_total": total,
+        "stated_retail": retail,
+        "stated_retail_discount_pct": round(discount_pct * 100.0, 1) if discount_pct is not None else None,
+        "stated_retail_savings": round(savings, 2) if savings is not None else None,
+        "hours_until_close": round(hours, 2) if hours is not None else None,
+        "provisional_max_bid": ceiling,
+        "provisional_ceiling_basis": "MAC.BID stated retail only; verify exact model and real market price before bidding",
+        "reasons": reasons,
+    }
