@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>MAC.BID Hunt</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">SAN ANTONIO · LOCAL DEAL ENGINE</p>
+      <h1>MAC.BID Hunt</h1>
+      <p id="catalog-meta" class="muted">Loading catalog…</p>
+    </div>
+    <div class="top-actions">
+      <button id="watch-toggle" class="ghost" type="button">☆ Watchlist</button>
+      <a class="ghost" href="https://www.mac.bid/locations/san-antonio" target="_blank" rel="noreferrer">Open MAC.BID ↗</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="controls panel">
+      <div class="search-wrap">
+        <input id="search" type="search" autocomplete="off" placeholder="Search products, brands, categories, UPCs…" aria-label="Search catalog" />
+      </div>
+
+      <div class="view-tabs" role="tablist" aria-label="Deal view">
+        <button class="tab active" data-sort="ending" type="button">Ending Soon</button>
+        <button class="tab" data-sort="value" type="button">Best Value</button>
+        <button class="tab" data-sort="competition" type="button">Low Competition</button>
+        <button class="tab" data-sort="cost" type="button">Lowest Cost</button>
+      </div>
+
+      <div class="filters">
+        <label>Category
+          <select id="category"><option value="">All</option></select>
+        </label>
+        <label>Condition
+          <select id="condition">
+            <option value="">All preferred</option>
+            <option value="LIKE NEW">Like New</option>
+            <option value="OPEN BOX">Open Box</option>
+          </select>
+        </label>
+        <label>Closes within
+          <select id="closes-within">
+            <option value="">Any time</option>
+            <option value="1">1 hour</option>
+            <option value="3">3 hours</option>
+            <option value="6">6 hours</option>
+            <option value="12">12 hours</option>
+            <option value="24">24 hours</option>
+          </select>
+        </label>
+        <label>Max pre-tax total
+          <input id="max-total" type="number" min="0" step="5" placeholder="Any" />
+        </label>
+        <label class="check"><input id="no-bidders" type="checkbox" /> No bidders</label>
+      </div>
+    </section>
+
+    <section class="summary-row">
+      <div><strong id="result-count">0</strong><span> products</span></div>
+      <button id="clear-filters" class="text-button" type="button">Clear filters</button>
+    </section>
+
+    <section id="grid" class="grid" aria-live="polite"></section>
+    <div class="load-more-wrap"><button id="load-more" class="primary" type="button">Load more</button></div>
+  </main>
+
+  <dialog id="detail-dialog">
+    <button id="dialog-close" class="dialog-close" aria-label="Close" type="button">×</button>
+    <div id="detail-content"></div>
+  </dialog>
+
+  <template id="card-template">
+    <article class="card">
+      <button class="watch-star" type="button" aria-label="Watch item">☆</button>
+      <button class="card-open" type="button">
+        <div class="image-wrap"><img loading="lazy" alt="" /></div>
+        <div class="card-body">
+          <div class="chips"></div>
+          <h2></h2>
+          <p class="brand muted"></p>
+          <div class="metrics"></div>
+          <div class="card-foot"></div>
+        </div>
+      </button>
+    </article>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
