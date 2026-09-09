@@ -88,6 +88,8 @@ jobs:
           assert 'DAMAGED' in cfg['excluded_conditions']
           assert 'LIKE NEW' in cfg['preferred_conditions']
           assert 'OPEN BOX' in cfg['preferred_conditions']
+          assert abs(float(cfg['sales_tax_rate']) - 0.0825) < 1e-12
+          assert 'San Antonio' in cfg['sales_tax_scope']
 
           manifest = json.loads(Path('app/actions.json').read_text())
           assert manifest['schema'] == 'repo-app-actions-v1'
@@ -114,15 +116,31 @@ jobs:
           assert Path('ui/finds.css').exists()
           assert Path('producer_worker/index.mjs').exists()
           assert Path('docs/PRIVACY_BOUNDARY.md').exists()
+          assert Path('.github/workflows/encrypted-private-compute-runtime.yml').exists()
 
           finds_html = Path('ui/finds.html').read_text()
           assert 'stays only in this browser/device' in finds_html
           app_js = Path('ui/app.js').read_text()
           assert "localStorage.getItem('macbid-hunt-watchlist')" in app_js
           assert "localStorage.setItem('macbid-hunt-watchlist'" in app_js
+          assert 'estimated_post_tax_total' in app_js
+          assert 'Estimated all-in total' in app_js
+          assert 'estimated_post_tax_total' in Path('ui/finds.js').read_text()
+
           producer_js = Path('producer_worker/index.mjs').read_text()
           assert '/v1/private-compute/notify' not in producer_js
           assert "mode: 'cron-only'" in producer_js
+          assert "actions: 'read'" in producer_js
+          assert 'trusted_runtime_not_attested' in producer_js
+          assert "repo-app-private-compute-request-v2" in producer_js
+
+          caller = Path('.github/workflows/encrypted-private-compute.yml').read_text()
+          runtime = Path('.github/workflows/encrypted-private-compute-runtime.yml').read_text()
+          trusted_runtime_sha = '646afc3a233f8a9739b252925d94592b30fea470'
+          trusted_source_sha = 'c09bac2079895d3f41cb346d2a9adf67369f0fb9'
+          assert f'encrypted-private-compute-runtime.yml@{trusted_runtime_sha}' in caller
+          assert trusted_source_sha in runtime
+          assert 'Checkout pinned public execution source' in runtime
 
           contracts = json.loads(Path('config/encrypted_compute_contracts.json').read_text())
           assert contracts['schema'] == 'repo-app-encrypted-compute-contracts-v1'
