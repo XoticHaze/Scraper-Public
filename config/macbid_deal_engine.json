@@ -1,0 +1,21 @@
+{
+  "locations": ["San Antonio", "Schertz"],
+  "preferred_conditions": ["LIKE NEW", "OPEN BOX"],
+  "excluded_conditions": ["DAMAGED"],
+  "condition_priority": {
+    "LIKE NEW": 0,
+    "OPEN BOX": 1
+  },
+  "minimum_stated_retail": 40.0,
+  "buyer_premium_rate": 0.15,
+  "lot_fee": 3.0,
+  "provisional_ceiling_ratio": {
+    "LIKE NEW": 0.35,
+    "OPEN BOX": 0.25
+  },
+  "views": {
+    "ending_soon": 100,
+    "best_value": 100,
+    "low_competition": 100
+  }
+}
