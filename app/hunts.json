@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 1,
+  "version": 2,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -13,8 +13,19 @@
       "verification": ["exact_model", "verified_market_price", "native_resolution", "lamp_or_laser_health"]
     },
     {
+      "id": "curved-monitors",
+      "label": "Curved Monitors",
+      "kind": "semantic",
+      "required_any": ["monitor", "display"],
+      "must_match_any": ["curved", "1000r", "1500r", "1800r"],
+      "boost_any": ["gaming", "odyssey", "alienware", "rog", "predator", "ultrawide", "ultra wide", "oled", "240hz", "165hz", "144hz"],
+      "exclude_any": ["monitor arm", "monitor stand", "screen protector"],
+      "minimum_signal_score": 4,
+      "verification": ["exact_model", "verified_market_price", "panel_size", "refresh_rate", "resolution", "curvature"]
+    },
+    {
       "id": "large-gaming-monitors",
-      "label": "Large Gaming Monitors",
+      "label": "Large Gaming Monitor Candidates",
       "kind": "semantic",
       "required_any": ["monitor", "display"],
       "boost_any": ["curved", "ultrawide", "ultra wide", "gaming", "odyssey", "alienware", "rog", "predator", "240hz", "165hz", "144hz", "oled", "34 inch", "35 inch", "38 inch", "40 inch", "45 inch", "49 inch", "57 inch"],
@@ -25,7 +36,7 @@
     },
     {
       "id": "quality-speakers",
-      "label": "Quality Speakers",
+      "label": "Quality Speaker Candidates",
       "kind": "semantic",
       "required_any": ["speaker", "speakers", "soundbar", "subwoofer", "bookshelf"],
       "boost_any": ["sonos", "klipsch", "jbl", "bose", "polk", "yamaha", "denon", "sony", "kef", "edifier", "marshall", "harman kardon", "subwoofer", "powered", "wireless"],
@@ -39,41 +50,43 @@
       "kind": "semantic",
       "required_any": ["solar panel", "solar panels", "photovoltaic"],
       "boost_any": ["100w", "200w", "300w", "400w", "bifacial", "monocrystalline", "foldable solar", "portable solar"],
-      "exclude_any": ["solar light", "solar charger cable", "panel mount only"],
+      "exclude_any": ["solar light", "solar charger cable", "panel mount only", "security camera", "camera", "charger", "bracket", "mount"],
       "minimum_signal_score": 2,
       "verification": ["exact_model", "verified_market_price", "rated_wattage", "electrical_condition"]
     },
     {
       "id": "ptz-cameras-haos",
-      "label": "PTZ Cameras · HAOS",
+      "label": "PTZ Cameras · HAOS Check",
       "kind": "semantic",
       "required_any": ["camera", "security camera", "ip camera"],
-      "boost_any": ["ptz", "pan tilt", "pan/tilt", "onvif", "rtsp", "reolink", "amcrest", "poe", "ip camera", "optical zoom"],
-      "exclude_any": ["camera mount", "camera battery", "dummy camera", "dash cam", "webcam"],
-      "minimum_signal_score": 3,
+      "must_match_any": ["ptz", "pan tilt", "pan/tilt", "pan-tilt"],
+      "boost_any": ["onvif", "rtsp", "reolink", "amcrest", "poe", "ip camera", "optical zoom"],
+      "exclude_any": ["camera mount", "camera battery", "dummy camera", "dash cam", "webcam", "solar panel charger", "digital camera"],
+      "minimum_signal_score": 4,
       "verification": ["exact_model", "verified_market_price", "haos_compatibility", "local_stream_protocol", "account_lock_risk"],
       "compatibility_gate": "haos"
     },
     {
       "id": "smart-door-locks-haos",
-      "label": "Smart Door Locks · HAOS",
+      "label": "Smart Door Locks · HAOS Check",
       "kind": "semantic",
       "required_any": ["smart lock", "smart deadbolt", "electronic deadbolt", "door lock", "deadbolt"],
-      "boost_any": ["z-wave", "matter", "thread", "zigbee", "home connect", "schlage connect", "aqara", "yale", "kwikset", "encode", "u100", "u200"],
+      "must_match_any": ["smart", "z-wave", "matter", "thread", "zigbee", "wifi", "wi-fi", "bluetooth", "home connect", "connect", "encode", "aqara", "yale assure", "fingerprint"],
+      "boost_any": ["z-wave", "matter", "thread", "zigbee", "home connect", "schlage connect", "aqara", "yale", "kwikset", "encode", "u100", "u200", "u300"],
       "exclude_any": ["lock box", "cabinet lock", "padlock", "keypad only"],
-      "minimum_signal_score": 3,
+      "minimum_signal_score": 4,
       "verification": ["exact_model", "verified_market_price", "haos_compatibility", "required_coordinator", "factory_reset", "completeness"],
       "compatibility_gate": "haos"
     },
     {
       "id": "large-area-rugs",
-      "label": "Large Gray / Blue Rugs",
+      "label": "Large Gray / Blue Rug Candidates",
       "kind": "semantic",
       "required_any": ["area rug", "rug"],
       "boost_any": ["8x10", "8 x 10", "8' x 10'", "9x12", "9 x 12", "10x14", "10 x 14", "large area rug", "gray", "grey", "navy", "deep blue", "dark blue", "blue"],
       "exclude_any": ["runner rug", "bath rug", "door mat", "doormat", "rug pad"],
       "minimum_signal_score": 3,
-      "numeric_hints": {"preferred_sizes": ["8x10", "9x12", "10x14"]},
+      "numeric_hints": {"preferred_sizes": ["8x10", "9x12", "10x14"], "preferred_colors": ["gray", "grey", "navy", "deep blue", "dark blue"]},
       "verification": ["dimensions", "color_from_image", "condition_from_image", "verified_market_price"]
     },
     {
@@ -103,13 +116,13 @@
       "kind": "semantic",
       "required_any": ["iphone", "ipad", "macbook", "apple watch", "airpods", "mac mini", "imac", "apple tv"],
       "boost_any": ["pro", "air", "max", "ultra", "m1", "m2", "m3", "m4", "256gb", "512gb", "1tb"],
-      "exclude_any": ["case", "screen protector", "charger only", "watch band", "replacement cable"],
+      "exclude_any": ["case", "screen protector", "charger only", "watch band", "replacement cable", "laptop stand", "battery", "replacement", "riser", "adapter", "dock", "keyboard cover"],
       "minimum_signal_score": 2,
       "verification": ["exact_model", "storage", "activation_lock", "battery_health_if_available", "verified_market_price"]
     },
     {
       "id": "best-tech-deals",
-      "label": "Best Tech",
+      "label": "Best Tech Candidates",
       "kind": "ranked",
       "category_signals": ["computer", "tablet", "monitor", "projector", "camera", "speaker", "electronics", "network", "smart home", "phone", "laptop", "tv"],
       "minimum_stated_retail": 100,
@@ -119,7 +132,7 @@
     },
     {
       "id": "resale-watch",
-      "label": "Resale Watch",
+      "label": "Resale Watch · Needs Verification",
       "kind": "ranked",
       "minimum_stated_retail": 80,
       "maximum_bidders": 3,
