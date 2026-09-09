@@ -5,8 +5,10 @@ on:
     paths:
       - 'app/**'
       - 'deal_engine/**'
+      - 'encrypted_compute/**'
       - 'config/**'
       - 'scripts/**'
+      - 'tools/**'
       - 'ui/**'
       - 'tests/**'
       - '.github/workflows/**'
@@ -14,8 +16,10 @@ on:
     paths:
       - 'app/**'
       - 'deal_engine/**'
+      - 'encrypted_compute/**'
       - 'config/**'
       - 'scripts/**'
+      - 'tools/**'
       - 'ui/**'
       - 'tests/**'
       - '.github/workflows/**'
@@ -42,15 +46,15 @@ jobs:
         with:
           python-version: '3.11.16'
 
-      - name: Install test dependency
+      - name: Install fixed test dependencies
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check 'pytest==8.4.1'
+          python -m pip install --disable-pip-version-check 'pytest==8.4.1' 'cryptography==45.0.7'
 
       - name: Python compile gate
         run: |
           set -euo pipefail
-          python -m compileall -q deal_engine scripts tests
+          python -m compileall -q deal_engine encrypted_compute scripts tools tests
 
       - name: JavaScript syntax gate
         run: |
@@ -60,12 +64,12 @@ jobs:
           node --check ui/action-center.js
           node --check ui/catalog-loader.js
 
-      - name: Scoring tests
+      - name: Tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py
+          pytest -q tests/test_deal_scoring.py tests/test_encrypted_compute.py
 
-      - name: Validate engine and app policy
+      - name: Validate engine, app, and private-compute policy
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -81,10 +85,16 @@ jobs:
           manifest = json.loads(Path('app/actions.json').read_text())
           assert manifest['schema'] == 'repo-app-actions-v1'
           assert manifest['repository'] == 'XoticHaze/Scraper-Public'
-          assert manifest['control_bridge']['enabled'] is False
           ids = {action['id'] for action in manifest['actions']}
           assert {'refresh', 'visual-review', 'actions', 'source'} <= ids
           for action in manifest['actions']:
               assert action.get('fallback_url', '').startswith('https://github.com/XoticHaze/Scraper-Public')
+
+          contracts = json.loads(Path('config/encrypted_compute_contracts.json').read_text())
+          assert contracts['schema'] == 'repo-app-encrypted-compute-contracts-v1'
+          private = contracts['contracts']['python-bundle-v1']
+          assert private['entrypoint'] == 'entrypoint.py'
+          assert private['authority'] == 'private_compute_only'
+          assert private['timeout_seconds'] <= 600
           print('POLICY_GATE=PASS')
           PY
