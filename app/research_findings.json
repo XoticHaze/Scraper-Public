@@ -13,12 +13,61 @@
       ]
     },
     {
+      "identity": "upc:B0FFH3WB8S",
+      "status": "NOT NATIVE 4K",
+      "model": "VOPLLS G3 Google TV Projector",
+      "note": "Model resolution shows native 1920x1080 with 3840x2160 input/support. Useful budget smart projector candidate, but it should not rank in the native-4K hunt beside the Optoma.",
+      "suppress_hunts": ["4k-projectors"],
+      "sources": [
+        {"label": "Model specifications", "url": "https://www.u-buy.com.au/product/QPGE1VBI8-voplls-google-tv-netflix-smart-projector-with-wifi-and-bluetooth-proyector-voice-control-1200-ansi-projector-4k-support-dolby-audio-1080p"}
+      ]
+    },
+    {
       "identity": "upc:195174124062",
       "status": "WATCH",
       "model": "LG UltraGear 45GX900A-B",
       "note": "Identity resolves to a 45-inch 800R curved OLED WQHD 240Hz gaming monitor. High-value fit for the large gaming-monitor lane, but panel damage, burn-in and missing-stand risk deserve a larger open-box discount.",
       "sources": [
         {"label": "LG official", "url": "https://www.lg.com/us/monitors/lg-45gx900a-b-gaming-monitor"}
+      ]
+    },
+    {
+      "identity": "upc:B0CRGJC5ZD",
+      "status": "CURVED · NOT LARGE",
+      "model": "Samsung Odyssey G55C 32-inch",
+      "note": "Verified as the 32-inch Odyssey G55C, 2560x1440, 165Hz, 1000R curved. Keep it in Curved Monitors, but suppress it from the 34-inch-plus Large Gaming Monitor intent.",
+      "suppress_hunts": ["large-gaming-monitors"],
+      "sources": [
+        {"label": "Current model reference", "url": "https://slickdeals.net/f/19981761-199-99-32-samsung-odyssey-g55c-2560x1440-165hz-1ms-curved-gaming-monitor-at-amazon"}
+      ]
+    },
+    {
+      "identity": "upc:B0DVM3BJHK",
+      "status": "PREMIUM TECH · NOT LARGE",
+      "model": "Samsung Odyssey OLED G8 G81SF 27-inch",
+      "note": "Verified as a 27-inch 4K QD-OLED, 240Hz G81SF. Very interesting tech candidate, but it does not satisfy the large-monitor size intent and is therefore suppressed from that lane.",
+      "suppress_hunts": ["large-gaming-monitors"],
+      "sources": [
+        {"label": "Model specifications", "url": "https://www.desertcart.us/products/717882148-samsung-27-inch-odyssey-qd-oled-g8-g81sf-4k-240hz-gaming-monitor-0-03ms-response-time-displayhdr-true-black-400-amd-freesync-premium-pro-ergonomic-stand-ls27fg810snxza-2025"}
+      ]
+    },
+    {
+      "identity": "upc:B095V23PTM",
+      "status": "CURVED · NOT LARGE",
+      "model": "Dell S2722DGM 27-inch",
+      "note": "ASIN resolves to the 27-inch S2722DGM QHD 165Hz curved gaming monitor. Keep it in Curved Monitors, but it does not satisfy the 34-inch-plus large-monitor preference.",
+      "suppress_hunts": ["large-gaming-monitors"],
+      "sources": [
+        {"label": "Dell model reference", "url": "https://www.dell.com/en-us/shop/dell-27-curved-gaming-monitor-s2722dgm/apd/210-azzp/monitors-monitor-accessories"}
+      ]
+    },
+    {
+      "identity": "upc:B0C79LRT8X",
+      "status": "IDENTITY CORRECTED",
+      "model": "Klipsch The Three Plus",
+      "note": "The ASIN resolves to Klipsch The Three Plus (model 1064667), not the One II named in the MAC.BID title. Treat the ASIN/model identity as the stronger pricing reference and verify the physical label/photo before bidding.",
+      "sources": [
+        {"label": "The Three Plus model reference", "url": "https://device.report/klipsch/1064667"}
       ]
     },
     {
