@@ -7,11 +7,16 @@ on:
       - 'deal_engine/**'
       - 'config/macbid_deal_engine.json'
       - 'scripts/macbid_deal_engine.py'
+      - 'scripts/macbid_postprocess.py'
       - 'tests/test_deal_scoring.py'
       - '.github/workflows/macbid-deal-engine.yml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: macbid-deal-engine-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   engine:
@@ -44,6 +49,11 @@ jobs:
           set -euo pipefail
           python scripts/macbid_deal_engine.py
 
+      - name: Collapse duplicate products and build verification queue
+        run: |
+          set -euo pipefail
+          python scripts/macbid_postprocess.py
+
       - name: Show compact ranked summary
         if: always()
         run: |
@@ -65,8 +75,10 @@ jobs:
                       'retail_price': row.get('retail_price'),
                       'estimated_pre_tax_total': row.get('estimated_pre_tax_total'),
                       'deal_score': row.get('deal_score'),
-                      'hours_until_close': row.get('hours_until_close'),
+                      'expected_close_date': row.get('expected_close_date'),
                       'unique_bidders': row.get('unique_bidders'),
+                      'duplicate_lot_count': row.get('duplicate_lot_count'),
+                      'market_price_status': row.get('market_price_status'),
                       'macbid_url': row.get('macbid_url'),
                   }, sort_keys=True))
           PY
