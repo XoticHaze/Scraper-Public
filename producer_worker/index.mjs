@@ -161,7 +161,10 @@ function appJwt(env) {
 async function installationToken(env, repos) {
   const response = await fetch(`https://api.github.com/app/installations/${env.GITHUB_INSTALLATION_ID}/access_tokens`, {
     method: 'POST', headers: ghHeaders(`Bearer ${appJwt(env)}`),
-    body: JSON.stringify({ repositories: repos.map((r) => r.split('/')[1]), permissions: { contents: 'write' } }),
+    body: JSON.stringify({
+      repositories: repos.map((r) => r.split('/')[1]),
+      permissions: { contents: 'write', actions: 'read' },
+    }),
   });
   if (!response.ok) throw new Error(`installation_token:${response.status}`);
   return (await response.json()).token;
@@ -218,6 +221,7 @@ async function readPrivatePayload(token, repo, basePath) {
 async function publicRequest(token, publicRepo, exchangeRef, runId, contractId) {
   const raw = await readFile(token, publicRepo, `rendezvous/recipients/${runId}/request.json`, exchangeRef);
   const request = JSON.parse(raw.toString('utf8'));
+  if (request.schema !== 'repo-app-private-compute-request-v2') throw new Error('request_schema_mismatch');
   if (String(request.run_id) !== String(runId) || request.contract_id !== contractId) throw new Error('request_binding_mismatch');
   return request;
 }
@@ -225,8 +229,24 @@ async function publicRequest(token, publicRepo, exchangeRef, runId, contractId) 
 async function privateRegistry(token, privateRepo) {
   const raw = await readFile(token, privateRepo, 'producer/workloads.json', 'main');
   const doc = JSON.parse(raw.toString('utf8'));
-  if (doc.schema !== 'repo-app-private-workload-registry-v1') throw new Error('private_registry_schema');
+  if (doc.schema !== 'repo-app-private-workload-registry-v2') throw new Error('private_registry_schema');
+  if (!doc.trusted_public_runtime) throw new Error('trusted_runtime_missing');
   return doc;
+}
+
+async function assertTrustedRuntime(token, publicRepo, registry, request) {
+  const trusted = registry.trusted_public_runtime || {};
+  if (trusted.repository !== publicRepo) throw new Error('trusted_runtime_repository_mismatch');
+  if (String(request.runtime_source_sha || '') !== String(trusted.runtime_source_sha || '')) throw new Error('runtime_source_request_mismatch');
+  const run = await ghJson(token, `https://api.github.com/repos/${publicRepo}/actions/runs/${request.run_id}`);
+  if (String(run.id) !== String(request.run_id)) throw new Error('runtime_run_id_mismatch');
+  if (run.repository?.full_name !== publicRepo) throw new Error('runtime_run_repository_mismatch');
+  const expectedSha = String(trusted.workflow_sha || '');
+  const expectedPath = `${publicRepo}/${trusted.workflow_path}@${expectedSha}`;
+  const referenced = Array.isArray(run.referenced_workflows) ? run.referenced_workflows : [];
+  const match = referenced.some((node) => String(node.sha || '') === expectedSha && String(node.path || '') === expectedPath);
+  if (!match) throw new Error('trusted_runtime_not_attested');
+  return true;
 }
 
 export async function processRun(env, runId, contractId) {
@@ -240,6 +260,7 @@ export async function processRun(env, runId, contractId) {
 
   const request = await publicRequest(token, publicRepo, exchangeRef, runId, contractId);
   const registry = await privateRegistry(token, privateRepo);
+  await assertTrustedRuntime(token, publicRepo, registry, request);
   const spec = registry.workloads?.[request.workload_id];
   if (!spec?.enabled || spec.contract_id !== contractId) throw new Error('workload_not_allowed');
 
@@ -327,7 +348,7 @@ async function catchUp(env) {
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    if (request.method === 'GET' && url.pathname === '/health') return Response.json({ ok: true, service: 'private-envelope-producer', mode: 'cron-only' });
+    if (request.method === 'GET' && url.pathname === '/health') return Response.json({ ok: true, service: 'private-envelope-producer', mode: 'cron-only', runtime_attestation: 'required' });
     return Response.json({ ok: false, error: 'not_found' }, { status: 404 });
   },
   async scheduled(controller, env, ctx) { ctx.waitUntil(catchUp(env)); },
