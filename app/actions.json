@@ -1,0 +1,61 @@
+{
+  "schema": "repo-app-actions-v1",
+  "app_id": "macbid-hunt",
+  "app_name": "MAC.BID Hunt",
+  "repository": "XoticHaze/Scraper-Public",
+  "execution_mode": "github_ui_fallback",
+  "control_bridge": {
+    "enabled": false,
+    "endpoint": null,
+    "notes": "Static Pages must never contain GitHub or MAC.BID credentials. A future authenticated control bridge may execute the same declared actions directly."
+  },
+  "actions": [
+    {
+      "id": "refresh",
+      "label": "Refresh catalog",
+      "description": "Run a fresh San Antonio catalog scan, scoring pass, UI build, browser validation, and Pages deployment.",
+      "kind": "workflow",
+      "risk": "read_only_compute",
+      "workflow": "macbid-deal-engine.yml",
+      "dispatch": "workflow_dispatch",
+      "fallback_url": "https://github.com/XoticHaze/Scraper-Public/actions/workflows/macbid-deal-engine.yml",
+      "inputs": [
+        {
+          "name": "reason",
+          "type": "string",
+          "required": false,
+          "description": "Optional reason for the refresh."
+        }
+      ]
+    },
+    {
+      "id": "visual-review",
+      "label": "Visual review",
+      "description": "Render the live app in desktop and mobile Chromium viewports and retain screenshots for review.",
+      "kind": "workflow",
+      "risk": "read_only_compute",
+      "workflow": "visual-review.yml",
+      "dispatch": "workflow_dispatch",
+      "fallback_url": "https://github.com/XoticHaze/Scraper-Public/actions/workflows/visual-review.yml",
+      "inputs": []
+    },
+    {
+      "id": "actions",
+      "label": "Open Actions",
+      "description": "Inspect runs, failures, schedules, and deployment state.",
+      "kind": "link",
+      "risk": "none",
+      "fallback_url": "https://github.com/XoticHaze/Scraper-Public/actions",
+      "inputs": []
+    },
+    {
+      "id": "source",
+      "label": "Open repository",
+      "description": "Inspect the app source, contracts, configuration, and workflow implementation.",
+      "kind": "link",
+      "risk": "none",
+      "fallback_url": "https://github.com/XoticHaze/Scraper-Public",
+      "inputs": []
+    }
+  ]
+}
