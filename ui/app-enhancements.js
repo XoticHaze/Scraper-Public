@@ -1,20 +1,33 @@
 (() => {
-  const quickQueries = [
-    ['Tools', 'tools'],
-    ['Smart Home', 'smart home'],
-    ['Computers', 'computers'],
-    ['TVs', 'televisions'],
-    ['Cameras', 'cameras'],
-    ['Appliances', 'appliances'],
-    ['Vacuums', 'vacuum'],
-    ['Automotive', 'automotive'],
-  ];
-
   const search = document.querySelector('#search');
   const controls = document.querySelector('.controls');
   const topbar = document.querySelector('.topbar');
 
   if (!search || !controls || !topbar) return;
+
+  state.hunt = state.hunt || '';
+  const baseProductMatchesSearch = productMatchesSearch;
+  productMatchesSearch = function enhancedProductMatch(product) {
+    if (state.hunt && !(product.hunt_ids || []).includes(state.hunt)) return false;
+    return baseProductMatchesSearch(product);
+  };
+
+  function syncHuntButtons() {
+    document.querySelectorAll('.quick-chip').forEach((button) => {
+      button.classList.toggle('active', button.dataset.hunt === state.hunt);
+    });
+  }
+
+  function setHunt(value) {
+    const hunt = String(value || '').trim();
+    state.hunt = hunt;
+    const url = new URL(window.location.href);
+    if (hunt) url.searchParams.set('hunt', hunt);
+    else url.searchParams.delete('hunt');
+    history.replaceState(null, '', url);
+    syncHuntButtons();
+    resetVisible();
+  }
 
   function setQuery(value) {
     const query = String(value || '').trim();
@@ -24,35 +37,38 @@
     if (query) url.searchParams.set('q', query);
     else url.searchParams.delete('q');
     history.replaceState(null, '', url);
-    document.querySelectorAll('.quick-chip').forEach((button) => {
-      button.classList.toggle('active', button.dataset.query.toLowerCase() === state.query);
-    });
     resetVisible();
   }
 
   function installQuickBar() {
     if (document.querySelector('.quick-bar')) return;
+    const profiles = (state.catalog?.hunt_profiles || []).filter((profile) => Number(profile.count || 0) > 0);
+    if (!profiles.length) return;
     const bar = document.createElement('div');
     bar.className = 'quick-bar';
     const label = document.createElement('span');
     label.className = 'quick-label';
-    label.textContent = 'Quick hunts';
+    label.textContent = 'Hunts';
     bar.append(label);
 
-    for (const [name, query] of quickQueries) {
+    for (const profile of profiles) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'quick-chip';
-      button.dataset.query = query;
-      button.textContent = name;
-      button.addEventListener('click', () => setQuery(state.query === query.toLowerCase() ? '' : query));
+      button.dataset.hunt = profile.id;
+      button.title = (profile.verification || []).length
+        ? `Verification: ${(profile.verification || []).join(', ')}`
+        : profile.label;
+      button.textContent = `${profile.label} · ${Number(profile.count).toLocaleString()}`;
+      button.addEventListener('click', () => setHunt(state.hunt === profile.id ? '' : profile.id));
       bar.append(button);
     }
     controls.querySelector('.search-wrap')?.after(bar);
+    syncHuntButtons();
   }
 
   function activeFilterCount() {
-    return [state.category, state.condition, state.closesWithin, state.maxTotal, state.noBidders].filter(Boolean).length;
+    return [state.hunt, state.category, state.condition, state.closesWithin, state.maxTotal, state.noBidders].filter(Boolean).length;
   }
 
   function updateFilterToggle() {
@@ -133,15 +149,16 @@
   }
 
   installStatusStrip();
-  installQuickBar();
   installMobileFilters();
 
   if (window.matchMedia('(max-width: 560px)').matches) {
     search.placeholder = 'Search products, brands…';
   }
 
-  const initial = new URL(window.location.href).searchParams.get('q');
-  if (initial) setQuery(initial);
+  const initialQuery = new URL(window.location.href).searchParams.get('q');
+  const initialHunt = new URL(window.location.href).searchParams.get('hunt');
+  if (initialQuery) setQuery(initialQuery);
+  if (initialHunt) state.hunt = initialHunt;
 
   search.addEventListener('input', () => {
     const url = new URL(window.location.href);
@@ -149,16 +166,15 @@
     if (query) url.searchParams.set('q', query);
     else url.searchParams.delete('q');
     history.replaceState(null, '', url);
-    document.querySelectorAll('.quick-chip').forEach((button) => {
-      button.classList.toggle('active', button.dataset.query.toLowerCase() === query.toLowerCase());
-    });
   });
 
   document.querySelector('#clear-filters')?.addEventListener('click', () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('q');
+    url.searchParams.delete('hunt');
     history.replaceState(null, '', url);
-    document.querySelectorAll('.quick-chip').forEach((button) => button.classList.remove('active'));
+    state.hunt = '';
+    syncHuntButtons();
     controls.classList.remove('filters-open');
     document.querySelector('#mobile-filter-toggle')?.setAttribute('aria-expanded', 'false');
     setTimeout(updateFilterToggle, 0);
@@ -167,6 +183,10 @@
   const waitForCatalog = setInterval(() => {
     if (!state.catalog) return;
     clearInterval(waitForCatalog);
+    installQuickBar();
+    if (initialHunt && (state.catalog.hunt_profiles || []).some((profile) => profile.id === initialHunt)) {
+      setHunt(initialHunt);
+    }
     updateStatus();
     updateFilterToggle();
   }, 100);
