@@ -14,6 +14,7 @@ REPORT = Path("results/macbid-deal-engine.json")
 UI_SOURCE = Path("ui")
 APP_ACTIONS = Path("app/actions.json")
 APP_HUNTS = Path("app/hunts.json")
+APP_FINDINGS = Path("app/research_findings.json")
 SITE = Path("site")
 
 LOT_FIELDS = (
@@ -167,6 +168,14 @@ def main() -> int:
             json.dumps(hunt_doc, separators=(",", ":"), ensure_ascii=False),
             encoding="utf-8",
         )
+    if APP_FINDINGS.exists():
+        findings = json.loads(APP_FINDINGS.read_text(encoding="utf-8"))
+        compact_findings = json.dumps(findings, separators=(",", ":"), ensure_ascii=False)
+        (SITE / "research-findings.json").write_text(compact_findings, encoding="utf-8")
+        (SITE / "research-findings.js").write_text(
+            "window.MACBID_RESEARCH_FINDINGS=" + compact_findings + ";\n",
+            encoding="utf-8",
+        )
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
 
     print(f"UI_PRODUCTS={len(products)}")
@@ -175,6 +184,7 @@ def main() -> int:
     for profile in public_profiles:
         print(f"UI_HUNT {profile['id']}={profile['count']}")
     print(f"UI_ACTION_MANIFEST={'yes' if APP_ACTIONS.exists() else 'no'}")
+    print(f"UI_RESEARCH_FINDINGS={'yes' if APP_FINDINGS.exists() else 'no'}")
     print(f"UI_OUTPUT={SITE}")
     return 0
 
