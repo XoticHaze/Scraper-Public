@@ -151,6 +151,7 @@ def main() -> int:
     min_retail = float(config["minimum_stated_retail"])
     premium_rate = float(config["buyer_premium_rate"])
     lot_fee = float(config["lot_fee"])
+    sales_tax_rate = float(config.get("sales_tax_rate", 0.0))
     now_epoch = int(time.time())
 
     report: dict[str, Any] = {
@@ -290,6 +291,7 @@ def main() -> int:
                 scoring_lot,
                 premium_rate=premium_rate,
                 lot_fee=lot_fee,
+                sales_tax_rate=sales_tax_rate,
                 low_value_retail_floor=min_retail,
             )
         )
@@ -337,6 +339,7 @@ def main() -> int:
     print(f"DEAL_ENGINE_INVENTORY={len(inventory)}")
     print(f"DEAL_ENGINE_ELIGIBLE={len(eligible)}")
     print(f"DEAL_ENGINE_COMPLETE={report['scan'].get('complete')}")
+    print(f"DEAL_ENGINE_SALES_TAX_RATE={sales_tax_rate}")
     for name, rows in report["views"].items():
         print(f"DEAL_VIEW {name} count={len(rows)}")
         for lot in rows[:20]:
@@ -351,6 +354,8 @@ def main() -> int:
                         "current_bid": lot.get("current_bid"),
                         "retail_price": lot.get("retail_price"),
                         "estimated_pre_tax_total": lot.get("estimated_pre_tax_total"),
+                        "estimated_sales_tax": lot.get("estimated_sales_tax"),
+                        "estimated_post_tax_total": lot.get("estimated_post_tax_total"),
                         "deal_score": lot.get("deal_score"),
                         "expected_closing_utc": lot.get("expected_closing_utc"),
                         "hours_until_close": lot.get("hours_until_close"),
