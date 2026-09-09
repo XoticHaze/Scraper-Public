@@ -1,6 +1,28 @@
 # Scraper-Public
 
-Public GitHub Actions compute for browser/network probes and scraping workloads.
+## MAC.BID Hunt
+
+**Live app:** https://xotichaze.github.io/Scraper-Public/
+
+**Run a fresh scan:** https://github.com/XoticHaze/Scraper-Public/actions/workflows/macbid-deal-engine.yml
+
+**Repository:** https://github.com/XoticHaze/Scraper-Public
+
+The repository is the compute/control plane and GitHub Pages is the persistent browser surface:
+
+```text
+GitHub Actions
+  -> live San Antonio MAC.BID scan
+  -> scoring + fee math + dedupe
+  -> static catalog build
+  -> browser smoke test
+  -> GitHub Pages
+  -> https://xotichaze.github.io/Scraper-Public/
+```
+
+The deal-engine workflow also runs automatically at minutes `17` and `47` of every hour. The Pages UI includes a **Run fresh scan** link for cases where you want a new snapshot immediately before bidding.
+
+> GitHub Pages must be enabled once under **Settings -> Pages -> Source: GitHub Actions**. The workflow is already wired to publish the tested site after that setting is enabled.
 
 ## Authority and privacy boundary
 
@@ -79,21 +101,16 @@ Current UI capabilities:
 - current bid, 15% premium, $3 lot fee, estimated pre-tax total, stated retail, discount, savings, and provisional max bid
 - duplicate-lot alternatives with direct MAC.BID links
 - browser-local watchlist
+- direct repo and fresh-scan controls
 - a reserved market-verification panel for verified new price, realistic open-box value, verdict, verified discount, and final max bid
 
-The workflow uploads a `macbid-hunt-ui` artifact containing a self-contained site. Download it, unzip it, and open `index.html`; `catalog.js` is embedded specifically so the UI works directly from disk without a local server.
-
-GitHub Pages deployment is also wired into the workflow. The repository needs a one-time setting before the public URL can be created:
-
-1. Open **Settings → Pages** for `XoticHaze/Scraper-Public`.
-2. Set **Source** to **GitHub Actions**.
-3. Re-run the `MAC.BID Deal Engine` workflow or make the next qualifying commit.
-
-After that, successful scans will publish the same tested UI automatically through GitHub Pages.
+The workflow also uploads a `macbid-hunt-ui` artifact containing a self-contained fallback site. Download it, unzip it, and open `index.html`; `catalog.js` is embedded specifically so the UI works directly from disk without a local server.
 
 ## Account layer
 
 Account integration is intentionally deferred. Future saved/watchlisted lots, search history, bids/wins, or other personal MAC.BID state belong in private `XoticHaze/Scraper` and should feed only the minimum needed preference/state signal into the public deal engine through the encrypted transport boundary.
+
+A public Pages frontend must never contain a GitHub PAT or MAC.BID account credential merely to trigger compute. Authenticated actions stay on GitHub/private infrastructure; the public frontend can deep-link into GitHub's authenticated workflow UI.
 
 ## Discovery probes
 
