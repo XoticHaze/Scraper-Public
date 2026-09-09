@@ -6,6 +6,7 @@ on:
       - 'app/**'
       - 'deal_engine/**'
       - 'encrypted_compute/**'
+      - 'producer_worker/**'
       - 'config/**'
       - 'scripts/**'
       - 'tools/**'
@@ -17,6 +18,7 @@ on:
       - 'app/**'
       - 'deal_engine/**'
       - 'encrypted_compute/**'
+      - 'producer_worker/**'
       - 'config/**'
       - 'scripts/**'
       - 'tools/**'
@@ -64,11 +66,13 @@ jobs:
           node --check ui/action-center.js
           node --check ui/catalog-loader.js
           node --check ui/finds.js
+          node --check producer_worker/index.mjs
+          node --check producer_worker/interop.mjs
 
       - name: Tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_encrypted_compute.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
 
       - name: Validate engine, app, hunt, and private-compute policy
         run: |
@@ -106,6 +110,7 @@ jobs:
           assert Path('ui/finds.html').exists()
           assert Path('ui/finds.js').exists()
           assert Path('ui/finds.css').exists()
+          assert Path('producer_worker/index.mjs').exists()
 
           contracts = json.loads(Path('config/encrypted_compute_contracts.json').read_text())
           assert contracts['schema'] == 'repo-app-encrypted-compute-contracts-v1'
