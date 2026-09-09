@@ -96,6 +96,12 @@ def main() -> int:
     hunt_doc = json.loads(APP_HUNTS.read_text(encoding="utf-8")) if APP_HUNTS.exists() else {"profiles": []}
     profiles = hunt_doc.get("profiles") or []
     profile_counts = {str(profile["id"]): 0 for profile in profiles}
+    finding_doc = json.loads(APP_FINDINGS.read_text(encoding="utf-8")) if APP_FINDINGS.exists() else {"findings": []}
+    finding_map = {
+        str(row["identity"]): row
+        for row in (finding_doc.get("findings") or [])
+        if isinstance(row, dict) and row.get("identity")
+    }
 
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for lot in inventory:
@@ -107,6 +113,16 @@ def main() -> int:
         product = product_metadata(lots)
         best_value_lot = max(lots, key=lambda row: float(row.get("deal_score") or -10_000))
         matches = match_profiles(profiles, product, best_value_lot)
+
+        # Model/market research is allowed to narrow semantic discovery. This is
+        # deliberately one-way: a research note can suppress a disproven match,
+        # but cannot silently manufacture a new hunt match.
+        finding = finding_map.get(str(product["identity"]))
+        suppressed = set(finding.get("suppress_hunts") or []) if finding else set()
+        if suppressed:
+            matches = {profile_id: match for profile_id, match in matches.items() if profile_id not in suppressed}
+            product["research_suppressed_hunts"] = sorted(suppressed)
+
         if matches:
             product["hunt_matches"] = matches
             product["hunt_ids"] = list(matches)
@@ -169,8 +185,7 @@ def main() -> int:
             encoding="utf-8",
         )
     if APP_FINDINGS.exists():
-        findings = json.loads(APP_FINDINGS.read_text(encoding="utf-8"))
-        compact_findings = json.dumps(findings, separators=(",", ":"), ensure_ascii=False)
+        compact_findings = json.dumps(finding_doc, separators=(",", ":"), ensure_ascii=False)
         (SITE / "research-findings.json").write_text(compact_findings, encoding="utf-8")
         (SITE / "research-findings.js").write_text(
             "window.MACBID_RESEARCH_FINDINGS=" + compact_findings + ";\n",
@@ -181,6 +196,7 @@ def main() -> int:
     print(f"UI_PRODUCTS={len(products)}")
     print(f"UI_LOTS={len(inventory)}")
     print(f"UI_HUNT_PROFILES={len(public_profiles)}")
+    print(f"UI_RESEARCH_CORRECTIONS={sum(bool(p.get('research_suppressed_hunts')) for p in products)}")
     for profile in public_profiles:
         print(f"UI_HUNT {profile['id']}={profile['count']}")
     print(f"UI_ACTION_MANIFEST={'yes' if APP_ACTIONS.exists() else 'no'}")
