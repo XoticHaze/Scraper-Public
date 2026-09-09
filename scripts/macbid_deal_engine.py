@@ -98,10 +98,21 @@ def local_contract(payload: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def location_filter(locations: list[str]) -> str:
-    escaped = [name.replace("`", "") for name in locations]
-    values = ",".join(f"`{name}`" for name in escaped)
-    return f"is_open:=1 && auction_location:=[{values}]"
+def list_filter(field: str, values: list[str]) -> str:
+    escaped = [str(value).replace("`", "") for value in values]
+    rendered = ",".join(f"`{value}`" for value in escaped)
+    return f"{field}:=[{rendered}]"
+
+
+def catalog_filter(locations: list[str], conditions: list[str], min_retail: float) -> str:
+    return " && ".join(
+        [
+            "is_open:=1",
+            list_filter("auction_location", locations),
+            list_filter("condition", conditions),
+            f"retail_price:>={min_retail:g}",
+        ]
+    )
 
 
 def condition_rank(condition: str, config: dict[str, Any]) -> int:
@@ -112,17 +123,23 @@ def condition_rank(condition: str, config: dict[str, Any]) -> int:
         return 999
 
 
+def close_date_key(lot: dict[str, Any]) -> str:
+    value = lot.get("expected_close_date")
+    return str(value) if value else "9999-12-31"
+
+
 def main() -> int:
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     locations = [str(v) for v in config["locations"]]
-    preferred_conditions = {str(v).upper() for v in config["preferred_conditions"]}
+    preferred_condition_list = [str(v).upper() for v in config["preferred_conditions"]]
+    preferred_conditions = set(preferred_condition_list)
     excluded_conditions = {str(v).upper() for v in config["excluded_conditions"]}
     min_retail = float(config["minimum_stated_retail"])
     premium_rate = float(config["buyer_premium_rate"])
     lot_fee = float(config["lot_fee"])
 
     report: dict[str, Any] = {
-        "schema": "macbid-deal-engine-v1",
+        "schema": "macbid-deal-engine-v2",
         "source": LOCATION_PAGE,
         "policy": config,
         "privacy": {
@@ -172,7 +189,7 @@ def main() -> int:
             raise RuntimeError("No local MAC.BID search contract observed")
 
         selected_search["q"] = "*"
-        selected_search["filter_by"] = location_filter(locations)
+        selected_search["filter_by"] = catalog_filter(locations, preferred_condition_list, min_retail)
         selected_search["sort_by"] = "expected_close_date:asc"
         selected_search["per_page"] = 250
         selected_search["page"] = 1
@@ -184,7 +201,8 @@ def main() -> int:
         all_docs: list[dict[str, Any]] = []
         page_num = 1
         total_found = None
-        while page_num <= 30:
+        max_pages = 200
+        while page_num <= max_pages:
             search = copy.deepcopy(selected_search)
             search["page"] = page_num
             payload = {"searches": [search]}
@@ -195,7 +213,7 @@ def main() -> int:
                 timeout=30_000,
             )
             if response.status != 200:
-                raise RuntimeError(f"Typesense search failed with HTTP {response.status}")
+                raise RuntimeError(f"Typesense search failed with HTTP {response.status}: {response.text()[:500]}")
             docs, found = extract_docs(response.json())
             if total_found is None:
                 total_found = found
@@ -204,19 +222,24 @@ def main() -> int:
             if len(docs) < int(search["per_page"]):
                 break
             page_num += 1
+        if page_num > max_pages:
+            raise RuntimeError(f"Catalog exceeded safety cap of {max_pages * 250} preferred lots")
 
         context.close()
         browser.close()
 
     inventory = dedupe(all_docs)
     report["scan"]["reported_found"] = total_found
+    report["scan"]["pages_scanned"] = page_num
     report["scan"]["deduped_inventory"] = len(inventory)
+    if total_found is not None:
+        report["scan"]["complete"] = len(inventory) >= total_found
 
     eligible: list[dict[str, Any]] = []
     excluded_counts: dict[str, int] = {}
     for lot in inventory:
         condition = str(lot.get("condition") or "").upper()
-        retail = lot.get("retail_price") or lot.get("retail")
+        retail = lot.get("retail_price") if lot.get("retail_price") is not None else lot.get("retail")
         try:
             retail_num = float(retail)
         except (TypeError, ValueError):
@@ -249,10 +272,12 @@ def main() -> int:
     report["scan"]["excluded_counts"] = excluded_counts
     report["inventory"] = eligible
 
+    # Typesense gives us the correct close *date*. Exact within-day time is a
+    # separate public lot-state enrichment step; never invent midnight.
     ending_soon = sorted(
         eligible,
         key=lambda x: (
-            float("inf") if x.get("hours_until_close") is None else x["hours_until_close"],
+            close_date_key(x),
             condition_rank(str(x.get("condition") or ""), config),
             -float(x.get("deal_score") or 0),
         ),
@@ -262,7 +287,7 @@ def main() -> int:
         key=lambda x: (
             -float(x.get("deal_score") or 0),
             condition_rank(str(x.get("condition") or ""), config),
-            float("inf") if x.get("hours_until_close") is None else x["hours_until_close"],
+            close_date_key(x),
         ),
     )
     low_competition = sorted(
@@ -271,6 +296,7 @@ def main() -> int:
             int(x.get("unique_bidders") or 0),
             int(x.get("total_bids") or 0),
             -float(x.get("deal_score") or 0),
+            close_date_key(x),
         ),
     )
 
@@ -285,6 +311,7 @@ def main() -> int:
     OUTPUT.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"DEAL_ENGINE_INVENTORY={len(inventory)}")
     print(f"DEAL_ENGINE_ELIGIBLE={len(eligible)}")
+    print(f"DEAL_ENGINE_COMPLETE={report['scan'].get('complete')}")
     for name, rows in report["views"].items():
         print(f"DEAL_VIEW {name} count={len(rows)}")
         for lot in rows[:20]:
@@ -298,8 +325,9 @@ def main() -> int:
                         "condition": lot.get("condition"),
                         "current_bid": lot.get("current_bid"),
                         "retail_price": lot.get("retail_price"),
+                        "estimated_pre_tax_total": lot.get("estimated_pre_tax_total"),
                         "deal_score": lot.get("deal_score"),
-                        "hours_until_close": lot.get("hours_until_close"),
+                        "expected_close_date": lot.get("expected_close_date"),
                         "unique_bidders": lot.get("unique_bidders"),
                         "lot_number": lot.get("lot_number"),
                         "auction_number": lot.get("auction_number"),
