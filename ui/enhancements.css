@@ -1,0 +1,40 @@
+.app-status{max-width:1700px;margin:14px auto 0;padding:0 clamp(16px,4vw,48px);display:flex;justify-content:space-between;gap:16px;align-items:center;color:var(--muted)}
+.status-main{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-width:0}
+.status-badge,.status-scope{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:12px}
+.status-badge strong{color:var(--text)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 3px rgba(255,255,255,.04)}
+.app-status.fresh .status-dot{background:var(--good)}
+.app-status.warn .status-dot{background:var(--warn)}
+.app-status.stale .status-dot{background:var(--danger)}
+.status-copy{font-size:12px;white-space:nowrap}
+.status-links{display:flex;gap:12px;white-space:nowrap;font-size:12px}
+.status-links a{color:var(--accent)}
+.quick-bar{display:flex;gap:7px;align-items:center;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.quick-bar::-webkit-scrollbar{display:none}
+.quick-label{flex:0 0 auto;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-right:2px}
+.quick-chip{flex:0 0 auto;border:1px solid var(--line);background:#171c22;color:#cbd2d9;border-radius:999px;padding:7px 10px;cursor:pointer;font-size:12px}
+.quick-chip.active{border-color:var(--accent);color:var(--accent);background:rgba(240,199,94,.08)}
+
+@media (max-width:900px){
+  .app-status{margin-top:10px;align-items:flex-start;flex-direction:column;gap:8px}
+  .status-links{width:100%}
+}
+
+@media (max-width:560px){
+  .topbar{flex-direction:column;gap:12px}
+  .top-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;justify-content:stretch}
+  .top-actions .ghost{display:flex!important;width:100%;padding:9px 8px;font-size:12px;white-space:nowrap}
+  .app-status{padding:0 16px;margin-top:10px}
+  .status-main{gap:7px}
+  .status-copy{font-size:11px}
+  .status-scope{font-size:11px}
+  .status-links{gap:16px}
+  .controls{gap:12px}
+  .quick-bar{margin-right:-2px}
+  .view-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+  .tab{text-align:center;padding:9px 8px}
+  .metrics{grid-template-columns:1fr 1fr}
+  .metric:nth-child(3){display:none!important}
+  .metric:nth-child(4){display:block!important;grid-column:1/-1}
+  .card-foot{font-size:10px}
+}
