@@ -50,6 +50,10 @@ function pct(value) {
   return Number.isFinite(n) ? `${n.toFixed(1)}%` : '—';
 }
 
+function lotAllIn(lot) {
+  return number(lot.estimated_post_tax_total ?? lot.estimated_all_in_total ?? lot.estimated_pre_tax_total);
+}
+
 function saveWatchlist() {
   localStorage.setItem('macbid-hunt-watchlist', JSON.stringify([...state.watchlist]));
 }
@@ -68,7 +72,7 @@ function activeLots(product) {
     if (close !== null && close <= now) return false;
     if (state.condition && lot.condition !== state.condition) return false;
     if (state.noBidders && Number(lot.unique_bidders || 0) !== 0) return false;
-    if (state.maxTotal !== null && Number(lot.estimated_pre_tax_total || Infinity) > state.maxTotal) return false;
+    if (state.maxTotal !== null && Number(lotAllIn(lot) ?? Infinity) > state.maxTotal) return false;
     if (state.closesWithin !== null && (close === null || close > now + state.closesWithin * 3600)) return false;
     return true;
   });
@@ -82,7 +86,7 @@ function lotComparator(mode) {
     return (a, b) => Number(a.unique_bidders || 0) - Number(b.unique_bidders || 0) || Number(a.total_bids || 0) - Number(b.total_bids || 0) || Number(b.deal_score || -9999) - Number(a.deal_score || -9999);
   }
   if (mode === 'cost') {
-    return (a, b) => Number(a.estimated_pre_tax_total || Infinity) - Number(b.estimated_pre_tax_total || Infinity) || Number(b.deal_score || -9999) - Number(a.deal_score || -9999);
+    return (a, b) => Number(lotAllIn(a) ?? Infinity) - Number(lotAllIn(b) ?? Infinity) || Number(b.deal_score || -9999) - Number(a.deal_score || -9999);
   }
   return (a, b) => Number(a.expected_closing_utc || Infinity) - Number(b.expected_closing_utc || Infinity) || Number(b.deal_score || -9999) - Number(a.deal_score || -9999);
 }
@@ -159,7 +163,7 @@ function renderCard(row) {
 
   metrics.append(
     metric('Current bid', money(lot.current_bid)),
-    metric('Est. pre-tax', money(lot.estimated_pre_tax_total), 'good'),
+    metric('Est. all-in', money(lotAllIn(lot)), 'good'),
     metric('Stated retail', money(lot.retail_price || product.retail_price)),
     metric('Closes', closeText(lot.expected_closing_utc))
   );
@@ -215,16 +219,21 @@ function safeMacUrl(value) {
 }
 
 function openDetails(row) {
-  const { product, lot, lots } = row;
+  const { product, lot } = row;
   const bid = Number(lot.current_bid || 0);
-  const premium = bid * Number(state.catalog.buyer_premium_rate || 0.15);
+  const premiumRate = Number(state.catalog.buyer_premium_rate || 0.15);
+  const premium = bid * premiumRate;
   const fee = Number(state.catalog.lot_fee || 3);
+  const taxRate = Number(state.catalog.sales_tax_rate || lot.sales_tax_rate || 0);
+  const subtotal = number(lot.estimated_pre_tax_total) ?? (bid + premium + fee);
+  const estimatedTax = number(lot.estimated_sales_tax) ?? subtotal * taxRate;
+  const allIn = lotAllIn(lot) ?? subtotal + estimatedTax;
   const image = lot.image_url || product.image_url || '';
   const altRows = [...product.lots]
     .filter((entry) => Number(entry.expected_closing_utc || 0) > Date.now() / 1000)
     .sort((a, b) => Number(a.expected_closing_utc || Infinity) - Number(b.expected_closing_utc || Infinity))
     .slice(0, 20)
-    .map((entry) => `<div class="alt"><span>${escapeHtml(entry.condition || '')} · ${money(entry.current_bid)} · ${closeText(entry.expected_closing_utc)}</span><span>${Number(entry.unique_bidders || 0)} bidders</span><a href="${safeMacUrl(entry.macbid_url)}" target="_blank" rel="noreferrer">Open ↗</a></div>`)
+    .map((entry) => `<div class="alt"><span>${escapeHtml(entry.condition || '')} · ${money(entry.current_bid)} · ${money(lotAllIn(entry))} all-in · ${closeText(entry.expected_closing_utc)}</span><span>${Number(entry.unique_bidders || 0)} bidders</span><a href="${safeMacUrl(entry.macbid_url)}" target="_blank" rel="noreferrer">Open ↗</a></div>`)
     .join('');
 
   detailContent.innerHTML = `<div class="detail">
@@ -235,15 +244,17 @@ function openDetails(row) {
       <p class="sub">${escapeHtml([product.brand, product.model, product.upc ? `UPC ${product.upc}` : null].filter(Boolean).join(' · '))}</p>
       <div class="cost-box">
         <div class="cost-row"><span>Current bid</span><strong>${money(bid)}</strong></div>
-        <div class="cost-row"><span>Buyer premium (${(Number(state.catalog.buyer_premium_rate || .15) * 100).toFixed(0)}%)</span><strong>${money(premium)}</strong></div>
+        <div class="cost-row"><span>Buyer premium (${(premiumRate * 100).toFixed(0)}%)</span><strong>${money(premium)}</strong></div>
         <div class="cost-row"><span>Lot fee</span><strong>${money(fee)}</strong></div>
-        <div class="cost-row total"><span>Estimated pre-tax total</span><strong>${money(lot.estimated_pre_tax_total)}</strong></div>
+        <div class="cost-row"><span>Estimated pre-tax subtotal</span><strong>${money(subtotal)}</strong></div>
+        <div class="cost-row"><span>Estimated sales tax (${(taxRate * 100).toFixed(2)}%)</span><strong>${money(estimatedTax)}</strong></div>
+        <div class="cost-row total"><span>Estimated all-in total</span><strong class="good">${money(allIn)}</strong></div>
         <div class="cost-row"><span>MAC.BID stated retail</span><strong>${money(lot.retail_price || product.retail_price)}</strong></div>
         <div class="cost-row"><span>Stated-retail discount</span><strong class="good">${pct(lot.stated_retail_discount_pct)}</strong></div>
         <div class="cost-row"><span>Stated-retail savings</span><strong class="good">${money(lot.stated_retail_savings)}</strong></div>
         <div class="cost-row"><span>Provisional max bid</span><strong>${money(lot.provisional_max_bid)}</strong></div>
       </div>
-      <p class="muted">Provisional ceiling is discovery-only until the exact model and real market price are verified.</p>
+      <p class="muted">Sales tax is an estimate using the configured San Antonio rate and current assumed taxable basis. Provisional ceiling is discovery-only until the exact model, real market price, and actual MAC.BID invoice treatment are verified.</p>
       ${verifiedMarkup(product, lot)}
       <div class="lot-box">
         <strong>Lot state</strong>
@@ -303,7 +314,8 @@ async function loadCatalog() {
     select.append(option);
   }
   const generated = new Date(state.catalog.generated_epoch_utc * 1000).toLocaleString();
-  $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · updated ${generated}`;
+  const tax = Number(state.catalog.sales_tax_rate || 0) * 100;
+  $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
   render();
 }
 
