@@ -51,6 +51,37 @@
     controls.querySelector('.search-wrap')?.after(bar);
   }
 
+  function activeFilterCount() {
+    return [state.category, state.condition, state.closesWithin, state.maxTotal, state.noBidders].filter(Boolean).length;
+  }
+
+  function updateFilterToggle() {
+    const button = document.querySelector('#mobile-filter-toggle');
+    if (!button) return;
+    const count = activeFilterCount();
+    button.textContent = count ? `Filters · ${count} active` : 'Filters';
+  }
+
+  function installMobileFilters() {
+    if (document.querySelector('#mobile-filter-toggle')) return;
+    const button = document.createElement('button');
+    button.id = 'mobile-filter-toggle';
+    button.className = 'mobile-filter-toggle';
+    button.type = 'button';
+    button.setAttribute('aria-expanded', 'false');
+    button.textContent = 'Filters';
+    button.addEventListener('click', () => {
+      const open = controls.classList.toggle('filters-open');
+      button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    controls.querySelector('.view-tabs')?.after(button);
+
+    ['#category', '#condition', '#closes-within', '#max-total', '#no-bidders'].forEach((selector) => {
+      document.querySelector(selector)?.addEventListener('change', updateFilterToggle);
+      document.querySelector(selector)?.addEventListener('input', updateFilterToggle);
+    });
+  }
+
   function nextScheduleText() {
     const now = new Date();
     const current = now.getMinutes();
@@ -103,6 +134,11 @@
 
   installStatusStrip();
   installQuickBar();
+  installMobileFilters();
+
+  if (window.matchMedia('(max-width: 560px)').matches) {
+    search.placeholder = 'Search products, brands…';
+  }
 
   const initial = new URL(window.location.href).searchParams.get('q');
   if (initial) setQuery(initial);
@@ -123,12 +159,16 @@
     url.searchParams.delete('q');
     history.replaceState(null, '', url);
     document.querySelectorAll('.quick-chip').forEach((button) => button.classList.remove('active'));
+    controls.classList.remove('filters-open');
+    document.querySelector('#mobile-filter-toggle')?.setAttribute('aria-expanded', 'false');
+    setTimeout(updateFilterToggle, 0);
   });
 
   const waitForCatalog = setInterval(() => {
     if (!state.catalog) return;
     clearInterval(waitForCatalog);
     updateStatus();
+    updateFilterToggle();
   }, 100);
   setInterval(updateStatus, 30_000);
 })();
