@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -29,9 +30,15 @@ def main() -> int:
     config = data.get("policy", {})
     inventory = list(data.get("inventory", []))
     limits = config.get("views", {})
+    final_epoch = int(time.time())
+
+    # A lot can legitimately close between the first Typesense page and final
+    # ranking. Re-check the exact close timestamp here so surfaced views contain
+    # only still-active candidates at artifact creation time.
+    active_inventory = [lot for lot in inventory if exact_close_key(lot) > final_epoch]
 
     ending = sorted(
-        inventory,
+        active_inventory,
         key=lambda x: (
             exact_close_key(x),
             condition_rank(str(x.get("condition") or ""), config),
@@ -39,7 +46,7 @@ def main() -> int:
         ),
     )
     best = sorted(
-        inventory,
+        active_inventory,
         key=lambda x: (
             -float(x.get("deal_score") or 0),
             condition_rank(str(x.get("condition") or ""), config),
@@ -47,7 +54,7 @@ def main() -> int:
         ),
     )
     low_comp = sorted(
-        inventory,
+        active_inventory,
         key=lambda x: (
             int(x.get("unique_bidders") or 0),
             int(x.get("total_bids") or 0),
@@ -75,10 +82,15 @@ def main() -> int:
         "low_competition": collapsed_low[: int(limits.get("low_competition", 100))],
         "verification_queue": verification,
     }
-    data.setdefault("scan", {})["unique_product_candidates"] = len({product_identity(lot) for lot in inventory})
-    data["scan"]["duplicate_lots_collapsed"] = len(inventory) - data["scan"]["unique_product_candidates"]
+    data.setdefault("scan", {})["final_view_epoch_utc"] = final_epoch
+    data["scan"]["active_at_final_ranking"] = len(active_inventory)
+    data["scan"]["closed_during_scan"] = len(inventory) - len(active_inventory)
+    data["scan"]["unique_product_candidates"] = len({product_identity(lot) for lot in active_inventory})
+    data["scan"]["duplicate_lots_collapsed"] = len(active_inventory) - data["scan"]["unique_product_candidates"]
 
     REPORT.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"POSTPROCESS_ACTIVE={data['scan']['active_at_final_ranking']}")
+    print(f"POSTPROCESS_CLOSED_DURING_SCAN={data['scan']['closed_during_scan']}")
     print(f"POSTPROCESS_UNIQUE_PRODUCTS={data['scan']['unique_product_candidates']}")
     print(f"POSTPROCESS_DUPLICATE_LOTS={data['scan']['duplicate_lots_collapsed']}")
     for view, rows in data["views"].items():
