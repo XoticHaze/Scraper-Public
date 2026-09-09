@@ -6,6 +6,7 @@
     "LIKE NEW": 0,
     "OPEN BOX": 1
   },
+  "include_pallets": false,
   "minimum_stated_retail": 40.0,
   "buyer_premium_rate": 0.15,
   "lot_fee": 3.0,
@@ -16,6 +17,7 @@
   "views": {
     "ending_soon": 100,
     "best_value": 100,
-    "low_competition": 100
+    "low_competition": 100,
+    "verification_queue": 100
   }
 }
