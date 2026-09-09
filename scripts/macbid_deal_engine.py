@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -19,11 +20,12 @@ SAFE_DOC_KEYS = {
     "id", "lot_id", "lot_number", "inventory_id", "auction_id", "auction_number",
     "auction_title", "auction_location", "product_name", "title", "name", "description",
     "condition", "condition_name", "retail_price", "retail", "current_bid", "current_price",
-    "price", "expected_close_date", "end_time", "closing_date", "closing_date_utc",
-    "pickup_date", "location_id", "location_name", "building_id", "building_name", "city_state",
-    "code", "upc", "asin", "model", "model_number", "manufacturer", "brand", "stock_image_url",
-    "image_url", "slug", "url", "is_open", "status", "total_bids", "unique_bidders",
-    "watchers_count", "box_size", "category", "ranking_weight"
+    "price", "expected_close_date", "expected_closing_utc", "end_time", "closing_date",
+    "closing_date_utc", "pickup_date", "location_id", "location_name", "building_id",
+    "building_name", "city_state", "code", "upc", "asin", "model", "model_number",
+    "manufacturer", "brand", "stock_image_url", "image_url", "slug", "url", "is_open",
+    "is_pallet", "status", "total_bids", "unique_bidders", "watchers_count", "box_size",
+    "category", "ranking_weight"
 }
 SENSITIVE = re.compile(
     r"(?:token|auth|cookie|session|secret|api.?key|signature|credential|jwt|password|email|phone|user)",
@@ -104,15 +106,23 @@ def list_filter(field: str, values: list[str]) -> str:
     return f"{field}:=[{rendered}]"
 
 
-def catalog_filter(locations: list[str], conditions: list[str], min_retail: float) -> str:
-    return " && ".join(
-        [
-            "is_open:=1",
-            list_filter("auction_location", locations),
-            list_filter("condition", conditions),
-            f"retail_price:>={min_retail:g}",
-        ]
-    )
+def catalog_filter(
+    locations: list[str],
+    conditions: list[str],
+    min_retail: float,
+    include_pallets: bool,
+    now_epoch: int,
+) -> str:
+    parts = [
+        "is_open:=1",
+        f"expected_closing_utc:>{now_epoch}",
+        list_filter("auction_location", locations),
+        list_filter("condition", conditions),
+        f"retail_price:>={min_retail:g}",
+    ]
+    if not include_pallets:
+        parts.append("is_pallet:=false")
+    return " && ".join(parts)
 
 
 def condition_rank(condition: str, config: dict[str, Any]) -> int:
@@ -123,9 +133,12 @@ def condition_rank(condition: str, config: dict[str, Any]) -> int:
         return 999
 
 
-def close_date_key(lot: dict[str, Any]) -> str:
-    value = lot.get("expected_close_date")
-    return str(value) if value else "9999-12-31"
+def exact_close_key(lot: dict[str, Any]) -> float:
+    value = lot.get("expected_closing_utc")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("inf")
 
 
 def main() -> int:
@@ -134,12 +147,14 @@ def main() -> int:
     preferred_condition_list = [str(v).upper() for v in config["preferred_conditions"]]
     preferred_conditions = set(preferred_condition_list)
     excluded_conditions = {str(v).upper() for v in config["excluded_conditions"]}
+    include_pallets = bool(config.get("include_pallets", False))
     min_retail = float(config["minimum_stated_retail"])
     premium_rate = float(config["buyer_premium_rate"])
     lot_fee = float(config["lot_fee"])
+    now_epoch = int(time.time())
 
     report: dict[str, Any] = {
-        "schema": "macbid-deal-engine-v2",
+        "schema": "macbid-deal-engine-v3",
         "source": LOCATION_PAGE,
         "policy": config,
         "privacy": {
@@ -189,14 +204,22 @@ def main() -> int:
             raise RuntimeError("No local MAC.BID search contract observed")
 
         selected_search["q"] = "*"
-        selected_search["filter_by"] = catalog_filter(locations, preferred_condition_list, min_retail)
-        selected_search["sort_by"] = "expected_close_date:asc"
+        selected_search["filter_by"] = catalog_filter(
+            locations,
+            preferred_condition_list,
+            min_retail,
+            include_pallets,
+            now_epoch,
+        )
+        # Exact contract observed from MAC.BID's own "Ending Soonest" control.
+        selected_search["sort_by"] = "expected_closing_utc:asc,ranking_weight:desc"
         selected_search["per_page"] = 250
         selected_search["page"] = 1
 
         report["scan"]["typesense_host"] = urlsplit(selected_url).hostname or ""
         report["scan"]["filter_by"] = selected_search["filter_by"]
         report["scan"]["sort_by"] = selected_search["sort_by"]
+        report["scan"]["scan_epoch_utc"] = now_epoch
 
         all_docs: list[dict[str, Any]] = []
         page_num = 1
@@ -257,10 +280,14 @@ def main() -> int:
             excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
             continue
 
+        scoring_lot = dict(lot)
+        if lot.get("expected_closing_utc") is not None:
+            scoring_lot["live_close_time"] = lot["expected_closing_utc"]
+
         scored = dict(lot)
         scored.update(
             score_lot(
-                lot,
+                scoring_lot,
                 premium_rate=premium_rate,
                 lot_fee=lot_fee,
                 low_value_retail_floor=min_retail,
@@ -272,12 +299,10 @@ def main() -> int:
     report["scan"]["excluded_counts"] = excluded_counts
     report["inventory"] = eligible
 
-    # Typesense gives us the correct close *date*. Exact within-day time is a
-    # separate public lot-state enrichment step; never invent midnight.
     ending_soon = sorted(
         eligible,
         key=lambda x: (
-            close_date_key(x),
+            exact_close_key(x),
             condition_rank(str(x.get("condition") or ""), config),
             -float(x.get("deal_score") or 0),
         ),
@@ -287,7 +312,7 @@ def main() -> int:
         key=lambda x: (
             -float(x.get("deal_score") or 0),
             condition_rank(str(x.get("condition") or ""), config),
-            close_date_key(x),
+            exact_close_key(x),
         ),
     )
     low_competition = sorted(
@@ -296,7 +321,7 @@ def main() -> int:
             int(x.get("unique_bidders") or 0),
             int(x.get("total_bids") or 0),
             -float(x.get("deal_score") or 0),
-            close_date_key(x),
+            exact_close_key(x),
         ),
     )
 
@@ -327,7 +352,8 @@ def main() -> int:
                         "retail_price": lot.get("retail_price"),
                         "estimated_pre_tax_total": lot.get("estimated_pre_tax_total"),
                         "deal_score": lot.get("deal_score"),
-                        "expected_close_date": lot.get("expected_close_date"),
+                        "expected_closing_utc": lot.get("expected_closing_utc"),
+                        "hours_until_close": lot.get("hours_until_close"),
                         "unique_bidders": lot.get("unique_bidders"),
                         "lot_number": lot.get("lot_number"),
                         "auction_number": lot.get("auction_number"),
