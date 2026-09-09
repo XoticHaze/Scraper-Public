@@ -14,6 +14,7 @@
 .quick-label{flex:0 0 auto;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-right:2px}
 .quick-chip{flex:0 0 auto;border:1px solid var(--line);background:#171c22;color:#cbd2d9;border-radius:999px;padding:7px 10px;cursor:pointer;font-size:12px}
 .quick-chip.active{border-color:var(--accent);color:var(--accent);background:rgba(240,199,94,.08)}
+.mobile-filter-toggle{display:none;border:1px solid var(--line);background:#171c22;color:var(--text);border-radius:11px;padding:10px 12px;font-weight:800;cursor:pointer}
 
 @media (max-width:900px){
   .app-status{margin-top:10px;align-items:flex-start;flex-direction:column;gap:8px}
@@ -21,18 +22,21 @@
 }
 
 @media (max-width:560px){
-  .topbar{flex-direction:column;gap:12px}
-  .top-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;justify-content:stretch}
-  .top-actions .ghost{display:flex!important;width:100%;padding:9px 8px;font-size:12px;white-space:nowrap}
-  .app-status{padding:0 16px;margin-top:10px}
-  .status-main{gap:7px}
+  .topbar{flex-direction:column;gap:10px;padding-bottom:12px}
+  .top-actions{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;justify-content:stretch}
+  .top-actions .ghost{display:flex!important;width:100%;padding:8px 5px;font-size:11px;white-space:nowrap}
+  .top-actions a:last-child{display:none!important}
+  .app-status{padding:0 16px;margin-top:8px;gap:4px}
+  .status-main{gap:6px}
   .status-copy{font-size:11px}
-  .status-scope{font-size:11px}
-  .status-links{gap:16px}
-  .controls{gap:12px}
+  .status-scope,.status-links{display:none}
+  .controls{gap:11px}
   .quick-bar{margin-right:-2px}
   .view-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
   .tab{text-align:center;padding:9px 8px}
+  .mobile-filter-toggle{display:block;width:100%}
+  .controls:not(.filters-open) .filters{display:none!important}
+  .controls.filters-open .filters{display:grid!important}
   .metrics{grid-template-columns:1fr 1fr}
   .metric:nth-child(3){display:none!important}
   .metric:nth-child(4){display:block!important;grid-column:1/-1}
