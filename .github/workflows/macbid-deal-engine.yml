@@ -69,6 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check ui/app.js
+          node --check ui/app-enhancements.js
           node --check ui/catalog-loader.js
           python scripts/macbid_build_ui.py
           python - <<'PY'
@@ -79,6 +80,8 @@ jobs:
           assert data['product_count'] > 0
           assert data['lot_count'] > 0
           assert Path('site/catalog.js').exists()
+          assert Path('site/app-enhancements.js').exists()
+          assert Path('site/enhancements.css').exists()
           assert all(
               lot.get('auction_location') == 'San Antonio'
               for product in data['products']
@@ -101,16 +104,35 @@ jobs:
           url = Path('site/index.html').resolve().as_uri()
           with sync_playwright() as p:
               browser = p.chromium.launch(headless=True)
-              page = browser.new_page(viewport={"width": 1440, "height": 1100})
-              page.goto(url, wait_until='domcontentloaded', timeout=30000)
-              page.wait_for_selector('.card', timeout=30000)
-              assert page.locator('.card').count() > 0
-              assert page.locator('.card img[src]').count() > 0
-              assert 'products' in page.locator('#catalog-meta').inner_text().lower()
-              page.fill('#search', 'a')
-              page.wait_for_timeout(100)
-              assert int(page.locator('#result-count').inner_text().replace(',', '')) >= 0
-              print('UI_DIRECT_OPEN_SMOKE=PASS')
+
+              desktop = browser.new_page(viewport={"width": 1440, "height": 1100})
+              desktop.goto(url, wait_until='domcontentloaded', timeout=30000)
+              desktop.wait_for_selector('.card', timeout=30000)
+              desktop.wait_for_selector('.app-status', timeout=30000)
+              assert desktop.locator('.card').count() > 0
+              assert desktop.locator('.card img[src]').count() > 0
+              assert desktop.locator('.quick-chip').count() >= 6
+              assert desktop.locator('#snapshot-health').inner_text()
+              assert 'products' in desktop.locator('#catalog-meta').inner_text().lower()
+              desktop.fill('#search', 'a')
+              desktop.wait_for_timeout(100)
+              assert int(desktop.locator('#result-count').inner_text().replace(',', '')) >= 0
+              desktop.close()
+
+              mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True)
+              mobile.goto(url, wait_until='domcontentloaded', timeout=30000)
+              mobile.wait_for_selector('.card', timeout=30000)
+              mobile.wait_for_selector('.app-status', timeout=30000)
+              top_links = mobile.locator('.top-actions a')
+              assert top_links.count() >= 3
+              for idx in range(top_links.count()):
+                  assert top_links.nth(idx).is_visible(), f'top action {idx} hidden on mobile'
+              close_metric = mobile.locator('.card').first.locator('.metric').nth(3)
+              assert close_metric.is_visible(), 'close time hidden on mobile'
+              assert close_metric.inner_text().strip()
+              assert mobile.evaluate('document.body.scrollWidth') <= 390
+              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile')
+              mobile.close()
               browser.close()
           PY
 
