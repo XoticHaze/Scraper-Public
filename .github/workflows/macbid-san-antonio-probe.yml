@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'scripts/macbid_probe.py'
+      - 'scripts/macbid_search_discovery.py'
       - '.github/workflows/macbid-san-antonio-probe.yml'
 
 permissions:
@@ -15,7 +16,7 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -36,12 +37,18 @@ jobs:
           set -euo pipefail
           python scripts/macbid_probe.py
 
-      - name: Show sanitized report
+      - name: Discover live search routing and lot cards
+        run: |
+          set -euo pipefail
+          python scripts/macbid_search_discovery.py
+
+      - name: Show sanitized reports
         if: always()
         run: |
           set -euo pipefail
-          if [ -f results/macbid-san-antonio-probe.json ]; then
-            python -m json.tool results/macbid-san-antonio-probe.json
-          else
-            echo 'No report file was produced.'
-          fi
+          for report in results/macbid-san-antonio-probe.json results/macbid-search-discovery.json; do
+            if [ -f "$report" ]; then
+              echo "===== $report ====="
+              python -m json.tool "$report"
+            fi
+          done
