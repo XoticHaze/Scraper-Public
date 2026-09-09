@@ -10,6 +10,9 @@ on:
         type: string
   repository_dispatch:
     types: [refresh]
+  workflow_run:
+    workflows: ['Scraper Public CI']
+    types: [completed]
   schedule:
     - cron: '17,47 * * * *'
 
@@ -24,6 +27,7 @@ concurrency:
 
 jobs:
   engine:
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -193,7 +197,7 @@ jobs:
           path: site
 
   deploy-pages:
-    if: ${{ github.ref == 'refs/heads/main' && needs.engine.result == 'success' }}
+    if: ${{ needs.engine.result == 'success' && (github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main') }}
     needs: engine
     runs-on: ubuntu-24.04
     timeout-minutes: 5
