@@ -10,6 +10,8 @@ on:
 permissions:
   contents: read
 
+# Public-target probe only. Never add cookies, auth headers, browser storage,
+# account state, or non-public payloads to this direct workflow.
 jobs:
   probe:
     runs-on: ubuntu-24.04
