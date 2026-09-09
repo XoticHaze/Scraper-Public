@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/macbid_probe.py'
       - 'scripts/macbid_search_discovery.py'
+      - 'scripts/macbid_location_discovery.py'
       - '.github/workflows/macbid-san-antonio-probe.yml'
 
 permissions:
@@ -37,6 +38,11 @@ jobs:
           set -euo pipefail
           python scripts/macbid_probe.py
 
+      - name: Discover San Antonio location filters
+        run: |
+          set -euo pipefail
+          python scripts/macbid_location_discovery.py
+
       - name: Discover live search routing and lot cards
         run: |
           set -euo pipefail
@@ -46,11 +52,10 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          for report in results/macbid-san-antonio-probe.json results/macbid-search-discovery.json; do
-            if [ -f "$report" ]; then
-              echo "===== $report ====="
-              python -m json.tool "$report"
-            fi
+          for report in results/*.json; do
+            [ -f "$report" ] || continue
+            echo "===== $report ====="
+            python -m json.tool "$report"
           done
 
       - name: Upload sanitized discovery reports
