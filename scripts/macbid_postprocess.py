@@ -17,9 +17,11 @@ def condition_rank(condition: str, config: dict[str, Any]) -> int:
         return 999
 
 
-def close_date_key(lot: dict[str, Any]) -> str:
-    value = lot.get("expected_close_date")
-    return str(value) if value else "9999-12-31"
+def exact_close_key(lot: dict[str, Any]) -> float:
+    try:
+        return float(lot.get("expected_closing_utc"))
+    except (TypeError, ValueError):
+        return float("inf")
 
 
 def main() -> int:
@@ -31,7 +33,7 @@ def main() -> int:
     ending = sorted(
         inventory,
         key=lambda x: (
-            close_date_key(x),
+            exact_close_key(x),
             condition_rank(str(x.get("condition") or ""), config),
             -float(x.get("deal_score") or 0),
         ),
@@ -41,7 +43,7 @@ def main() -> int:
         key=lambda x: (
             -float(x.get("deal_score") or 0),
             condition_rank(str(x.get("condition") or ""), config),
-            close_date_key(x),
+            exact_close_key(x),
         ),
     )
     low_comp = sorted(
@@ -50,7 +52,7 @@ def main() -> int:
             int(x.get("unique_bidders") or 0),
             int(x.get("total_bids") or 0),
             -float(x.get("deal_score") or 0),
-            close_date_key(x),
+            exact_close_key(x),
         ),
     )
 
@@ -58,8 +60,9 @@ def main() -> int:
     collapsed_best = collapse_ranked(best)
     collapsed_low = collapse_ranked(low_comp)
 
+    verification_limit = int(limits.get("verification_queue", 100))
     verification = []
-    for lot in collapsed_best[:100]:
+    for lot in collapsed_best[:verification_limit]:
         candidate = dict(lot)
         candidate["market_price_status"] = "unverified"
         candidate["candidate_score_kind"] = "discovery_only"
@@ -88,7 +91,8 @@ def main() -> int:
                         "condition": lot.get("condition"),
                         "current_bid": lot.get("current_bid"),
                         "retail_price": lot.get("retail_price"),
-                        "expected_close_date": lot.get("expected_close_date"),
+                        "expected_closing_utc": lot.get("expected_closing_utc"),
+                        "hours_until_close": lot.get("hours_until_close"),
                         "unique_bidders": lot.get("unique_bidders"),
                         "duplicate_lot_count": lot.get("duplicate_lot_count"),
                         "macbid_url": lot.get("macbid_url"),
