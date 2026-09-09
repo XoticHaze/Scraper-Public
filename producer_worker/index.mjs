@@ -267,15 +267,15 @@ export async function processRun(env, runId, contractId) {
     contract_version: String(recipient.contract_version), workload_id: request.workload_id, result_private_jwk: result.private_jwk,
     result_root: `rendezvous/results/${runId}/${contractId}`, status: 'workload_published', created_at: new Date().toISOString(),
   };
-  await putFile(token, privateRepo, statePath, 'main', Buffer.from(`${JSON.stringify(state, null, 2)}\n`), `producer state ${runId}`);
-  return { status: 'published', workload_id: request.workload_id };
+  await putFile(token, privateRepo, statePath, 'main', Buffer.from(`${JSON.stringify(state, null, 2)}\n`), `private producer state ${runId}`);
+  return { status: 'workload_published' };
 }
 
 async function collectOne(env, token, publicRepo, privateRepo, exchangeRef, statePath, state) {
-  if (state.status === 'result_stored') return false;
-  const envRaw = await readFile(token, publicRepo, `${state.result_root}/result-envelope.json`, exchangeRef, true);
-  if (!envRaw) return false;
-  const envelope = JSON.parse(envRaw.toString('utf8'));
+  if (state.status !== 'workload_published') return false;
+  const envelopeRaw = await readFile(token, publicRepo, `${state.result_root}/result-envelope.json`, exchangeRef, true);
+  if (!envelopeRaw) return false;
+  const envelope = JSON.parse(envelopeRaw.toString('utf8'));
   const parts = [];
   for (const node of envelope.chunks || []) {
     const chunk = await readFile(token, publicRepo, node.path, exchangeRef);
@@ -325,18 +325,9 @@ async function catchUp(env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request) {
     const url = new URL(request.url);
-    if (request.method === 'GET' && url.pathname === '/health') return Response.json({ ok: true, service: 'private-envelope-producer' });
-    if (request.method === 'POST' && url.pathname === '/v1/private-compute/notify') {
-      try {
-        const body = await request.json();
-        const result = await processRun(env, String(body.run_id || ''), String(body.contract_id || ''));
-        return Response.json({ ok: true, ...result }, { status: 202 });
-      } catch (e) {
-        return Response.json({ ok: false, error: String(e.message || e) }, { status: 400 });
-      }
-    }
+    if (request.method === 'GET' && url.pathname === '/health') return Response.json({ ok: true, service: 'private-envelope-producer', mode: 'cron-only' });
     return Response.json({ ok: false, error: 'not_found' }, { status: 404 });
   },
   async scheduled(controller, env, ctx) { ctx.waitUntil(catchUp(env)); },
