@@ -33,7 +33,6 @@ env:
   RESPONSE_ROOT: rendezvous/responses
   INPUT_CONTRACT_ID: ${{ inputs.contract_id || '' }}
   INPUT_WORKLOAD_ID: ${{ inputs.workload_id || '' }}
-  PRODUCER_URL: ${{ vars.PRIVATE_ENVELOPE_PRODUCER_URL }}
 
 jobs:
   consume:
@@ -146,28 +145,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --branch "$EXCHANGE_REF" \
             --path "$run_root/$CONTRACT_ID.json" \
             --file "$RUNNER_TEMP/encrypted-compute-recipient.json"
-
-      - name: Notify trusted private envelope producer
-        run: |
-          set -euo pipefail
-          if [ -z "${PRODUCER_URL:-}" ]; then
-            echo 'PRIVATE_ENVELOPE_PRODUCER_URL is not configured; waiting for a producer/catch-up service.'
-            exit 0
-          fi
-          payload=$(python - <<'PY'
-          import json, os
-          print(json.dumps({'run_id': os.environ['GITHUB_RUN_ID'], 'contract_id': os.environ['CONTRACT_ID']}))
-          PY
-          )
-          if curl -fsS --max-time 30 --retry 2 \
-            -H 'content-type: application/json' \
-            -d "$payload" \
-            "${PRODUCER_URL%/}/v1/private-compute/notify"; then
-            echo
-            echo 'PRIVATE_PRODUCER_NOTIFY=accepted'
-          else
-            echo 'PRIVATE_PRODUCER_NOTIFY=failed; producer cron catch-up may still service this run.'
-          fi
+          echo 'PRIVATE_PRODUCER_MODE=trusted-cron-catch-up'
 
       - name: Wait for run-bound encrypted workload
         env:
