@@ -28,6 +28,10 @@ LOT_FIELDS = (
     "current_bid",
     "retail_price",
     "estimated_pre_tax_total",
+    "estimated_sales_tax",
+    "estimated_post_tax_total",
+    "estimated_all_in_total",
+    "sales_tax_rate",
     "stated_retail_discount_pct",
     "stated_retail_savings",
     "deal_score",
@@ -157,6 +161,8 @@ def main() -> int:
         "locations": policy.get("locations", []),
         "buyer_premium_rate": policy.get("buyer_premium_rate", 0.15),
         "lot_fee": policy.get("lot_fee", 3.0),
+        "sales_tax_rate": policy.get("sales_tax_rate", 0.0),
+        "sales_tax_scope": policy.get("sales_tax_scope"),
         "minimum_stated_retail": policy.get("minimum_stated_retail"),
         "product_count": len(products),
         "lot_count": len(inventory),
@@ -197,6 +203,7 @@ def main() -> int:
     print(f"UI_LOTS={len(inventory)}")
     print(f"UI_HUNT_PROFILES={len(public_profiles)}")
     print(f"UI_RESEARCH_CORRECTIONS={sum(bool(p.get('research_suppressed_hunts')) for p in products)}")
+    print(f"UI_SALES_TAX_RATE={catalog['sales_tax_rate']}")
     for profile in public_profiles:
         print(f"UI_HUNT {profile['id']}={profile['count']}")
     print(f"UI_ACTION_MANIFEST={'yes' if APP_ACTIONS.exists() else 'no'}")
