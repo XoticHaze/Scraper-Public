@@ -1,0 +1,1 @@
+{"authority": "private_compute_only", "contract_id": "python-bundle-v1", "contract_version": "1", "direction": "workload", "recipient_b64": "8+ra30uwENid2R9/UxKw3Y3dd26vvaLa2MQFZ+pBcHg=", "recipient_key_id": "sha256:d410662a626a0f1b5cfcae217c4b31ba8aa3a7856f8efc977e58f2d0d91c2686", "run_id": "34321562721", "schema": "repo-app-ephemeral-recipient-v1"}
