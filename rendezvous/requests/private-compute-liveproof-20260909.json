@@ -1,0 +1,5 @@
+{
+  "schema": "repo-app-encrypted-compute-request-v1",
+  "contract_id": "python-bundle-v1",
+  "purpose": "public non-secret end-to-end transport proof"
+}
