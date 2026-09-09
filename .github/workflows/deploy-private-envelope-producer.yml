@@ -1,0 +1,41 @@
+name: Deploy Private Envelope Producer
+run-name: Deploy private producer · #${{ github.run_number }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-private-envelope-producer
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Validate producer source
+        run: |
+          set -euo pipefail
+          node --check producer_worker/index.mjs
+          python -m json.tool producer_worker/wrangler.jsonc >/dev/null 2>&1 || true
+
+      - name: Deploy Cloudflare Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN'; exit 2; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID'; exit 2; }
+          npx --yes wrangler@4.129.1 deploy --config producer_worker/wrangler.jsonc
+
+      - name: Deployment note
+        run: |
+          echo 'Worker secrets must already contain GITHUB_APP_ID, GITHUB_INSTALLATION_ID, and GITHUB_APP_PRIVATE_KEY.'
+          echo 'After deployment, set repository variable PRIVATE_ENVELOPE_PRODUCER_URL to the Worker URL.'
