@@ -12,6 +12,7 @@ on:
       - 'tools/**'
       - 'ui/**'
       - 'tests/**'
+      - 'docs/**'
       - '.github/workflows/**'
   pull_request:
     paths:
@@ -24,6 +25,7 @@ on:
       - 'tools/**'
       - 'ui/**'
       - 'tests/**'
+      - 'docs/**'
       - '.github/workflows/**'
 
 permissions:
@@ -74,7 +76,7 @@ jobs:
           set -euo pipefail
           pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
 
-      - name: Validate engine, app, hunt, and private-compute policy
+      - name: Validate engine, app, hunt, privacy, and private-compute policy
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -111,6 +113,16 @@ jobs:
           assert Path('ui/finds.js').exists()
           assert Path('ui/finds.css').exists()
           assert Path('producer_worker/index.mjs').exists()
+          assert Path('docs/PRIVACY_BOUNDARY.md').exists()
+
+          finds_html = Path('ui/finds.html').read_text()
+          assert 'stays only in this browser/device' in finds_html
+          app_js = Path('ui/app.js').read_text()
+          assert "localStorage.getItem('macbid-hunt-watchlist')" in app_js
+          assert "localStorage.setItem('macbid-hunt-watchlist'" in app_js
+          producer_js = Path('producer_worker/index.mjs').read_text()
+          assert '/v1/private-compute/notify' not in producer_js
+          assert "mode: 'cron-only'" in producer_js
 
           contracts = json.loads(Path('config/encrypted_compute_contracts.json').read_text())
           assert contracts['schema'] == 'repo-app-encrypted-compute-contracts-v1'
