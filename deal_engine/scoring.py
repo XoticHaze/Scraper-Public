@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import math
+import re
 from datetime import datetime, timezone
 from typing import Any
+
+DATE_ONLY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def number(value: Any) -> float | None:
@@ -16,6 +19,15 @@ def number(value: Any) -> float | None:
             return float(text)
         except ValueError:
             return None
+    return None
+
+
+def first_present(mapping: dict[str, Any], *keys: str) -> Any:
+    """Return the first non-None value, preserving valid zero values."""
+    for key in keys:
+        value = mapping.get(key)
+        if value is not None:
+            return value
     return None
 
 
@@ -53,7 +65,6 @@ def parse_close(value: Any) -> datetime | None:
     if value is None:
         return None
     if isinstance(value, (int, float)):
-        # Handle seconds or milliseconds since epoch.
         raw = float(value)
         if raw > 10_000_000_000:
             raw /= 1000.0
@@ -62,7 +73,12 @@ def parse_close(value: Any) -> datetime | None:
         except (ValueError, OSError, OverflowError):
             return None
     if isinstance(value, str):
-        text = value.strip().replace("Z", "+00:00")
+        raw = value.strip()
+        # MAC.BID's public Typesense expected_close_date is a calendar date only.
+        # Do not invent midnight as an exact close time; enrichment handles that.
+        if DATE_ONLY_RE.fullmatch(raw):
+            return None
+        text = raw.replace("Z", "+00:00")
         try:
             dt = datetime.fromisoformat(text)
             if dt.tzinfo is None:
@@ -90,17 +106,17 @@ def score_lot(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     condition = str(lot.get("condition") or "").strip().upper()
-    retail = number(lot.get("retail_price") or lot.get("retail"))
-    bid = number(lot.get("current_bid") or lot.get("current_price") or lot.get("price"))
+    retail = number(first_present(lot, "retail_price", "retail"))
+    bid = number(first_present(lot, "current_bid", "current_price", "price"))
     total = estimated_pre_tax_total(bid, premium_rate=premium_rate, lot_fee=lot_fee)
     bidders = int(number(lot.get("unique_bidders")) or 0)
     bids = int(number(lot.get("total_bids")) or 0)
-    hours = hours_until_close(lot.get("expected_close_date") or lot.get("closing_date") or lot.get("end_time"), now=now)
+    close_value = first_present(lot, "live_close_time", "end_time", "closing_date", "expected_close_date")
+    hours = hours_until_close(close_value, now=now)
 
     score = 0.0
     reasons: list[str] = []
 
-    # Condition quality. Damaged/unknown should normally be filtered before scoring.
     if condition == "LIKE NEW":
         score += 16
         reasons.append("like-new condition")
@@ -116,7 +132,6 @@ def score_lot(
     if retail is not None and retail > 0 and total is not None:
         discount_pct = max(-1.0, min(1.0, 1.0 - (total / retail)))
         savings = retail - total
-        # Main value signal: percentage spread plus meaningful absolute dollars.
         score += max(-20.0, min(42.0, discount_pct * 48.0))
         if savings > 0:
             score += min(24.0, math.log1p(savings) * 4.0)
@@ -131,7 +146,6 @@ def score_lot(
         score -= 8.0
         reasons.append("missing usable retail/current bid")
 
-    # Less competition is valuable, especially shortly before close.
     if bidders == 0:
         score += 10
         reasons.append("no bidders yet")
@@ -147,7 +161,7 @@ def score_lot(
     if bids >= 20:
         score -= 4
 
-    # Urgency is intentionally small. Ending Soon is a separate primary view.
+    # Exact urgency only applies after an exact live close time is available.
     if hours is not None:
         if 0 <= hours <= 6:
             score += 5
