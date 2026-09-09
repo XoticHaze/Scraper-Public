@@ -50,54 +50,53 @@ def main() -> int:
         page.goto(URL, wait_until="domcontentloaded", timeout=60_000)
         page.wait_for_timeout(5_000)
 
-        # Surface select/options without dumping arbitrary page state.
-        selects = page.locator("select").evaluate_all(
-            """els => els.map((s, i) => ({index:i, value:s.value, options:[...s.options].map(o => ({text:o.textContent.trim(), value:o.value}))}))"""
-        )
-        print("SORT_SELECTS " + json.dumps(selects, sort_keys=True))
-
-        candidates = page.locator("button, [role='button'], label").evaluate_all(
+        controls = page.locator("button, [role='button'], label").evaluate_all(
             """els => els.map((e,i) => ({i, text:(e.innerText || e.textContent || '').trim().slice(0,200), aria:e.getAttribute('aria-label') || ''}))
                 .filter(x => /sort|ending|soon|close|price/i.test(x.text + ' ' + x.aria)).slice(0,80)"""
         )
-        print("SORT_CONTROLS " + json.dumps(candidates, sort_keys=True))
+        print("SORT_CONTROLS " + json.dumps(controls, sort_keys=True))
 
-        # First try a native select option containing Ending/Soonest.
         changed = False
-        for idx, select in enumerate(selects):
-            for option in select.get("options", []):
-                text = str(option.get("text", ""))
-                if "ending" in text.lower() or "soonest" in text.lower():
-                    page.locator("select").nth(idx).select_option(str(option.get("value", "")))
-                    page.wait_for_timeout(4_000)
-                    print(f"SORT_SELECTED select={idx} text={text!r} value={option.get('value')!r}")
-                    changed = True
-                    break
-            if changed:
-                break
 
-        # Custom dropdown fallback.
+        # The current MAC.BID UI renders the sort choices as custom controls rather
+        # than a native <select>. Try the visible choice directly first.
+        try:
+            choice = page.get_by_text("Ending Soonest", exact=True).first
+            choice.click(timeout=5_000)
+            page.wait_for_timeout(4_000)
+            print("SORT_CLICKED_DIRECT Ending Soonest")
+            changed = True
+        except Exception as direct_error:
+            print(f"SORT_DIRECT_MISS={type(direct_error).__name__}")
+
         if not changed:
-            trigger = page.get_by_role("button", name=lambda name: bool(name and "sort" in name.lower())).first
-            try:
-                trigger.click(timeout=5_000)
-                page.wait_for_timeout(500)
-            except Exception:
-                pass
-            for pattern in ("Ending Soon", "Ending Soonest", "Soonest", "Closing Soon"):
+            # Open the custom sort menu using literal selectors only. Avoid callable
+            # role-name selectors because Playwright Python expects str/regex here.
+            opened = False
+            for label in ("Sort: Best Match", "Sort"):
                 try:
-                    choice = page.get_by_text(pattern, exact=False).first
-                    choice.click(timeout=3_000)
-                    page.wait_for_timeout(4_000)
-                    print(f"SORT_CLICKED pattern={pattern!r}")
-                    changed = True
+                    trigger = page.get_by_text(label, exact=True).first
+                    trigger.click(timeout=4_000)
+                    page.wait_for_timeout(700)
+                    print(f"SORT_TRIGGER_CLICKED {label!r}")
+                    opened = True
                     break
                 except Exception:
                     continue
 
+            if opened:
+                try:
+                    choice = page.get_by_text("Ending Soonest", exact=True).first
+                    choice.click(timeout=5_000)
+                    page.wait_for_timeout(4_000)
+                    print("SORT_CLICKED_AFTER_OPEN Ending Soonest")
+                    changed = True
+                except Exception as choice_error:
+                    print(f"SORT_CHOICE_MISS={type(choice_error).__name__}")
+
         print(f"SORT_CHANGED={changed}")
         browser.close()
-    return 0
+    return 0 if changed else 2
 
 
 if __name__ == "__main__":
