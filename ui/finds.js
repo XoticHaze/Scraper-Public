@@ -1,5 +1,6 @@
 (() => {
   const catalog = window.MACBID_CATALOG;
+  const research = window.MACBID_RESEARCH_FINDINGS || { findings: [] };
   const root = document.querySelector('#finds-sections');
   const nav = document.querySelector('#finds-nav');
   const meta = document.querySelector('#finds-meta');
@@ -12,12 +13,15 @@
     'tools','samsung-tablets','apple-devices','best-tech-deals','resale-watch'
   ];
   const profileMap = new Map((catalog.hunt_profiles || []).map((p) => [p.id, p]));
+  const researchMap = new Map((research.findings || []).map((item) => [item.identity, item]));
   const watched = new Set(JSON.parse(localStorage.getItem('macbid-hunt-watchlist') || '[]'));
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const safeUrl = (value) => {
+  const safeUrl = (value, hosts = null) => {
     try {
       const url = new URL(value);
-      return url.protocol === 'https:' && ['mac.bid','www.mac.bid'].includes(url.hostname) ? url.href : '';
+      if (url.protocol !== 'https:') return '';
+      if (hosts && !hosts.includes(url.hostname)) return '';
+      return url.href;
     } catch { return ''; }
   };
   const money = (v) => Number.isFinite(Number(v)) ? `$${Number(v).toFixed(2)}` : '—';
@@ -35,7 +39,21 @@
   const scoreFor = (product, profileId) => {
     const lot = bestLot(product) || {};
     const semantic = Number(product.hunt_matches?.[profileId]?.score || 0);
-    return semantic * 10 + Number(lot.deal_score || 0) - Number(lot.unique_bidders || 0) * 2;
+    const researched = researchMap.has(product.identity) ? 12 : 0;
+    return researched + semantic * 10 + Number(lot.deal_score || 0) - Number(lot.unique_bidders || 0) * 2;
+  };
+  const researchMarkup = (product) => {
+    const finding = researchMap.get(product.identity);
+    if (!finding) return '';
+    const sourceLinks = (finding.sources || []).map((source) => {
+      const url = safeUrl(source.url);
+      return url ? `<a href="${esc(url)}" target="_blank" rel="noreferrer">${esc(source.label || 'Source')} ↗</a>` : '';
+    }).filter(Boolean).join(' · ');
+    return `<div class="research-note">
+      <div class="research-head"><span class="find-badge research">${esc(finding.status || 'RESEARCHED')}</span>${finding.model ? `<strong>${esc(finding.model)}</strong>` : ''}</div>
+      <p>${esc(finding.note || '')}</p>
+      ${sourceLinks ? `<div class="research-sources">${sourceLinks}</div>` : ''}
+    </div>`;
   };
   const card = (product, profileId = '') => {
     const lot = bestLot(product) || {};
@@ -43,16 +61,17 @@
     const article = document.createElement('article');
     article.className = 'find-card';
     const image = product.image_url || lot.image_url || lot.stock_image_url || '';
-    const imageUrl = (() => { try { const u = new URL(image); return u.protocol === 'https:' ? u.href : ''; } catch { return ''; } })();
+    const imageUrl = safeUrl(image);
     const haos = match.compatibility_gate === 'haos';
     const verify = (match.verification || []).map((v) => String(v).replaceAll('_',' ')).join(' · ');
-    const lotUrl = safeUrl(lot.macbid_url);
+    const lotUrl = safeUrl(lot.macbid_url, ['mac.bid','www.mac.bid']);
     article.innerHTML = `
       <div class="image-wrap">${imageUrl ? `<img loading="lazy" src="${esc(imageUrl)}" alt="">` : ''}</div>
       <div class="find-body">
         <div class="find-badges">
           <span class="find-badge">${esc(lot.condition || 'Unknown')}</span>
           ${haos ? '<span class="find-badge haos">HAOS VERIFY</span>' : ''}
+          ${researchMap.has(product.identity) ? '<span class="find-badge research">RESEARCHED</span>' : ''}
           ${watched.has(product.identity) ? '<span class="find-badge">★ WATCHED</span>' : ''}
           ${Number(lot.unique_bidders || 0) === 0 ? '<span class="find-badge">0 bidders</span>' : ''}
         </div>
@@ -63,6 +82,7 @@
           <div class="find-metric"><span>MAC retail</span><strong>${money(lot.retail_price)}</strong></div>
           <div class="find-metric"><span>Closes</span><strong>${esc(closeText(lot.expected_closing_utc))}</strong></div>
         </div>
+        ${researchMarkup(product)}
         ${verify ? `<div class="verify-line">Verify: ${esc(verify)}</div>` : ''}
         <div class="find-links">
           ${lotUrl ? `<a href="${esc(lotUrl)}" target="_blank" rel="noreferrer">Open lot ↗</a>` : ''}
@@ -93,7 +113,7 @@
 
   const generated = Number(catalog.generated_epoch_utc || 0);
   const age = generated ? Math.max(0, Math.round(Date.now()/1000 - generated)) : null;
-  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · San Antonio`;
+  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${researchMap.size} researched · San Antonio`;
   status.textContent = age == null ? 'Snapshot age unknown' : age < 60 ? 'Updated just now' : `Updated ${Math.round(age/60)}m ago`;
 
   const watchedProducts = (catalog.products || []).filter((p) => watched.has(p.identity));
@@ -102,6 +122,14 @@
     id: 'my-watchlist', label: 'My Watchlist', products: watchedProducts,
     subtitle: watchedProducts.length ? 'Browser-saved items, ordered toward the nearest close.' : 'Star items in the main Hunt app and they will appear here.',
     seeAll: './',
+  });
+
+  const researchedProducts = (catalog.products || []).filter((p) => researchMap.has(p.identity));
+  researchedProducts.sort((a,b) => scoreFor(b,'') - scoreFor(a,''));
+  addSection({
+    id: 'researched', label: 'Researched Finds', products: researchedProducts,
+    subtitle: 'Items we have already model-checked, compatibility-checked, or otherwise investigated together. Current bids still come from the latest scan.',
+    seeAll: '',
   });
 
   for (const id of priority) {
