@@ -63,6 +63,7 @@ jobs:
           node --check ui/app-enhancements.js
           node --check ui/action-center.js
           node --check ui/catalog-loader.js
+          node --check ui/finds.js
 
       - name: Tests
         run: |
@@ -101,6 +102,10 @@ jobs:
           } <= hunt_ids
           for profile in hunts['profiles']:
               assert profile.get('verification'), profile['id']
+
+          assert Path('ui/finds.html').exists()
+          assert Path('ui/finds.js').exists()
+          assert Path('ui/finds.css').exists()
 
           contracts = json.loads(Path('config/encrypted_compute_contracts.json').read_text())
           assert contracts['schema'] == 'repo-app-encrypted-compute-contracts-v1'
