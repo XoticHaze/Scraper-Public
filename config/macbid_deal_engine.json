@@ -10,6 +10,8 @@
   "minimum_stated_retail": 40.0,
   "buyer_premium_rate": 0.15,
   "lot_fee": 3.0,
+  "sales_tax_rate": 0.0825,
+  "sales_tax_scope": "San Antonio estimate; applied to hammer + buyer premium + lot fee until reconciled against an actual MAC.BID invoice",
   "provisional_ceiling_ratio": {
     "LIKE NEW": 0.35,
     "OPEN BOX": 0.25
