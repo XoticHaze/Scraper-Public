@@ -8,11 +8,15 @@ on:
       - 'config/macbid_deal_engine.json'
       - 'scripts/macbid_deal_engine.py'
       - 'scripts/macbid_postprocess.py'
+      - 'scripts/macbid_build_ui.py'
+      - 'ui/**'
       - 'tests/test_deal_scoring.py'
       - '.github/workflows/macbid-deal-engine.yml'
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: macbid-deal-engine-${{ github.ref }}
@@ -44,7 +48,7 @@ jobs:
           set -euo pipefail
           pytest -q tests/test_deal_scoring.py
 
-      - name: Run local inventory deal engine
+      - name: Run San Antonio inventory deal engine
         run: |
           set -euo pipefail
           python scripts/macbid_deal_engine.py
@@ -53,6 +57,54 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/macbid_postprocess.py
+
+      - name: Build static hunt UI
+        run: |
+          set -euo pipefail
+          node --check ui/app.js
+          python scripts/macbid_build_ui.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('site/catalog.json').read_text())
+          assert data['locations'] == ['San Antonio'], data['locations']
+          assert data['product_count'] > 0
+          assert data['lot_count'] > 0
+          assert all(
+              lot.get('auction_location') == 'San Antonio'
+              for product in data['products']
+              for lot in product['lots']
+          )
+          assert any(
+              lot.get('image_url') or product.get('image_url')
+              for product in data['products'][:500]
+              for lot in product['lots'][:1]
+          )
+          print(f"UI_CATALOG_SAN_ANTONIO products={data['product_count']} lots={data['lot_count']}")
+          PY
+
+      - name: Smoke-test rendered hunt UI
+        run: |
+          set -euo pipefail
+          python -m http.server 8000 --directory site >/tmp/macbid-ui-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python - <<'PY'
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              page = browser.new_page(viewport={"width": 1440, "height": 1100})
+              page.goto('http://127.0.0.1:8000', wait_until='domcontentloaded', timeout=30000)
+              page.wait_for_selector('.card', timeout=30000)
+              assert page.locator('.card').count() > 0
+              assert page.locator('.card img[src]').count() > 0
+              assert 'products' in page.locator('#catalog-meta').inner_text().lower()
+              page.fill('#search', 'a')
+              page.wait_for_timeout(100)
+              assert int(page.locator('#result-count').inner_text().replace(',', '')) >= 0
+              print('UI_SMOKE=PASS')
+              browser.close()
+          PY
 
       - name: Show compact ranked summary
         if: always()
@@ -75,7 +127,7 @@ jobs:
                       'retail_price': row.get('retail_price'),
                       'estimated_pre_tax_total': row.get('estimated_pre_tax_total'),
                       'deal_score': row.get('deal_score'),
-                      'expected_close_date': row.get('expected_close_date'),
+                      'expected_closing_utc': row.get('expected_closing_utc'),
                       'unique_bidders': row.get('unique_bidders'),
                       'duplicate_lot_count': row.get('duplicate_lot_count'),
                       'market_price_status': row.get('market_price_status'),
@@ -94,3 +146,31 @@ jobs:
           path: results/macbid-deal-engine.json
           if-no-files-found: warn
           retention-days: 2
+
+      - name: Upload browsable UI artifact
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-hunt-ui
+          path: site
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Upload GitHub Pages artifact
+        if: success()
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: site
+
+  deploy-pages:
+    if: ${{ github.ref == 'refs/heads/main' && needs.engine.result == 'success' }}
+    needs: engine
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy MAC.BID Hunt to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
