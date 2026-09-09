@@ -23,7 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check producer_worker/index.mjs
-          python -m json.tool producer_worker/wrangler.jsonc >/dev/null 2>&1 || true
+          node --check producer_worker/interop.mjs
 
       - name: Deploy Cloudflare Worker
         env:
@@ -37,5 +37,6 @@ jobs:
 
       - name: Deployment note
         run: |
+          echo 'Producer mode: cron-only; no public workload-trigger endpoint is required.'
           echo 'Worker secrets must already contain GITHUB_APP_ID, GITHUB_INSTALLATION_ID, and GITHUB_APP_PRIVATE_KEY.'
-          echo 'After deployment, set repository variable PRIVATE_ENVELOPE_PRODUCER_URL to the Worker URL.'
+          echo 'The GitHub App should be installed only on XoticHaze/Scraper and XoticHaze/Scraper-Public with the minimum Contents access required by the protocol.'
