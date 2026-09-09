@@ -25,6 +25,7 @@
     } catch { return ''; }
   };
   const money = (v) => Number.isFinite(Number(v)) ? `$${Number(v).toFixed(2)}` : '—';
+  const lotAllIn = (lot) => Number(lot?.estimated_post_tax_total ?? lot?.estimated_all_in_total ?? lot?.estimated_pre_tax_total);
   const closeText = (epoch) => {
     const s = Number(epoch || 0) - Date.now() / 1000;
     if (s <= 0) return 'closed';
@@ -78,7 +79,7 @@
         <h3>${esc(product.name || 'Unnamed item')}</h3>
         <div class="find-metrics">
           <div class="find-metric"><span>Current bid</span><strong>${money(lot.current_bid)}</strong></div>
-          <div class="find-metric"><span>Pre-tax total</span><strong>${money(lot.estimated_pre_tax_total)}</strong></div>
+          <div class="find-metric"><span>Est. all-in</span><strong>${money(lotAllIn(lot))}</strong></div>
           <div class="find-metric"><span>MAC retail</span><strong>${money(lot.retail_price)}</strong></div>
           <div class="find-metric"><span>Closes</span><strong>${esc(closeText(lot.expected_closing_utc))}</strong></div>
         </div>
@@ -113,7 +114,8 @@
 
   const generated = Number(catalog.generated_epoch_utc || 0);
   const age = generated ? Math.max(0, Math.round(Date.now()/1000 - generated)) : null;
-  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${researchMap.size} researched · San Antonio`;
+  const taxPct = Number(catalog.sales_tax_rate || 0) * 100;
+  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${researchMap.size} researched · est. tax ${taxPct.toFixed(2)}% · San Antonio`;
   status.textContent = age == null ? 'Snapshot age unknown' : age < 60 ? 'Updated just now' : `Updated ${Math.round(age/60)}m ago`;
 
   const watchedProducts = (catalog.products || []).filter((p) => watched.has(p.identity));
@@ -128,7 +130,7 @@
   researchedProducts.sort((a,b) => scoreFor(b,'') - scoreFor(a,''));
   addSection({
     id: 'researched', label: 'Researched Finds', products: researchedProducts,
-    subtitle: 'Items we have already model-checked, compatibility-checked, or otherwise investigated together. Current bids still come from the latest scan.',
+    subtitle: 'Items we have already model-checked, compatibility-checked, or otherwise investigated together. Current bids and estimated all-in costs still come from the latest scan.',
     seeAll: '',
   });
 
