@@ -9,7 +9,7 @@
   const priority = [
     '4k-projectors','curved-monitors','large-gaming-monitors','quality-speakers',
     'solar-panels','ptz-cameras-haos','smart-door-locks-haos','large-area-rugs',
-    'tools','samsung-tablets','apple-devices','best-tech-deals'
+    'tools','samsung-tablets','apple-devices','best-tech-deals','resale-watch'
   ];
   const profileMap = new Map((catalog.hunt_profiles || []).map((p) => [p.id, p]));
   const watched = new Set(JSON.parse(localStorage.getItem('macbid-hunt-watchlist') || '[]'));
@@ -109,12 +109,13 @@
     if (!profile) continue;
     const products = (catalog.products || []).filter((p) => (p.hunt_ids || []).includes(id));
     products.sort((a,b) => scoreFor(b,id) - scoreFor(a,id));
+    const resaleNote = id === 'resale-watch' ? ' · preliminary until real market value, liquidity, fees and net margin are verified' : '';
     addSection({
       id,
       label: profile.label,
       products,
       profileId: id,
-      subtitle: `Top current discovery candidates${profile.compatibility_gate === 'haos' ? ' · HAOS compatibility must clear before recommendation' : ''}.`,
+      subtitle: `Top current discovery candidates${profile.compatibility_gate === 'haos' ? ' · HAOS compatibility must clear before recommendation' : ''}${resaleNote}.`,
       seeAll: `./?hunt=${encodeURIComponent(id)}`,
     });
   }
