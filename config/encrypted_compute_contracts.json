@@ -1,0 +1,17 @@
+{
+  "schema": "repo-app-encrypted-compute-contracts-v1",
+  "contracts": {
+    "python-bundle-v1": {
+      "version": "1",
+      "entrypoint": "entrypoint.py",
+      "max_files": 256,
+      "max_plaintext_bytes": 25000000,
+      "max_result_files": 128,
+      "max_result_bytes": 15000000,
+      "timeout_seconds": 600,
+      "output_root": "private_output",
+      "authority": "private_compute_only",
+      "notes": "Executes a fixed entrypoint filename from an authenticated run-bound encrypted bundle. No GitHub token or repository credential is exposed to the private process."
+    }
+  }
+}
