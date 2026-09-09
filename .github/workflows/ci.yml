@@ -67,9 +67,9 @@ jobs:
       - name: Tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_encrypted_compute.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_encrypted_compute.py
 
-      - name: Validate engine, app, and private-compute policy
+      - name: Validate engine, app, hunt, and private-compute policy
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -89,6 +89,18 @@ jobs:
           assert {'refresh', 'visual-review', 'actions', 'source'} <= ids
           for action in manifest['actions']:
               assert action.get('fallback_url', '').startswith('https://github.com/XoticHaze/Scraper-Public')
+
+          hunts = json.loads(Path('app/hunts.json').read_text())
+          assert hunts['schema'] == 'macbid-hunt-profiles-v1'
+          hunt_ids = {profile['id'] for profile in hunts['profiles']}
+          assert {
+              '4k-projectors', 'large-gaming-monitors', 'quality-speakers',
+              'solar-panels', 'ptz-cameras-haos', 'smart-door-locks-haos',
+              'large-area-rugs', 'tools', 'samsung-tablets', 'apple-devices',
+              'best-tech-deals', 'resale-watch'
+          } <= hunt_ids
+          for profile in hunts['profiles']:
+              assert profile.get('verification'), profile['id']
 
           contracts = json.loads(Path('config/encrypted_compute_contracts.json').read_text())
           assert contracts['schema'] == 'repo-app-encrypted-compute-contracts-v1'
