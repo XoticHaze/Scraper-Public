@@ -1,0 +1,68 @@
+{
+  "schema": "macbid-research-findings-v1",
+  "version": 1,
+  "updated_at": "2026-09-09",
+  "findings": [
+    {
+      "identity": "upc:796435814533",
+      "status": "WATCH",
+      "model": "Optoma UHD35STx",
+      "note": "Exact UPC resolves to a true 4K UHD short-throw gaming projector: 3840x2160, 3,600 lumens, lamp light source. Verify lamp hours, optics, remote and completeness before setting a final max bid.",
+      "sources": [
+        {"label": "Optoma official", "url": "https://www.optomausa.com/product/uhd35stx"}
+      ]
+    },
+    {
+      "identity": "upc:195174124062",
+      "status": "WATCH",
+      "model": "LG UltraGear 45GX900A-B",
+      "note": "Identity resolves to a 45-inch 800R curved OLED WQHD 240Hz gaming monitor. High-value fit for the large gaming-monitor lane, but panel damage, burn-in and missing-stand risk deserve a larger open-box discount.",
+      "sources": [
+        {"label": "LG official", "url": "https://www.lg.com/us/monitors/lg-45gx900a-b-gaming-monitor"}
+      ]
+    },
+    {
+      "identity": "upc:B09Y8C185M",
+      "status": "HAOS CANDIDATE",
+      "model": "TP-Link Tapo C210 family / 2-pack listing",
+      "note": "The Tapo C210 family supports local RTSP/ONVIF, making it a strong Home Assistant candidate through the ONVIF integration. Confirm exact pack/model, factory reset and local-stream availability on the auction units.",
+      "sources": [
+        {"label": "Tapo C210", "url": "https://www.tapo.com/us/product/smart-camera/tapo-c210/"},
+        {"label": "Home Assistant ONVIF", "url": "https://www.home-assistant.io/integrations/onvif/"}
+      ]
+    },
+    {
+      "identity": "upc:B0FXWGYDQW",
+      "status": "HAOS CANDIDATE",
+      "model": "Aqara Smart Lock U300",
+      "note": "U300 is a Matter-over-Thread smart lock and is a strong Home Assistant fit through Matter. Verify factory reset, Thread/Matter commissioning state and hardware completeness before bidding.",
+      "sources": [
+        {"label": "Aqara U300", "url": "https://us.aqara.com/products/smart-lock-u300"},
+        {"label": "Home Assistant Matter", "url": "https://www.home-assistant.io/integrations/matter/"}
+      ]
+    },
+    {
+      "identity": "upc:B07KQY3MWL",
+      "status": "VERIFY VARIANT",
+      "model": "Schlage Connect Smart Deadbolt",
+      "note": "Schlage Connect exists in multiple radio variants. Confirm the exact Z-Wave/Zigbee model from label/model number before calling it HAOS-compatible; a Z-Wave variant is the preferred local fit.",
+      "sources": [
+        {"label": "Schlage Connect support", "url": "https://www.schlage.com/en/home/support/faqs/schlage-connect.html"}
+      ]
+    },
+    {
+      "identity": "upc:B0F1FRNRLS",
+      "status": "WATCH COMPETITION",
+      "model": "Samsung Galaxy Tab S9 FE+",
+      "note": "Real tablet candidate, but current bidder competition is materially higher than many tools/home items. Keep it in the tech watch lane and let verified street price plus all-in auction cost decide whether the spread survives.",
+      "sources": []
+    },
+    {
+      "identity": "upc:1270922",
+      "status": "VERIFY VALUE",
+      "model": "CRAFTSMAN Portable Table Saw",
+      "note": "Good tool/resale-shaped candidate because it can combine useful personal value, local pickup economics and low competition. Exact model, included fence/guard/blade hardware and real market value still need verification.",
+      "sources": []
+    }
+  ]
+}
