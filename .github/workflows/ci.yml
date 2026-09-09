@@ -3,6 +3,7 @@ name: Scraper Public CI
 on:
   push:
     paths:
+      - 'app/**'
       - 'deal_engine/**'
       - 'config/**'
       - 'scripts/**'
@@ -11,6 +12,7 @@ on:
       - '.github/workflows/**'
   pull_request:
     paths:
+      - 'app/**'
       - 'deal_engine/**'
       - 'config/**'
       - 'scripts/**'
@@ -55,6 +57,7 @@ jobs:
           set -euo pipefail
           node --check ui/app.js
           node --check ui/app-enhancements.js
+          node --check ui/action-center.js
           node --check ui/catalog-loader.js
 
       - name: Scoring tests
@@ -62,16 +65,26 @@ jobs:
           set -euo pipefail
           pytest -q tests/test_deal_scoring.py
 
-      - name: Validate engine policy
+      - name: Validate engine and app policy
         run: |
           set -euo pipefail
           python - <<'PY'
           import json
           from pathlib import Path
+
           cfg = json.loads(Path('config/macbid_deal_engine.json').read_text())
           assert cfg['locations'] == ['San Antonio'], cfg['locations']
           assert 'DAMAGED' in cfg['excluded_conditions']
           assert 'LIKE NEW' in cfg['preferred_conditions']
           assert 'OPEN BOX' in cfg['preferred_conditions']
+
+          manifest = json.loads(Path('app/actions.json').read_text())
+          assert manifest['schema'] == 'repo-app-actions-v1'
+          assert manifest['repository'] == 'XoticHaze/Scraper-Public'
+          assert manifest['control_bridge']['enabled'] is False
+          ids = {action['id'] for action in manifest['actions']}
+          assert {'refresh', 'visual-review', 'actions', 'source'} <= ids
+          for action in manifest['actions']:
+              assert action.get('fallback_url', '').startswith('https://github.com/XoticHaze/Scraper-Public')
           print('POLICY_GATE=PASS')
           PY
