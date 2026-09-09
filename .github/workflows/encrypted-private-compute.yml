@@ -21,42 +21,31 @@ on:
       - 'rendezvous/requests/private-compute-*.json'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: encrypted-private-compute-${{ github.run_id }}
   cancel-in-progress: false
 
-env:
-  EXCHANGE_REF: rendezvous-exchange
-  RECIPIENT_ROOT: rendezvous/recipients
-  RESPONSE_ROOT: rendezvous/responses
-  INPUT_CONTRACT_ID: ${{ inputs.contract_id || '' }}
-  INPUT_WORKLOAD_ID: ${{ inputs.workload_id || '' }}
-
 jobs:
-  consume:
+  resolve-request:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    env:
-      PYTHONPATH: .
+    timeout-minutes: 3
+    outputs:
+      contract_id: ${{ steps.resolve.outputs.contract_id }}
+      workload_id: ${{ steps.resolve.outputs.workload_id }}
+      request_source: ${{ steps.resolve.outputs.request_source }}
     steps:
-      - name: Checkout public execution contract
+      - name: Checkout request metadata only
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 2
 
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: '3.11.16'
-
-      - name: Install fixed transport dependency
-        run: |
-          set -euo pipefail
-          python -m pip install --disable-pip-version-check 'cryptography==45.0.7'
-
-      - name: Resolve private workload request
+      - name: Resolve request
+        id: resolve
+        env:
+          INPUT_CONTRACT_ID: ${{ inputs.contract_id || '' }}
+          INPUT_WORKLOAD_ID: ${{ inputs.workload_id || '' }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -65,7 +54,7 @@ jobs:
 
           contract = (os.environ.get('INPUT_CONTRACT_ID') or 'python-bundle-v1').strip()
           workload = (os.environ.get('INPUT_WORKLOAD_ID') or '').strip()
-          request_source = 'workflow_dispatch'
+          source = 'workflow_dispatch'
           if os.environ.get('GITHUB_EVENT_NAME') == 'push':
               changed = subprocess.check_output(
                   ['git', 'diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD'], text=True
@@ -77,181 +66,24 @@ jobs:
               doc = json.loads(marker.read_text(encoding='utf-8'))
               workload = str(doc.get('workload_id') or '').strip()
               contract = str(doc.get('contract_id') or contract).strip()
-              request_source = marker.as_posix()
+              source = marker.as_posix()
           ident = re.compile(r'^[a-z0-9][a-z0-9._-]{0,63}$')
           if not ident.fullmatch(contract) or not ident.fullmatch(workload):
               raise SystemExit('invalid contract_id/workload_id')
-          with Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as env:
-              env.write(f'CONTRACT_ID={contract}\n')
-              env.write(f'WORKLOAD_ID={workload}\n')
-              env.write(f'REQUEST_SOURCE={request_source}\n')
-          print(f'PRIVATE_COMPUTE_REQUEST workload={workload} contract={contract} source={request_source}')
+          out = Path(os.environ['GITHUB_OUTPUT'])
+          with out.open('a', encoding='utf-8') as f:
+              f.write(f'contract_id={contract}\n')
+              f.write(f'workload_id={workload}\n')
+              f.write(f'request_source={source}\n')
+          print(f'PRIVATE_COMPUTE_RESOLVED workload={workload} contract={contract} source={source}')
           PY
 
-      - name: Resolve fixed contract and generate one-run recipient
-        run: |
-          set -euo pipefail
-          umask 077
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          from encrypted_compute.transport import generate_recipient
-
-          registry = json.loads(Path('config/encrypted_compute_contracts.json').read_text())
-          contract_id = os.environ['CONTRACT_ID']
-          contract = registry['contracts'].get(contract_id)
-          if not contract:
-              raise SystemExit('contract not registered')
-          version = str(contract['version'])
-          recipient = generate_recipient(
-              run_id=os.environ['GITHUB_RUN_ID'],
-              contract_id=contract_id,
-              contract_version=version,
-              direction='workload',
-          )
-          private_path = Path(os.environ['RUNNER_TEMP']) / 'encrypted-compute-private.b64'
-          recipient_path = Path(os.environ['RUNNER_TEMP']) / 'encrypted-compute-recipient.json'
-          request_path = Path(os.environ['RUNNER_TEMP']) / 'encrypted-compute-request.json'
-          private_path.write_text(recipient.private_b64 + '\n', encoding='ascii')
-          private_path.chmod(0o600)
-          recipient_path.write_text(json.dumps(recipient.public, sort_keys=True) + '\n', encoding='utf-8')
-          request_path.write_text(json.dumps({
-              'schema': 'repo-app-private-compute-request-v1',
-              'run_id': str(os.environ['GITHUB_RUN_ID']),
-              'contract_id': contract_id,
-              'contract_version': version,
-              'workload_id': os.environ['WORKLOAD_ID'],
-              'request_source': os.environ['REQUEST_SOURCE'],
-          }, sort_keys=True) + '\n', encoding='utf-8')
-          with Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as env:
-              env.write(f'CONTRACT_VERSION={version}\n')
-              env.write(f'RECIPIENT_KEY_ID={recipient.public["recipient_key_id"]}\n')
-          print('ENCRYPTED_COMPUTE_RUN_ID=' + os.environ['GITHUB_RUN_ID'])
-          print('ENCRYPTED_COMPUTE_WORKLOAD_ID=' + os.environ['WORKLOAD_ID'])
-          print('ENCRYPTED_COMPUTE_RECIPIENT_KEY_ID=' + recipient.public['recipient_key_id'])
-          PY
-
-      - name: Publish one-run request and public recipient
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          run_root="$RECIPIENT_ROOT/$GITHUB_RUN_ID"
-          python scripts/encrypted_compute_exchange.py publish-file \
-            --repo "$GITHUB_REPOSITORY" --branch "$EXCHANGE_REF" \
-            --path "$run_root/request.json" \
-            --file "$RUNNER_TEMP/encrypted-compute-request.json"
-          python scripts/encrypted_compute_exchange.py publish-file \
-            --repo "$GITHUB_REPOSITORY" --branch "$EXCHANGE_REF" \
-            --path "$run_root/$CONTRACT_ID.json" \
-            --file "$RUNNER_TEMP/encrypted-compute-recipient.json"
-          echo 'PRIVATE_PRODUCER_MODE=trusted-cron-catch-up'
-
-      - name: Wait for run-bound encrypted workload
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          envelope_path="$RESPONSE_ROOT/$GITHUB_RUN_ID/$CONTRACT_ID/workload-envelope.json"
-          api="https://api.github.com/repos/$GITHUB_REPOSITORY/contents/$envelope_path?ref=$EXCHANGE_REF"
-          found=0
-          for _ in $(seq 1 120); do
-            if curl -fsSL \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H 'Accept: application/vnd.github.raw+json' \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "$api" -o /dev/null 2>/dev/null; then
-              found=1
-              break
-            fi
-            sleep 5
-          done
-          test "$found" = 1 || { echo 'Encrypted workload did not arrive for this run.'; exit 42; }
-
-      - name: Fetch and validate encrypted workload chunks
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          response_root="$RESPONSE_ROOT/$GITHUB_RUN_ID/$CONTRACT_ID"
-          python scripts/encrypted_compute_exchange.py fetch-workload \
-            --repo "$GITHUB_REPOSITORY" \
-            --branch "$EXCHANGE_REF" \
-            --run-id "$GITHUB_RUN_ID" \
-            --contract-id "$CONTRACT_ID" \
-            --contract-version "$CONTRACT_VERSION" \
-            --response-root "$response_root" \
-            --envelope-path "$response_root/workload-envelope.json" \
-            --out "$RUNNER_TEMP/encrypted-request"
-
-      - name: Decrypt and execute fixed private contract
-        run: |
-          set -euo pipefail
-          response_root="$RESPONSE_ROOT/$GITHUB_RUN_ID/$CONTRACT_ID"
-          rc=0
-          python scripts/encrypted_compute_run.py \
-            --contract-id "$CONTRACT_ID" \
-            --contract-version "$CONTRACT_VERSION" \
-            --run-id "$GITHUB_RUN_ID" \
-            --envelope "$RUNNER_TEMP/encrypted-request/workload-envelope.json" \
-            --chunk-map "$RUNNER_TEMP/encrypted-request/chunk-map.json" \
-            --private-key "$RUNNER_TEMP/encrypted-compute-private.b64" \
-            --response-root "$response_root" \
-            --result-staging "$RUNNER_TEMP/encrypted-result" \
-            --receipt "$RUNNER_TEMP/encrypted-compute-receipt.json" || rc=$?
-          echo "ENCRYPTED_CONSUMER_RC=$rc" >> "$GITHUB_ENV"
-
-      - name: Publish encrypted private result
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          if [ -f "$RUNNER_TEMP/encrypted-result/result-envelope.json" ]; then
-            python scripts/encrypted_compute_exchange.py publish-result \
-              --repo "$GITHUB_REPOSITORY" \
-              --branch "$EXCHANGE_REF" \
-              --run-id "$GITHUB_RUN_ID" \
-              --contract-id "$CONTRACT_ID" \
-              --contract-version "$CONTRACT_VERSION" \
-              --staging "$RUNNER_TEMP/encrypted-result"
-          else
-            echo 'No encrypted result was produced.'
-          fi
-
-      - name: Emit sanitized public receipt
-        if: always()
-        run: |
-          set -euo pipefail
-          if [ -f "$RUNNER_TEMP/encrypted-compute-receipt.json" ]; then
-            cat "$RUNNER_TEMP/encrypted-compute-receipt.json"
-          else
-            echo '{"schema":"repo-app-encrypted-compute-receipt-v1","status":"NO_RECEIPT","private_plaintext_emitted":false}'
-          fi
-
-      - name: Enforce workload result after result publication
-        if: always()
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          path = Path(os.environ['RUNNER_TEMP']) / 'encrypted-compute-receipt.json'
-          if not path.exists():
-              raise SystemExit(1)
-          receipt = json.loads(path.read_text())
-          if receipt.get('status') != 'PASS':
-              raise SystemExit(1)
-          PY
-
-      - name: Remove one-run private material
-        if: always()
-        run: |
-          set -euo pipefail
-          rm -rf \
-            "$RUNNER_TEMP/encrypted-compute-private.b64" \
-            "$RUNNER_TEMP/encrypted-compute-recipient.json" \
-            "$RUNNER_TEMP/encrypted-compute-request.json" \
-            "$RUNNER_TEMP/encrypted-request" \
-            "$RUNNER_TEMP/encrypted-result" \
-            "$RUNNER_TEMP/encrypted-compute-receipt.json"
+  pinned-runtime:
+    needs: resolve-request
+    permissions:
+      contents: write
+    uses: XoticHaze/Scraper-Public/.github/workflows/encrypted-private-compute-runtime.yml@646afc3a233f8a9739b252925d94592b30fea470
+    with:
+      contract_id: ${{ needs.resolve-request.outputs.contract_id }}
+      workload_id: ${{ needs.resolve-request.outputs.workload_id }}
+      request_source: ${{ needs.resolve-request.outputs.request_source }}
