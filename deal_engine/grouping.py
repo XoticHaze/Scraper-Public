@@ -40,8 +40,11 @@ def alternate_summary(lot: dict[str, Any]) -> dict[str, Any]:
         "current_bid": lot.get("current_bid"),
         "estimated_pre_tax_total": lot.get("estimated_pre_tax_total"),
         "expected_close_date": lot.get("expected_close_date"),
+        "expected_closing_utc": lot.get("expected_closing_utc"),
+        "hours_until_close": lot.get("hours_until_close"),
         "unique_bidders": lot.get("unique_bidders"),
         "total_bids": lot.get("total_bids"),
+        "image_url": lot.get("image_url") or lot.get("stock_image_url"),
         "macbid_url": lot.get("macbid_url"),
     }
 
