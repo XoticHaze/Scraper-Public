@@ -1,5 +1,5 @@
 name: Encrypted Private Compute
-run-name: Private compute · ${{ inputs.contract_id }} · #${{ github.run_number }}
+run-name: Private compute · ${{ inputs.contract_id || 'python-bundle-v1' }} · #${{ github.run_number }}
 
 on:
   workflow_dispatch:
@@ -11,6 +11,9 @@ on:
         default: python-bundle-v1
         options:
           - python-bundle-v1
+  push:
+    paths:
+      - 'rendezvous/requests/private-compute-*.json'
 
 permissions:
   contents: write
@@ -23,6 +26,7 @@ env:
   EXCHANGE_REF: rendezvous-exchange
   RECIPIENT_ROOT: rendezvous/recipients
   RESPONSE_ROOT: rendezvous/responses
+  CONTRACT_ID: ${{ inputs.contract_id || 'python-bundle-v1' }}
 
 jobs:
   consume:
@@ -45,8 +49,6 @@ jobs:
           python -m pip install --disable-pip-version-check 'cryptography==45.0.7'
 
       - name: Resolve fixed contract and generate one-run recipient
-        env:
-          CONTRACT_ID: ${{ inputs.contract_id }}
         run: |
           set -euo pipefail
           umask 077
@@ -82,7 +84,6 @@ jobs:
       - name: Publish one-run public recipient
         env:
           GH_TOKEN: ${{ github.token }}
-          CONTRACT_ID: ${{ inputs.contract_id }}
         run: |
           set -euo pipefail
           python scripts/encrypted_compute_exchange.py publish-file \
@@ -94,7 +95,6 @@ jobs:
       - name: Wait for run-bound encrypted workload
         env:
           GH_TOKEN: ${{ github.token }}
-          CONTRACT_ID: ${{ inputs.contract_id }}
         run: |
           set -euo pipefail
           envelope_path="$RESPONSE_ROOT/$GITHUB_RUN_ID/$CONTRACT_ID/workload-envelope.json"
@@ -116,7 +116,6 @@ jobs:
       - name: Fetch and validate encrypted workload chunks
         env:
           GH_TOKEN: ${{ github.token }}
-          CONTRACT_ID: ${{ inputs.contract_id }}
         run: |
           set -euo pipefail
           response_root="$RESPONSE_ROOT/$GITHUB_RUN_ID/$CONTRACT_ID"
@@ -131,8 +130,6 @@ jobs:
             --out "$RUNNER_TEMP/encrypted-request"
 
       - name: Decrypt and execute fixed private contract
-        env:
-          CONTRACT_ID: ${{ inputs.contract_id }}
         run: |
           set -euo pipefail
           response_root="$RESPONSE_ROOT/$GITHUB_RUN_ID/$CONTRACT_ID"
@@ -153,7 +150,6 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          CONTRACT_ID: ${{ inputs.contract_id }}
         run: |
           set -euo pipefail
           if [ -f "$RUNNER_TEMP/encrypted-result/result-envelope.json" ]; then
