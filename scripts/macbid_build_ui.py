@@ -122,8 +122,10 @@ def main() -> int:
     if SITE.exists():
         shutil.rmtree(SITE)
     shutil.copytree(UI_SOURCE, SITE)
-    (SITE / "catalog.json").write_text(
-        json.dumps(catalog, separators=(",", ":"), ensure_ascii=False),
+    compact_json = json.dumps(catalog, separators=(",", ":"), ensure_ascii=False)
+    (SITE / "catalog.json").write_text(compact_json, encoding="utf-8")
+    (SITE / "catalog.js").write_text(
+        "window.MACBID_CATALOG=" + compact_json + ";\n",
         encoding="utf-8",
     )
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
