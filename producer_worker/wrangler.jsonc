@@ -1,0 +1,15 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "scraper-private-envelope-producer",
+  "main": "index.mjs",
+  "compatibility_date": "2026-09-09",
+  "workers_dev": true,
+  "triggers": {
+    "crons": ["*/2 * * * *"]
+  },
+  "vars": {
+    "PUBLIC_REPO": "XoticHaze/Scraper-Public",
+    "PRIVATE_REPO": "XoticHaze/Scraper",
+    "EXCHANGE_REF": "rendezvous-exchange"
+  }
+}
