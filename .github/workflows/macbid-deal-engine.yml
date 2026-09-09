@@ -74,18 +74,23 @@ jobs:
           set -euo pipefail
           node --check ui/app.js
           node --check ui/app-enhancements.js
+          node --check ui/action-center.js
           node --check ui/catalog-loader.js
           python scripts/macbid_build_ui.py
           python - <<'PY'
           import json
           from pathlib import Path
           data = json.loads(Path('site/catalog.json').read_text())
+          actions = json.loads(Path('site/actions.json').read_text())
           assert data['locations'] == ['San Antonio'], data['locations']
           assert data['product_count'] > 0
           assert data['lot_count'] > 0
           assert Path('site/catalog.js').exists()
           assert Path('site/app-enhancements.js').exists()
+          assert Path('site/action-center.js').exists()
           assert Path('site/enhancements.css').exists()
+          assert actions['schema'] == 'repo-app-actions-v1'
+          assert {a['id'] for a in actions['actions']} >= {'refresh', 'visual-review', 'actions', 'source'}
           assert all(
               lot.get('auction_location') == 'San Antonio'
               for product in data['products']
@@ -97,6 +102,7 @@ jobs:
               for lot in product['lots'][:1]
           )
           print(f"UI_CATALOG_SAN_ANTONIO products={data['product_count']} lots={data['lot_count']}")
+          print(f"UI_ACTIONS={len(actions['actions'])}")
           PY
 
       - name: Smoke-test directly opened hunt UI
@@ -113,10 +119,12 @@ jobs:
               desktop.goto(url, wait_until='domcontentloaded', timeout=30000)
               desktop.wait_for_selector('.card', timeout=30000)
               desktop.wait_for_selector('.app-status', timeout=30000)
+              desktop.wait_for_selector('#app-actions-open', timeout=30000)
               assert desktop.locator('.card').count() > 0
               assert desktop.locator('.card img[src]').count() > 0
               assert desktop.locator('.quick-chip').count() >= 6
               assert desktop.locator('#snapshot-health').inner_text()
+              assert desktop.locator('#app-actions-open').is_visible()
               assert 'products' in desktop.locator('#catalog-meta').inner_text().lower()
               desktop.fill('#search', 'a')
               desktop.wait_for_timeout(100)
@@ -127,15 +135,15 @@ jobs:
               mobile.goto(url, wait_until='domcontentloaded', timeout=30000)
               mobile.wait_for_selector('.card', timeout=30000)
               mobile.wait_for_selector('.app-status', timeout=30000)
-              top_links = mobile.locator('.top-actions a')
-              assert top_links.count() >= 3
-              for idx in range(top_links.count()):
-                  assert top_links.nth(idx).is_visible(), f'top action {idx} hidden on mobile'
+              mobile.wait_for_selector('#app-actions-open', timeout=30000)
+              assert mobile.locator('#app-actions-open').is_visible(), 'app actions hidden on mobile'
+              assert mobile.locator('a[href*="macbid-deal-engine.yml"]').is_visible(), 'refresh hidden on mobile'
+              assert mobile.locator('a[href="https://github.com/XoticHaze/Scraper-Public/actions"]').is_visible(), 'actions hidden on mobile'
               close_metric = mobile.locator('.card').first.locator('.metric').nth(3)
               assert close_metric.is_visible(), 'close time hidden on mobile'
               assert close_metric.inner_text().strip()
               assert mobile.evaluate('document.body.scrollWidth') <= 390
-              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile')
+              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile+actions')
               mobile.close()
               browser.close()
           PY
