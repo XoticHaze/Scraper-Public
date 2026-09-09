@@ -2,6 +2,8 @@ name: MAC.BID Deal Engine
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
   push:
     paths:
       - 'deal_engine/**'
