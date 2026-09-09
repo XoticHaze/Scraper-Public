@@ -8,10 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from deal_engine.grouping import product_identity
+from deal_engine.hunts import match_profiles
 
 REPORT = Path("results/macbid-deal-engine.json")
 UI_SOURCE = Path("ui")
 APP_ACTIONS = Path("app/actions.json")
+APP_HUNTS = Path("app/hunts.json")
 SITE = Path("site")
 
 LOT_FIELDS = (
@@ -90,6 +92,10 @@ def main() -> int:
         if float(lot.get("expected_closing_utc") or 0) > final_epoch
     ]
 
+    hunt_doc = json.loads(APP_HUNTS.read_text(encoding="utf-8")) if APP_HUNTS.exists() else {"profiles": []}
+    profiles = hunt_doc.get("profiles") or []
+    profile_counts = {str(profile["id"]): 0 for profile in profiles}
+
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for lot in inventory:
         grouped[product_identity(lot)].append(lot)
@@ -98,6 +104,13 @@ def main() -> int:
     for lots in grouped.values():
         lots.sort(key=lambda row: float(row.get("expected_closing_utc") or float("inf")))
         product = product_metadata(lots)
+        best_value_lot = max(lots, key=lambda row: float(row.get("deal_score") or -10_000))
+        matches = match_profiles(profiles, product, best_value_lot)
+        if matches:
+            product["hunt_matches"] = matches
+            product["hunt_ids"] = list(matches)
+            for profile_id in matches:
+                profile_counts[profile_id] = profile_counts.get(profile_id, 0) + 1
         product["lots"] = [compact_lot(row) for row in lots]
         products.append(product)
 
@@ -106,6 +119,19 @@ def main() -> int:
             float(lot.get("expected_closing_utc") or float("inf")) for lot in product["lots"]
         )
     )
+
+    public_profiles = []
+    for profile in profiles:
+        public_profiles.append(
+            {
+                "id": profile["id"],
+                "label": profile["label"],
+                "kind": profile.get("kind", "semantic"),
+                "verification": profile.get("verification") or [],
+                "compatibility_gate": profile.get("compatibility_gate"),
+                "count": profile_counts.get(str(profile["id"]), 0),
+            }
+        )
 
     catalog = {
         "schema": "macbid-hunt-ui-v1",
@@ -117,6 +143,7 @@ def main() -> int:
         "minimum_stated_retail": policy.get("minimum_stated_retail"),
         "product_count": len(products),
         "lot_count": len(inventory),
+        "hunt_profiles": public_profiles,
         "products": products,
     }
 
@@ -135,10 +162,18 @@ def main() -> int:
             json.dumps(actions, separators=(",", ":"), ensure_ascii=False),
             encoding="utf-8",
         )
+    if APP_HUNTS.exists():
+        (SITE / "hunt-profiles.json").write_text(
+            json.dumps(hunt_doc, separators=(",", ":"), ensure_ascii=False),
+            encoding="utf-8",
+        )
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
 
     print(f"UI_PRODUCTS={len(products)}")
     print(f"UI_LOTS={len(inventory)}")
+    print(f"UI_HUNT_PROFILES={len(public_profiles)}")
+    for profile in public_profiles:
+        print(f"UI_HUNT {profile['id']}={profile['count']}")
     print(f"UI_ACTION_MANIFEST={'yes' if APP_ACTIONS.exists() else 'no'}")
     print(f"UI_OUTPUT={SITE}")
     return 0
