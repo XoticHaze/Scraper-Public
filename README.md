@@ -25,8 +25,7 @@ The primary workload is a category-agnostic local bargain engine rather than a l
 
 Default market scope:
 
-- San Antonio
-- Schertz
+- San Antonio only
 
 Default condition policy:
 
@@ -36,7 +35,7 @@ Default condition policy:
 - exclude pallets unless explicitly enabled
 - suppress listings below a configurable stated-retail floor
 
-The engine bootstraps MAC.BID's public Typesense search contract from the San Antonio location page, keeps only the local open-inventory query, expands it to San Antonio + Schertz, scans the complete eligible catalog, scores lots, collapses duplicate products, and builds a bounded market-verification queue.
+The engine bootstraps MAC.BID's public Typesense search contract from the San Antonio location page, keeps only the local open-inventory query, scans the complete eligible San Antonio catalog, scores lots, collapses duplicate products, and builds a bounded market-verification queue.
 
 ### Exact ending-soonest authority
 
@@ -47,7 +46,7 @@ filter: expected_closing_utc > current epoch
 sort:   expected_closing_utc:asc,ranking_weight:desc
 ```
 
-The deal engine now uses that exact public epoch field rather than inventing a time from MAC.BID's date-only `expected_close_date`. It rechecks the epoch at final ranking so lots that expire during a scan are not surfaced as active.
+The deal engine uses that exact public epoch field rather than inventing a time from MAC.BID's date-only `expected_close_date`. It rechecks the epoch at final ranking so lots that expire during a scan are not surfaced as active.
 
 ### Primary views
 
@@ -56,13 +55,41 @@ The deal engine now uses that exact public epoch field rather than inventing a t
 - `low_competition` — fewest bidders/bids first, using value as a tiebreaker
 - `verification_queue` — unique high-ranked products that still require exact-model and real-market-price validation before a bid recommendation
 
-Repeated copies of the same product are collapsed into one primary candidate with alternative lots attached, so a single product cannot flood the surface.
+Repeated copies of the same product are grouped so one product cannot flood the surface while alternative active lots remain available for comparison.
 
 Fee math currently uses MAC.BID's public **15% buyer premium + $3 lot fee** and is labeled pre-tax. Provisional max bids are intentionally conservative and explicitly marked as based only on MAC.BID's stated retail until exact product/model and external market-price verification are available.
 
 Configuration lives in `config/macbid_deal_engine.json`.
 
 The first-stage engine is inventory-first. Direct searches, brands, categories, and future personal-interest overlays should be applied over the same local inventory snapshot instead of spawning one scraper per keyword.
+
+## MAC.BID Hunt UI
+
+Every successful deal-engine run builds an image-first static browser from the current San Antonio snapshot.
+
+Current UI capabilities:
+
+- real MAC.BID product images loaded lazily from the public catalog
+- free-text product/brand/category/UPC/model search
+- category and condition filters
+- close-within and max-pre-tax-total filters
+- zero-bidder hunting
+- `Ending Soon`, `Best Value`, `Low Competition`, and `Lowest Cost` ordering
+- exact live countdowns from `expected_closing_utc`
+- current bid, 15% premium, $3 lot fee, estimated pre-tax total, stated retail, discount, savings, and provisional max bid
+- duplicate-lot alternatives with direct MAC.BID links
+- browser-local watchlist
+- a reserved market-verification panel for verified new price, realistic open-box value, verdict, verified discount, and final max bid
+
+The workflow uploads a `macbid-hunt-ui` artifact containing a self-contained site. Download it, unzip it, and open `index.html`; `catalog.js` is embedded specifically so the UI works directly from disk without a local server.
+
+GitHub Pages deployment is also wired into the workflow. The repository needs a one-time setting before the public URL can be created:
+
+1. Open **Settings → Pages** for `XoticHaze/Scraper-Public`.
+2. Set **Source** to **GitHub Actions**.
+3. Re-run the `MAC.BID Deal Engine` workflow or make the next qualifying commit.
+
+After that, successful scans will publish the same tested UI automatically through GitHub Pages.
 
 ## Account layer
 
