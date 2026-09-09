@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>MAC.BID Finds</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="enhancements.css" />
+  <link rel="stylesheet" href="finds.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">SAN ANTONIO · CURRENT HUNT SHORTLISTS</p>
+      <h1>MAC.BID Finds</h1>
+      <p id="finds-meta" class="muted">Loading current snapshot…</p>
+    </div>
+    <div class="top-actions">
+      <a class="ghost" href="./">← Hunt</a>
+      <a class="ghost" href="https://github.com/XoticHaze/Scraper-Public/actions/workflows/macbid-deal-engine.yml" target="_blank" rel="noreferrer">Refresh now ↗</a>
+      <a class="ghost" href="https://www.mac.bid/locations/san-antonio" target="_blank" rel="noreferrer">MAC.BID ↗</a>
+    </div>
+  </header>
+
+  <main class="finds-main">
+    <section class="finds-intro panel">
+      <div>
+        <strong>Follow-along view</strong>
+        <p class="muted">Automatically rebuilt from the latest San Antonio catalog. These are discovery candidates, not final BUY calls until model/market/condition verification clears.</p>
+      </div>
+      <div id="finds-status" class="finds-status">Loading…</div>
+    </section>
+    <nav id="finds-nav" class="quick-bar finds-nav" aria-label="Find lanes"></nav>
+    <div id="finds-sections"></div>
+  </main>
+
+  <script src="catalog.js"></script>
+  <script src="catalog-loader.js"></script>
+  <script src="finds.js" defer></script>
+</body>
+</html>
