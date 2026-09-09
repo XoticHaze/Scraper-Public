@@ -26,7 +26,28 @@ def _text(product: dict[str, Any], lot: dict[str, Any] | None = None) -> str:
 
 
 def _contains(text: str, term: str) -> bool:
-    return str(term).strip().lower() in text
+    """Match semantic terms without accidental substring collisions.
+
+    Simple word/phrase terms use token boundaries and accept a trailing plural on
+    the final alphabetic word. Punctuated model-ish terms keep literal matching.
+    This prevents examples such as `tv` -> `utv`, `phone` -> `microphone`, and
+    `tablet` -> `tabletop` while still allowing `monitor` -> `monitors`.
+    """
+
+    value = str(term).strip().lower()
+    if not value:
+        return False
+    if re.fullmatch(r"[a-z0-9]+(?:[ -][a-z0-9]+)*", value):
+        parts = re.split(r"[ -]+", value)
+        regex_parts: list[str] = []
+        for index, part in enumerate(parts):
+            piece = re.escape(part)
+            if index == len(parts) - 1 and part.isalpha() and len(part) > 2 and not part.endswith("s"):
+                piece += "s?"
+            regex_parts.append(piece)
+        pattern = r"(?<![a-z0-9])" + r"[\s-]+".join(regex_parts) + r"(?![a-z0-9])"
+        return re.search(pattern, text) is not None
+    return value in text
 
 
 def _any(text: str, terms: list[str] | None) -> list[str]:
@@ -54,13 +75,22 @@ def match_profile(
         required_hits = _any(text, required_any)
         if required_any and not required_hits:
             return None
+        must_match_any = profile.get("must_match_any") or []
+        must_hits = _any(text, must_match_any)
+        if must_match_any and not must_hits:
+            return None
         boost_hits = _any(text, profile.get("boost_any"))
-        score = len(required_hits) * 2 + len(required_all) * 2 + len(boost_hits)
+        score = (
+            len(required_hits) * 2
+            + len(required_all) * 2
+            + len(must_hits) * 2
+            + len(boost_hits)
+        )
         if score < int(profile.get("minimum_signal_score") or 1):
             return None
         return {
             "score": score,
-            "signals": (required_hits + required_all + boost_hits)[:12],
+            "signals": (required_hits + required_all + must_hits + boost_hits)[:12],
             "verification": profile.get("verification") or [],
             "compatibility_gate": profile.get("compatibility_gate"),
         }
