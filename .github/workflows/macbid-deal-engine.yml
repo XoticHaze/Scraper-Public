@@ -1,0 +1,84 @@
+name: MAC.BID Deal Engine
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deal_engine/**'
+      - 'config/macbid_deal_engine.json'
+      - 'scripts/macbid_deal_engine.py'
+      - 'tests/test_deal_scoring.py'
+      - '.github/workflows/macbid-deal-engine.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  engine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11.16'
+
+      - name: Install fixed dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'playwright==1.55.0' 'pytest==8.4.1'
+          python -m playwright install --with-deps chromium
+
+      - name: Run scoring tests
+        run: |
+          set -euo pipefail
+          pytest -q tests/test_deal_scoring.py
+
+      - name: Run local inventory deal engine
+        run: |
+          set -euo pipefail
+          python scripts/macbid_deal_engine.py
+
+      - name: Show compact ranked summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f results/macbid-deal-engine.json ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('results/macbid-deal-engine.json').read_text())
+          print(json.dumps(data.get('scan', {}), indent=2, sort_keys=True))
+          for view, rows in data.get('views', {}).items():
+              print(f'===== {view} =====')
+              for row in rows[:25]:
+                  print(json.dumps({
+                      'product_name': row.get('product_name') or row.get('title') or row.get('name'),
+                      'auction_location': row.get('auction_location'),
+                      'condition': row.get('condition'),
+                      'current_bid': row.get('current_bid'),
+                      'retail_price': row.get('retail_price'),
+                      'estimated_pre_tax_total': row.get('estimated_pre_tax_total'),
+                      'deal_score': row.get('deal_score'),
+                      'hours_until_close': row.get('hours_until_close'),
+                      'unique_bidders': row.get('unique_bidders'),
+                      'macbid_url': row.get('macbid_url'),
+                  }, sort_keys=True))
+          PY
+          else
+            echo 'No deal-engine report was produced.'
+          fi
+
+      - name: Upload deal engine report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-deal-engine
+          path: results/macbid-deal-engine.json
+          if-no-files-found: warn
+          retention-days: 2
