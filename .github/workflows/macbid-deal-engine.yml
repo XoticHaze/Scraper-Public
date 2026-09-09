@@ -12,16 +12,6 @@ on:
     types: [refresh]
   schedule:
     - cron: '17,47 * * * *'
-  push:
-    paths:
-      - 'deal_engine/**'
-      - 'config/macbid_deal_engine.json'
-      - 'scripts/macbid_deal_engine.py'
-      - 'scripts/macbid_postprocess.py'
-      - 'scripts/macbid_build_ui.py'
-      - 'ui/**'
-      - 'tests/test_deal_scoring.py'
-      - '.github/workflows/macbid-deal-engine.yml'
 
 permissions:
   contents: read
@@ -29,7 +19,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: macbid-deal-engine-${{ github.ref }}
+  group: macbid-live-refresh
   cancel-in-progress: true
 
 jobs:
