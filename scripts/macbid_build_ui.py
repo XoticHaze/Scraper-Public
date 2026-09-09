@@ -11,6 +11,7 @@ from deal_engine.grouping import product_identity
 
 REPORT = Path("results/macbid-deal-engine.json")
 UI_SOURCE = Path("ui")
+APP_ACTIONS = Path("app/actions.json")
 SITE = Path("site")
 
 LOT_FIELDS = (
@@ -128,10 +129,17 @@ def main() -> int:
         "window.MACBID_CATALOG=" + compact_json + ";\n",
         encoding="utf-8",
     )
+    if APP_ACTIONS.exists():
+        actions = json.loads(APP_ACTIONS.read_text(encoding="utf-8"))
+        (SITE / "actions.json").write_text(
+            json.dumps(actions, separators=(",", ":"), ensure_ascii=False),
+            encoding="utf-8",
+        )
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
 
     print(f"UI_PRODUCTS={len(products)}")
     print(f"UI_LOTS={len(inventory)}")
+    print(f"UI_ACTION_MANIFEST={'yes' if APP_ACTIONS.exists() else 'no'}")
     print(f"UI_OUTPUT={SITE}")
     return 0
 
