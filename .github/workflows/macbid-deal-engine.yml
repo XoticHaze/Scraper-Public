@@ -54,10 +54,10 @@ jobs:
           python -m pip install --disable-pip-version-check 'playwright==1.55.0' 'pytest==8.4.1'
           python -m playwright install --with-deps chromium
 
-      - name: Run scoring tests
+      - name: Run scoring and hunt tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py
 
       - name: Run San Antonio inventory deal engine
         run: |
@@ -85,10 +85,12 @@ jobs:
           assert data['locations'] == ['San Antonio'], data['locations']
           assert data['product_count'] > 0
           assert data['lot_count'] > 0
+          assert len(data.get('hunt_profiles', [])) >= 10
           assert Path('site/catalog.js').exists()
           assert Path('site/app-enhancements.js').exists()
           assert Path('site/action-center.js').exists()
           assert Path('site/enhancements.css').exists()
+          assert Path('site/hunt-profiles.json').exists()
           assert actions['schema'] == 'repo-app-actions-v1'
           assert {a['id'] for a in actions['actions']} >= {'refresh', 'visual-review', 'actions', 'source'}
           assert all(
@@ -102,6 +104,7 @@ jobs:
               for lot in product['lots'][:1]
           )
           print(f"UI_CATALOG_SAN_ANTONIO products={data['product_count']} lots={data['lot_count']}")
+          print(f"UI_HUNTS={len(data.get('hunt_profiles', []))}")
           print(f"UI_ACTIONS={len(actions['actions'])}")
           PY
 
@@ -126,6 +129,10 @@ jobs:
               assert desktop.locator('#snapshot-health').inner_text()
               assert desktop.locator('#app-actions-open').is_visible()
               assert 'products' in desktop.locator('#catalog-meta').inner_text().lower()
+              first_hunt = desktop.locator('.quick-chip').first
+              first_hunt.click()
+              desktop.wait_for_timeout(100)
+              assert 'hunt=' in desktop.url
               desktop.fill('#search', 'a')
               desktop.wait_for_timeout(100)
               assert int(desktop.locator('#result-count').inner_text().replace(',', '')) >= 0
@@ -137,13 +144,13 @@ jobs:
               mobile.wait_for_selector('.app-status', timeout=30000)
               mobile.wait_for_selector('#app-actions-open', timeout=30000)
               assert mobile.locator('#app-actions-open').is_visible(), 'app actions hidden on mobile'
-              assert mobile.locator('a[href*="macbid-deal-engine.yml"]').is_visible(), 'refresh hidden on mobile'
-              assert mobile.locator('a[href="https://github.com/XoticHaze/Scraper-Public/actions"]').is_visible(), 'actions hidden on mobile'
+              assert mobile.locator('a[href*="macbid-deal-engine.yml"]').first.is_visible(), 'refresh hidden on mobile'
+              assert mobile.locator('a[href="https://github.com/XoticHaze/Scraper-Public/actions"]').first.is_visible(), 'actions hidden on mobile'
               close_metric = mobile.locator('.card').first.locator('.metric').nth(3)
               assert close_metric.is_visible(), 'close time hidden on mobile'
               assert close_metric.inner_text().strip()
               assert mobile.evaluate('document.body.scrollWidth') <= 390
-              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile+actions')
+              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile+semantic-hunts+actions')
               mobile.close()
               browser.close()
           PY
