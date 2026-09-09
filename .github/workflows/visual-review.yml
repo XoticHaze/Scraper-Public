@@ -1,0 +1,81 @@
+name: MAC.BID Hunt Visual Review
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/visual-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11.16'
+
+      - name: Install Playwright
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'playwright==1.55.0'
+          python -m playwright install --with-deps chromium
+
+      - name: Capture live desktop and mobile views
+        run: |
+          set -euo pipefail
+          mkdir -p visual-review
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          url = 'https://xotichaze.github.io/Scraper-Public/'
+          out = Path('visual-review')
+          diagnostics = {}
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              for name, viewport, is_mobile in [
+                  ('desktop', {'width': 1440, 'height': 1200}, False),
+                  ('mobile', {'width': 390, 'height': 844}, True),
+              ]:
+                  page = browser.new_page(viewport=viewport, is_mobile=is_mobile)
+                  response = page.goto(url, wait_until='networkidle', timeout=60000)
+                  page.wait_for_selector('.card', timeout=30000)
+                  page.screenshot(path=str(out / f'{name}-full.png'), full_page=True)
+                  page.screenshot(path=str(out / f'{name}-viewport.png'), full_page=False)
+                  diagnostics[name] = {
+                      'status': response.status if response else None,
+                      'title': page.title(),
+                      'cards_rendered': page.locator('.card').count(),
+                      'images_rendered': page.locator('.card img[src]').count(),
+                      'body_scroll_width': page.evaluate('document.body.scrollWidth'),
+                      'viewport_width': viewport['width'],
+                      'body_scroll_height': page.evaluate('document.body.scrollHeight'),
+                      'header_height': page.locator('.topbar').bounding_box()['height'],
+                      'controls_height': page.locator('.controls').bounding_box()['height'],
+                      'first_card_box': page.locator('.card').first.bounding_box(),
+                      'visible_text': page.locator('body').inner_text()[:5000],
+                  }
+                  page.close()
+              browser.close()
+
+          (out / 'diagnostics.json').write_text(json.dumps(diagnostics, indent=2), encoding='utf-8')
+          print(json.dumps(diagnostics, indent=2))
+          PY
+
+      - name: Upload visual review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-visual-review
+          path: visual-review
+          if-no-files-found: error
+          retention-days: 2
