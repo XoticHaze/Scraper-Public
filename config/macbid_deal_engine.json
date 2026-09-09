@@ -1,5 +1,5 @@
 {
-  "locations": ["San Antonio", "Schertz"],
+  "locations": ["San Antonio"],
   "preferred_conditions": ["LIKE NEW", "OPEN BOX"],
   "excluded_conditions": ["DAMAGED"],
   "condition_priority": {
