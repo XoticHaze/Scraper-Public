@@ -17,11 +17,11 @@ Default rules:
 
 The encrypted transport pattern is modeled after `XoticHaze/research-compute-public-`: one-run X25519 recipient keys generated inside the runner, run-bound authenticated ciphertext, fixed consumers, sanitized receipts, and deletion of transient private material after execution.
 
-`XoticHaze/Scraper` is the separate private repository reserved for future authenticated/account-state work. The public deal engine must not depend on it.
+`XoticHaze/Scraper` is the separate **private** repository reserved for future authenticated/account-state work. The public deal engine does not depend on it.
 
 ## MAC.BID deal engine
 
-The primary workload is now a category-agnostic local bargain engine rather than a lock-specific scraper.
+The primary workload is a category-agnostic local bargain engine rather than a lock-specific scraper.
 
 Default market scope:
 
@@ -33,20 +33,40 @@ Default condition policy:
 - prefer `LIKE NEW`
 - allow `OPEN BOX`
 - exclude `DAMAGED`
+- exclude pallets unless explicitly enabled
+- suppress listings below a configurable stated-retail floor
 
-The engine bootstraps MAC.BID's public Typesense search contract from the San Antonio location page, keeps only the local open-inventory query, expands it to San Antonio + Schertz, scans the catalog, and ranks the results.
+The engine bootstraps MAC.BID's public Typesense search contract from the San Antonio location page, keeps only the local open-inventory query, expands it to San Antonio + Schertz, scans the complete eligible catalog, scores lots, collapses duplicate products, and builds a bounded market-verification queue.
 
-Primary views:
+### Exact ending-soonest authority
 
-- `ending_soon` — earliest public `expected_close_date` first
-- `best_value` — deterministic score from condition, current bid, stated retail spread, bidder competition, and urgency
-- `low_competition` — fewest bidders/bids first, using value score as a tiebreaker
+A browser probe of MAC.BID's own `Ending Soonest` control confirmed the native search contract:
 
-Fee math currently uses MAC.BID's public 15% buyer premium plus $3 lot fee. Provisional max bids are intentionally conservative and are explicitly marked as based only on MAC.BID's stated retail until exact model and external market-price verification are added.
+```text
+filter: expected_closing_utc > current epoch
+sort:   expected_closing_utc:asc,ranking_weight:desc
+```
+
+The deal engine now uses that exact public epoch field rather than inventing a time from MAC.BID's date-only `expected_close_date`. It rechecks the epoch at final ranking so lots that expire during a scan are not surfaced as active.
+
+### Primary views
+
+- `ending_soon` — exact MAC.BID closing timestamp ascending
+- `best_value` — deterministic discovery score from condition, current bid, stated-retail spread, bidder competition, and urgency
+- `low_competition` — fewest bidders/bids first, using value as a tiebreaker
+- `verification_queue` — unique high-ranked products that still require exact-model and real-market-price validation before a bid recommendation
+
+Repeated copies of the same product are collapsed into one primary candidate with alternative lots attached, so a single product cannot flood the surface.
+
+Fee math currently uses MAC.BID's public **15% buyer premium + $3 lot fee** and is labeled pre-tax. Provisional max bids are intentionally conservative and explicitly marked as based only on MAC.BID's stated retail until exact product/model and external market-price verification are available.
 
 Configuration lives in `config/macbid_deal_engine.json`.
 
-The first-stage engine is inventory-first. Direct searches and category/brand views should be applied over the same local inventory snapshot instead of spawning one scraper per keyword.
+The first-stage engine is inventory-first. Direct searches, brands, categories, and future personal-interest overlays should be applied over the same local inventory snapshot instead of spawning one scraper per keyword.
+
+## Account layer
+
+Account integration is intentionally deferred. Future saved/watchlisted lots, search history, bids/wins, or other personal MAC.BID state belong in private `XoticHaze/Scraper` and should feed only the minimum needed preference/state signal into the public deal engine through the encrypted transport boundary.
 
 ## Discovery probes
 
