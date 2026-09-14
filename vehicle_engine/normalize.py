@@ -60,8 +60,6 @@ def _dealer_price(lines: list[str], text: str) -> int | None:
             if match:
                 return _int_value(match.group(1))
 
-    # Conservative fallback: use the first dollar value only if the nearby
-    # label does not identify it as MSRP/retail/monthly finance noise.
     for idx, line in enumerate(lines):
         match = PRICE_RE.search(line)
         if not match:
@@ -155,6 +153,7 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         "transmission": _label_value(lines, ("transmission",)),
         "certified": bool(re.search(r"\bCertified\b", title_line, re.I) or re.search(r"\bGold Certified\b|\bSilver Certified\b", text, re.I)),
         "dealer_doc_fee": dealer.get("doc_fee"),
+        "dealer_mandatory_addon_amount": float(dealer.get("mandatory_addon_amount") or 0),
         "dealer_addon_warning": dealer.get("addon_warning"),
     }
 
