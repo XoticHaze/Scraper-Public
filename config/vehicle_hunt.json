@@ -29,9 +29,50 @@
   },
   "source": {
     "cars_com": {
-      "enabled": true,
-      "pages": 5,
-      "maximum_distance_query_miles": 250
-    }
+      "enabled": false,
+      "reason": "GitHub-hosted runner receives HTTP 403 from Cars.com"
+    },
+    "local_dealers": [
+      {
+        "id": "cavender_toyota",
+        "name": "Cavender Toyota",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "inventory_url": "https://www.cavendertoyota.com/used-cars/toyota-rav4.htm",
+        "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
+        "doc_fee": 225,
+        "addon_warning": null
+      },
+      {
+        "id": "north_park_toyota",
+        "name": "North Park Toyota of San Antonio",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "inventory_url": "https://www.northparktoyota.com/used-inventory/index.htm?make=Toyota&model=RAV4",
+        "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
+        "doc_fee": 0,
+        "addon_warning": null
+      },
+      {
+        "id": "universal_toyota",
+        "name": "Red McCombs Universal Toyota",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "inventory_url": "https://www.universaltoyota.com/used-vehicles/?make=Toyota&model=RAV4",
+        "detail_url_contains": ["/used-San%2BAntonio-", "/used-San+Antonio-", "/used-"],
+        "doc_fee": 225,
+        "addon_warning": null
+      },
+      {
+        "id": "shottenkirk_toyota_sa",
+        "name": "Shottenkirk Toyota San Antonio",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "inventory_url": "https://www.shottenkirktoyotasanantonio.com/used-vehicles/?model=RAV4",
+        "detail_url_contains": ["/inventory/", "/used-vehicles/"],
+        "doc_fee": 225,
+        "addon_warning": "Dealer currently discloses a $3,696 tint/nitrogen/VIP package on used vehicles; verify removal or full OTD before ranking as a buy."
+      }
+    ]
   }
 }
