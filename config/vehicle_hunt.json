@@ -1,0 +1,34 @@
+{
+  "schema": "vehicle-hunt-config-v1",
+  "market": {
+    "label": "San Antonio, TX",
+    "zip": "78251",
+    "preferred_radius_miles": 50,
+    "hard_radius_miles": 200
+  },
+  "vehicle": {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_min": 2018,
+    "year_max": 2025,
+    "target_price": 23000,
+    "max_price": 27000,
+    "preferred_mileage": 45000,
+    "maintenance_control_mileage": 35000,
+    "max_mileage": 100000,
+    "preferred_drivetrain": "All-wheel Drive"
+  },
+  "ownership_cost": {
+    "sales_tax_rate": 0.0625,
+    "estimated_title_registration": 250,
+    "assumed_doc_fee": 225,
+    "dealer_addons_included": false
+  },
+  "source": {
+    "cars_com": {
+      "enabled": true,
+      "pages": 5,
+      "maximum_distance_query_miles": 250
+    }
+  }
+}
