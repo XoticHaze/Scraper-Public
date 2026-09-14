@@ -3,12 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 import time
+import urllib.request
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlencode
-
-import requests
-from bs4 import BeautifulSoup
 
 from vehicle_engine.normalize import parse_cars_com_card
 from vehicle_engine.scoring import rank_vehicles
@@ -16,6 +15,55 @@ from vehicle_engine.scoring import rank_vehicles
 CONFIG = Path("config/vehicle_hunt.json")
 RESULT = Path("results/vehicle-hunt.json")
 PREVIOUS = Path("results/vehicle-previous.json")
+
+
+class VehicleCardParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.depth = 0
+        self.capture_depth: int | None = None
+        self.parts: list[str] = []
+        self.url: str | None = None
+        self.image_url: str | None = None
+        self.cards: list[dict] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_map = dict(attrs)
+        classes = set((attrs_map.get("class") or "").split())
+        if self.capture_depth is None and ("vehicle-card" in classes or attrs_map.get("data-listing-id")):
+            self.capture_depth = self.depth
+            self.parts = []
+            self.url = None
+            self.image_url = None
+        if self.capture_depth is not None:
+            href = attrs_map.get("href")
+            if tag == "a" and href and "/vehicledetail/" in href and self.url is None:
+                self.url = href if href.startswith("http") else "https://www.cars.com" + href
+            if tag == "img" and self.image_url is None:
+                self.image_url = attrs_map.get("src") or attrs_map.get("data-src")
+        self.depth += 1
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_map = dict(attrs)
+        if self.capture_depth is not None and tag == "img" and self.image_url is None:
+            self.image_url = attrs_map.get("src") or attrs_map.get("data-src")
+
+    def handle_data(self, data: str) -> None:
+        if self.capture_depth is not None:
+            value = data.strip()
+            if value:
+                self.parts.append(value)
+
+    def handle_endtag(self, tag: str) -> None:
+        self.depth = max(0, self.depth - 1)
+        if self.capture_depth is not None and self.depth == self.capture_depth:
+            text = "\n".join(self.parts)
+            if "Toyota RAV4" in text:
+                self.cards.append({"text": text, "url": self.url, "image_url": self.image_url})
+            self.capture_depth = None
+            self.parts = []
+            self.url = None
+            self.image_url = None
 
 
 def load_config(path: Path) -> tuple[dict, dict]:
@@ -44,34 +92,24 @@ def cars_url(cfg: dict, page: int) -> str:
 
 def fetch_cards(cfg: dict) -> list[dict]:
     source = cfg["source"]["cars_com"]
-    session = requests.Session()
-    session.headers.update({"User-Agent": "Mozilla/5.0 compatible; Scraper-Public vehicle research"})
     cards: list[dict] = []
     seen: set[str] = set()
     for page_number in range(1, int(source.get("pages", 3)) + 1):
-        response = session.get(cars_url(cfg, page_number), timeout=30)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        nodes = soup.select(".vehicle-card, [data-listing-id]")
-        if not nodes:
+        request = urllib.request.Request(
+            cars_url(cfg, page_number),
+            headers={"User-Agent": "Mozilla/5.0 compatible; Scraper-Public vehicle research"},
+        )
+        with urllib.request.urlopen(request, timeout=30) as response:
+            html = response.read().decode("utf-8", "replace")
+        parser = VehicleCardParser()
+        parser.feed(html)
+        if not parser.cards:
             break
-        for node in nodes:
-            text = node.get_text("\n", strip=True)
-            if "Toyota RAV4" not in text:
-                continue
-            link = node.select_one('a[href*="/vehicledetail/"]') or node.select_one("a[href]")
-            image = node.select_one("img")
-            url = link.get("href") if link else None
-            if url and url.startswith("/"):
-                url = "https://www.cars.com" + url
-            image_url = None
-            if image:
-                image_url = image.get("src") or image.get("data-src")
-            key = url or text[:160]
-            if key in seen:
-                continue
-            seen.add(key)
-            cards.append({"text": text, "url": url, "image_url": image_url})
+        for card in parser.cards:
+            key = card.get("url") or card.get("text", "")[:160]
+            if key not in seen:
+                seen.add(key)
+                cards.append(card)
     return cards
 
 
@@ -107,8 +145,7 @@ def main() -> int:
     cfg, policy = load_config(Path(args.config))
     parsed = [parse_cars_com_card(card) for card in fetch_cards(cfg)]
     rows = [row for row in parsed if row]
-    unique = {listing_key(row): row for row in rows}
-    rows = list(unique.values())
+    rows = list({listing_key(row): row for row in rows}.values())
     add_history(rows, Path(args.previous))
     ranked = rank_vehicles(rows, policy)
 
