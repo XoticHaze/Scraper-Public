@@ -3,9 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
-import urllib.request
 from datetime import datetime, timezone
-from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -15,55 +13,6 @@ from vehicle_engine.scoring import rank_vehicles
 CONFIG = Path("config/vehicle_hunt.json")
 RESULT = Path("results/vehicle-hunt.json")
 PREVIOUS = Path("results/vehicle-previous.json")
-
-
-class VehicleCardParser(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.depth = 0
-        self.capture_depth: int | None = None
-        self.parts: list[str] = []
-        self.url: str | None = None
-        self.image_url: str | None = None
-        self.cards: list[dict] = []
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        attrs_map = dict(attrs)
-        classes = set((attrs_map.get("class") or "").split())
-        if self.capture_depth is None and ("vehicle-card" in classes or attrs_map.get("data-listing-id")):
-            self.capture_depth = self.depth
-            self.parts = []
-            self.url = None
-            self.image_url = None
-        if self.capture_depth is not None:
-            href = attrs_map.get("href")
-            if tag == "a" and href and "/vehicledetail/" in href and self.url is None:
-                self.url = href if href.startswith("http") else "https://www.cars.com" + href
-            if tag == "img" and self.image_url is None:
-                self.image_url = attrs_map.get("src") or attrs_map.get("data-src")
-        self.depth += 1
-
-    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        attrs_map = dict(attrs)
-        if self.capture_depth is not None and tag == "img" and self.image_url is None:
-            self.image_url = attrs_map.get("src") or attrs_map.get("data-src")
-
-    def handle_data(self, data: str) -> None:
-        if self.capture_depth is not None:
-            value = data.strip()
-            if value:
-                self.parts.append(value)
-
-    def handle_endtag(self, tag: str) -> None:
-        self.depth = max(0, self.depth - 1)
-        if self.capture_depth is not None and self.depth == self.capture_depth:
-            text = "\n".join(self.parts)
-            if "Toyota RAV4" in text:
-                self.cards.append({"text": text, "url": self.url, "image_url": self.image_url})
-            self.capture_depth = None
-            self.parts = []
-            self.url = None
-            self.image_url = None
 
 
 def load_config(path: Path) -> tuple[dict, dict]:
@@ -91,25 +40,75 @@ def cars_url(cfg: dict, page: int) -> str:
 
 
 def fetch_cards(cfg: dict) -> list[dict]:
+    """Fetch rendered public result cards through Chromium.
+
+    Cars.com rejects raw datacenter HTTP requests with 403, while the existing
+    deal workflow already provisions Playwright/Chromium for browser smoke
+    tests. Reusing that browser path keeps the source adapter public-only and
+    avoids adding credentials or a second execution surface.
+    """
+    from playwright.sync_api import sync_playwright
+
     source = cfg["source"]["cars_com"]
+    max_pages = int(source.get("pages", 3))
     cards: list[dict] = []
     seen: set[str] = set()
-    for page_number in range(1, int(source.get("pages", 3)) + 1):
-        request = urllib.request.Request(
-            cars_url(cfg, page_number),
-            headers={"User-Agent": "Mozilla/5.0 compatible; Scraper-Public vehicle research"},
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            viewport={"width": 1440, "height": 1200},
+            locale="en-US",
+            user_agent=(
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+            ),
         )
-        with urllib.request.urlopen(request, timeout=30) as response:
-            html = response.read().decode("utf-8", "replace")
-        parser = VehicleCardParser()
-        parser.feed(html)
-        if not parser.cards:
-            break
-        for card in parser.cards:
-            key = card.get("url") or card.get("text", "")[:160]
-            if key not in seen:
-                seen.add(key)
-                cards.append(card)
+        page = context.new_page()
+
+        for page_number in range(1, max_pages + 1):
+            url = cars_url(cfg, page_number)
+            response = page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            status = response.status if response else None
+            page.wait_for_timeout(2500)
+
+            title = page.title()
+            body_text = page.locator("body").inner_text(timeout=10000)[:1000]
+            if status and status >= 400:
+                raise RuntimeError(f"cars.com browser status {status}")
+            if "access denied" in body_text.lower() or "verify you are human" in body_text.lower():
+                raise RuntimeError(f"cars.com browser challenge: {title}")
+
+            extracted = page.evaluate(
+                """
+                () => Array.from(document.querySelectorAll('.vehicle-card, [data-listing-id]'))
+                  .map((el) => {
+                    const a = el.querySelector('a[href*="/vehicledetail/"]') || el.querySelector('a[href]');
+                    const img = el.querySelector('img');
+                    return {
+                      text: (el.innerText || '').trim(),
+                      url: a ? a.href : null,
+                      image_url: img ? (img.currentSrc || img.src || null) : null,
+                    };
+                  })
+                  .filter((x) => x.text && /20\d{2}\s+Toyota\s+RAV4/i.test(x.text));
+                """
+            )
+            print(f"VEHICLE_SOURCE_PAGE source=cars.com page={page_number} status={status} cards={len(extracted)}")
+            if not extracted:
+                if page_number == 1:
+                    raise RuntimeError("cars.com rendered zero RAV4 cards")
+                break
+
+            for card in extracted:
+                key = card.get("url") or card.get("text", "")[:160]
+                if key and key not in seen:
+                    seen.add(key)
+                    cards.append(card)
+
+        context.close()
+        browser.close()
+
     return cards
 
 
@@ -146,6 +145,9 @@ def main() -> int:
     parsed = [parse_cars_com_card(card) for card in fetch_cards(cfg)]
     rows = [row for row in parsed if row]
     rows = list({listing_key(row): row for row in rows}.values())
+    if not rows:
+        raise RuntimeError("vehicle source returned no parseable listings")
+
     add_history(rows, Path(args.previous))
     ranked = rank_vehicles(rows, policy)
 
