@@ -24,6 +24,9 @@
     "assumed_doc_fee": 225,
     "dealer_addons_included": false
   },
+  "automation": {
+    "refresh_interval_minutes": 180
+  },
   "source": {
     "cars_com": {
       "enabled": true,
