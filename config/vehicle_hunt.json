@@ -41,6 +41,7 @@
         "inventory_url": "https://www.cavendertoyota.com/used-cars/toyota-rav4.htm",
         "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
         "doc_fee": 225,
+        "mandatory_addon_amount": 0,
         "addon_warning": null
       },
       {
@@ -51,6 +52,7 @@
         "inventory_url": "https://www.northparktoyota.com/used-inventory/index.htm?make=Toyota&model=RAV4",
         "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
         "doc_fee": 0,
+        "mandatory_addon_amount": 0,
         "addon_warning": null
       },
       {
@@ -61,6 +63,7 @@
         "inventory_url": "https://www.universaltoyota.com/used-vehicles/?make=Toyota&model=RAV4",
         "detail_url_contains": ["/used-San%2BAntonio-", "/used-San+Antonio-", "/used-"],
         "doc_fee": 225,
+        "mandatory_addon_amount": 0,
         "addon_warning": null
       },
       {
@@ -71,6 +74,7 @@
         "inventory_url": "https://www.shottenkirktoyotasanantonio.com/used-vehicles/?model=RAV4",
         "detail_url_contains": ["/inventory/", "/used-vehicles/"],
         "doc_fee": 225,
+        "mandatory_addon_amount": 3696,
         "addon_warning": "Dealer currently discloses a $3,696 tint/nitrogen/VIP package on used vehicles; verify removal or full OTD before ranking as a buy."
       }
     ]
