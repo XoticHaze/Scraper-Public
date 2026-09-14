@@ -14,6 +14,7 @@ from deal_engine.grouping import collapse_ranked, product_identity
 REPORT = Path("results/macbid-deal-engine.json")
 VEHICLE_REPORT = Path("results/vehicle-hunt.json")
 VEHICLE_PREVIOUS = Path("results/vehicle-previous.json")
+VEHICLE_UI = Path("ui/vehicle_catalog.json")
 VEHICLE_LIVE_URL = "https://xotichaze.github.io/Scraper-Public/vehicle_catalog.json"
 
 
@@ -50,6 +51,10 @@ def refresh_vehicle_hunt() -> None:
             shutil.copyfile(VEHICLE_PREVIOUS, VEHICLE_REPORT)
             print("VEHICLE_REFRESH=fallback_previous_catalog")
 
+    if VEHICLE_REPORT.exists():
+        shutil.copyfile(VEHICLE_REPORT, VEHICLE_UI)
+        print("VEHICLE_UI=staged")
+
 
 def main() -> int:
     data = json.loads(REPORT.read_text(encoding="utf-8"))
@@ -60,31 +65,15 @@ def main() -> int:
 
     active_inventory = [lot for lot in inventory if exact_close_key(lot) > final_epoch]
 
-    ending = sorted(
-        active_inventory,
-        key=lambda x: (
-            exact_close_key(x),
-            condition_rank(str(x.get("condition") or ""), config),
-            -float(x.get("deal_score") or 0),
-        ),
-    )
-    best = sorted(
-        active_inventory,
-        key=lambda x: (
-            -float(x.get("deal_score") or 0),
-            condition_rank(str(x.get("condition") or ""), config),
-            exact_close_key(x),
-        ),
-    )
-    low_comp = sorted(
-        active_inventory,
-        key=lambda x: (
-            int(x.get("unique_bidders") or 0),
-            int(x.get("total_bids") or 0),
-            -float(x.get("deal_score") or 0),
-            exact_close_key(x),
-        ),
-    )
+    ending = sorted(active_inventory, key=lambda x: (
+        exact_close_key(x), condition_rank(str(x.get("condition") or ""), config), -float(x.get("deal_score") or 0)
+    ))
+    best = sorted(active_inventory, key=lambda x: (
+        -float(x.get("deal_score") or 0), condition_rank(str(x.get("condition") or ""), config), exact_close_key(x)
+    ))
+    low_comp = sorted(active_inventory, key=lambda x: (
+        int(x.get("unique_bidders") or 0), int(x.get("total_bids") or 0), -float(x.get("deal_score") or 0), exact_close_key(x)
+    ))
 
     collapsed_ending = collapse_ranked(ending)
     collapsed_best = collapse_ranked(best)
