@@ -8,7 +8,9 @@ def estimate_otd(price: float, policy: dict[str, Any]) -> float:
     tax = float(policy.get("sales_tax_rate", 0.0625))
     title_reg = float(policy.get("estimated_title_registration", 250.0))
     doc = float(policy.get("assumed_doc_fee", 225.0))
-    return round(price * (1.0 + tax) + title_reg + doc, 2)
+    addon = float(policy.get("dealer_addon_amount", 0.0))
+    taxable_subtotal = price + addon
+    return round(taxable_subtotal * (1.0 + tax) + title_reg + doc, 2)
 
 
 def locality_bucket(distance_miles: int | None, policy: dict[str, Any], market_local: bool = False) -> str:
@@ -119,7 +121,8 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
         score += 4.0
         reasons.append("certified")
 
-    if row.get("dealer_addon_warning"):
+    addon_amount = float(row.get("dealer_mandatory_addon_amount") or 0)
+    if addon_amount > 0 or row.get("dealer_addon_warning"):
         score -= 12.0
         risks.append("dealer_mandatory_addon_risk")
 
@@ -143,6 +146,7 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
     otd_policy = dict(policy)
     if row.get("dealer_doc_fee") is not None:
         otd_policy["assumed_doc_fee"] = row["dealer_doc_fee"]
+    otd_policy["dealer_addon_amount"] = addon_amount
 
     out = dict(row)
     out.update({
