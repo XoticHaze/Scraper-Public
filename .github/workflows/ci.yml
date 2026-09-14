@@ -5,6 +5,7 @@ on:
     paths:
       - 'app/**'
       - 'deal_engine/**'
+      - 'vehicle_engine/**'
       - 'encrypted_compute/**'
       - 'producer_worker/**'
       - 'config/**'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'app/**'
       - 'deal_engine/**'
+      - 'vehicle_engine/**'
       - 'encrypted_compute/**'
       - 'producer_worker/**'
       - 'config/**'
@@ -58,7 +60,7 @@ jobs:
       - name: Python compile gate
         run: |
           set -euo pipefail
-          python -m compileall -q deal_engine encrypted_compute scripts tools tests
+          python -m compileall -q deal_engine vehicle_engine encrypted_compute scripts tools tests
 
       - name: JavaScript syntax gate
         run: |
@@ -68,15 +70,16 @@ jobs:
           node --check ui/action-center.js
           node --check ui/catalog-loader.js
           node --check ui/finds.js
+          node --check ui/vehicles.js
           node --check producer_worker/index.mjs
           node --check producer_worker/interop.mjs
 
       - name: Tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_vehicle_hunt.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
 
-      - name: Validate engine, app, hunt, privacy, and private-compute policy
+      - name: Validate engine, app, hunt, locality, privacy, and private-compute policy
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -90,6 +93,15 @@ jobs:
           assert 'OPEN BOX' in cfg['preferred_conditions']
           assert abs(float(cfg['sales_tax_rate']) - 0.0825) < 1e-12
           assert 'San Antonio' in cfg['sales_tax_scope']
+
+          vehicle = json.loads(Path('config/vehicle_hunt.json').read_text())
+          assert vehicle['market']['label'] == 'San Antonio, TX'
+          assert vehicle['market']['zip'] == '78251'
+          assert vehicle['market']['preferred_radius_miles'] == 50
+          assert vehicle['market']['hard_radius_miles'] == 200
+          assert vehicle['vehicle']['target_price'] == 23000
+          assert vehicle['vehicle']['maintenance_control_mileage'] == 35000
+          assert abs(float(vehicle['ownership_cost']['sales_tax_rate']) - 0.0625) < 1e-12
 
           manifest = json.loads(Path('app/actions.json').read_text())
           assert manifest['schema'] == 'repo-app-actions-v1'
@@ -114,6 +126,9 @@ jobs:
           assert Path('ui/finds.html').exists()
           assert Path('ui/finds.js').exists()
           assert Path('ui/finds.css').exists()
+          assert Path('ui/vehicles.html').exists()
+          assert Path('ui/vehicles.js').exists()
+          assert Path('ui/vehicles.css').exists()
           assert Path('producer_worker/index.mjs').exists()
           assert Path('docs/PRIVACY_BOUNDARY.md').exists()
           assert Path('.github/workflows/encrypted-private-compute-runtime.yml').exists()
@@ -126,6 +141,7 @@ jobs:
           assert 'estimated_post_tax_total' in app_js
           assert 'Estimated all-in total' in app_js
           assert 'estimated_post_tax_total' in Path('ui/finds.js').read_text()
+          assert 'vehicle_catalog.json' in Path('ui/vehicles.js').read_text()
 
           producer_js = Path('producer_worker/index.mjs').read_text()
           assert '/v1/private-compute/notify' not in producer_js
