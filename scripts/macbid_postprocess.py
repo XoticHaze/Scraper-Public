@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
+import sys
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 from deal_engine.grouping import collapse_ranked, product_identity
 
 REPORT = Path("results/macbid-deal-engine.json")
+VEHICLE_REPORT = Path("results/vehicle-hunt.json")
+VEHICLE_PREVIOUS = Path("results/vehicle-previous.json")
+VEHICLE_LIVE_URL = "https://xotichaze.github.io/Scraper-Public/vehicle_catalog.json"
 
 
 def condition_rank(condition: str, config: dict[str, Any]) -> int:
@@ -25,6 +32,25 @@ def exact_close_key(lot: dict[str, Any]) -> float:
         return float("inf")
 
 
+def refresh_vehicle_hunt() -> None:
+    VEHICLE_PREVIOUS.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with urllib.request.urlopen(VEHICLE_LIVE_URL, timeout=10) as response:
+            VEHICLE_PREVIOUS.write_bytes(response.read())
+        print("VEHICLE_PREVIOUS=live_pages_snapshot")
+    except Exception as exc:
+        print(f"VEHICLE_PREVIOUS=unavailable reason={type(exc).__name__}")
+
+    try:
+        subprocess.run([sys.executable, "scripts/vehicle_scan.py"], check=True, timeout=90)
+        print("VEHICLE_REFRESH=PASS")
+    except Exception as exc:
+        print(f"VEHICLE_REFRESH=DEGRADED reason={type(exc).__name__}")
+        if VEHICLE_PREVIOUS.exists():
+            shutil.copyfile(VEHICLE_PREVIOUS, VEHICLE_REPORT)
+            print("VEHICLE_REFRESH=fallback_previous_catalog")
+
+
 def main() -> int:
     data = json.loads(REPORT.read_text(encoding="utf-8"))
     config = data.get("policy", {})
@@ -32,9 +58,6 @@ def main() -> int:
     limits = config.get("views", {})
     final_epoch = int(time.time())
 
-    # A lot can legitimately close between the first Typesense page and final
-    # ranking. Re-check the exact close timestamp here so surfaced views contain
-    # only still-active candidates at artifact creation time.
     active_inventory = [lot for lot in inventory if exact_close_key(lot) > final_epoch]
 
     ending = sorted(
@@ -96,22 +119,19 @@ def main() -> int:
     for view, rows in data["views"].items():
         print(f"POSTPROCESS_VIEW {view} count={len(rows)}")
         for lot in rows[:10]:
-            print(
-                json.dumps(
-                    {
-                        "product_name": lot.get("product_name") or lot.get("title") or lot.get("name"),
-                        "condition": lot.get("condition"),
-                        "current_bid": lot.get("current_bid"),
-                        "retail_price": lot.get("retail_price"),
-                        "expected_closing_utc": lot.get("expected_closing_utc"),
-                        "hours_until_close": lot.get("hours_until_close"),
-                        "unique_bidders": lot.get("unique_bidders"),
-                        "duplicate_lot_count": lot.get("duplicate_lot_count"),
-                        "macbid_url": lot.get("macbid_url"),
-                    },
-                    sort_keys=True,
-                )
-            )
+            print(json.dumps({
+                "product_name": lot.get("product_name") or lot.get("title") or lot.get("name"),
+                "condition": lot.get("condition"),
+                "current_bid": lot.get("current_bid"),
+                "retail_price": lot.get("retail_price"),
+                "expected_closing_utc": lot.get("expected_closing_utc"),
+                "hours_until_close": lot.get("hours_until_close"),
+                "unique_bidders": lot.get("unique_bidders"),
+                "duplicate_lot_count": lot.get("duplicate_lot_count"),
+                "macbid_url": lot.get("macbid_url"),
+            }, sort_keys=True))
+
+    refresh_vehicle_hunt()
     return 0
 
 
