@@ -3,11 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urljoin
 
-from vehicle_engine.normalize import parse_cars_com_card
+from vehicle_engine.normalize import parse_dealer_detail
 from vehicle_engine.scoring import rank_vehicles
 
 CONFIG = Path("config/vehicle_hunt.json")
@@ -21,38 +22,61 @@ def load_config(path: Path) -> tuple[dict, dict]:
     return cfg, policy
 
 
-def cars_url(cfg: dict, page: int) -> str:
-    market = cfg["market"]
-    vehicle = cfg["vehicle"]
-    source = cfg["source"]["cars_com"]
-    params = {
-        "stock_type": "used",
-        "makes[]": vehicle["make"].lower(),
-        "models[]": f"{vehicle['make'].lower()}-{vehicle['model'].lower()}",
-        "maximum_distance": source.get("maximum_distance_query_miles", 250),
-        "zip": market["zip"],
-        "year_min": vehicle["year_min"],
-        "year_max": vehicle["year_max"],
-        "list_price_max": vehicle["max_price"],
-        "page": page,
-    }
-    return "https://www.cars.com/shopping/results/?" + urlencode(params, doseq=True)
+def _looks_like_challenge(status: int | None, title: str, body: str) -> bool:
+    if status is not None and status >= 400:
+        return True
+    haystack = f"{title}\n{body[:1600]}".lower()
+    return any(token in haystack for token in (
+        "access denied", "verify you are human", "captcha", "just a moment",
+        "request blocked", "security challenge",
+    ))
 
 
-def fetch_cards(cfg: dict) -> list[dict]:
-    """Fetch rendered public result cards through Chromium.
+def _discover_detail_links(page, dealer: dict) -> list[str]:
+    patterns = [str(value) for value in dealer.get("detail_url_contains", [])]
+    inventory_url = str(dealer["inventory_url"])
+    rows = page.evaluate(
+        """
+        () => Array.from(document.querySelectorAll('a[href]')).map((a) => {
+          const box = a.closest('article, li, [data-vehicle], [data-vin], .vehicle-card, .inventory-item, .vehicle, .vehicle-item');
+          return {
+            href: a.href || '',
+            text: (a.innerText || a.textContent || '').trim().slice(0, 220),
+            context: box ? (box.innerText || '').trim().slice(0, 900) : ''
+          };
+        })
+        """
+    )
+    links: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        href = str(row.get("href") or "").strip()
+        if not href or href == inventory_url:
+            continue
+        context = f"{row.get('text') or ''} {row.get('context') or ''} {href}".lower()
+        if "rav4" not in context:
+            continue
+        if patterns and not any(pattern.lower() in href.lower() for pattern in patterns):
+            continue
+        absolute = urljoin(inventory_url, href).split("#", 1)[0]
+        if absolute not in seen:
+            seen.add(absolute)
+            links.append(absolute)
+    return links
 
-    Cars.com rejects raw datacenter HTTP requests with 403, while the existing
-    deal workflow already provisions Playwright/Chromium for browser smoke
-    tests. Reusing that browser path keeps the source adapter public-only and
-    avoids adding credentials or a second execution surface.
+
+def fetch_local_dealers(cfg: dict) -> tuple[list[dict], dict[str, str]]:
+    """Render local dealer inventory and normalize detail pages.
+
+    Each dealer is independently best-effort. A blocked or redesigned dealer
+    does not suppress healthy local sources, and zero total results is treated
+    as a failed refresh so the existing last-good catalog can remain live.
     """
     from playwright.sync_api import sync_playwright
 
-    source = cfg["source"]["cars_com"]
-    max_pages = int(source.get("pages", 3))
-    cards: list[dict] = []
-    seen: set[str] = set()
+    dealers = list(cfg.get("source", {}).get("local_dealers", []))
+    rows: list[dict] = []
+    errors: dict[str, str] = {}
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -64,52 +88,64 @@ def fetch_cards(cfg: dict) -> list[dict]:
                 "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
             ),
         )
-        page = context.new_page()
+        inventory_page = context.new_page()
+        detail_page = context.new_page()
 
-        for page_number in range(1, max_pages + 1):
-            url = cars_url(cfg, page_number)
-            response = page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            status = response.status if response else None
-            page.wait_for_timeout(2500)
+        for dealer in dealers:
+            source_id = str(dealer.get("id") or "unknown_dealer")
+            try:
+                response = inventory_page.goto(
+                    str(dealer["inventory_url"]), wait_until="domcontentloaded", timeout=60000
+                )
+                status = response.status if response else None
+                inventory_page.wait_for_timeout(3000)
+                title = inventory_page.title()
+                body = inventory_page.locator("body").inner_text(timeout=15000)
+                if _looks_like_challenge(status, title, body):
+                    raise RuntimeError(f"inventory blocked status={status} title={title!r}")
 
-            title = page.title()
-            body_text = page.locator("body").inner_text(timeout=10000)[:1000]
-            if status and status >= 400:
-                raise RuntimeError(f"cars.com browser status {status}")
-            if "access denied" in body_text.lower() or "verify you are human" in body_text.lower():
-                raise RuntimeError(f"cars.com browser challenge: {title}")
+                links = _discover_detail_links(inventory_page, dealer)
+                print(f"VEHICLE_SOURCE_PAGE source={source_id} status={status} detail_links={len(links)}")
+                if not links:
+                    raise RuntimeError("no RAV4 detail links discovered")
 
-            extracted = page.evaluate(
-                """
-                () => Array.from(document.querySelectorAll('.vehicle-card, [data-listing-id]'))
-                  .map((el) => {
-                    const a = el.querySelector('a[href*="/vehicledetail/"]') || el.querySelector('a[href]');
-                    const img = el.querySelector('img');
-                    return {
-                      text: (el.innerText || '').trim(),
-                      url: a ? a.href : null,
-                      image_url: img ? (img.currentSrc || img.src || null) : null,
-                    };
-                  })
-                  .filter((x) => x.text && /20\d{2}\s+Toyota\s+RAV4/i.test(x.text));
-                """
-            )
-            print(f"VEHICLE_SOURCE_PAGE source=cars.com page={page_number} status={status} cards={len(extracted)}")
-            if not extracted:
-                if page_number == 1:
-                    raise RuntimeError("cars.com rendered zero RAV4 cards")
-                break
-
-            for card in extracted:
-                key = card.get("url") or card.get("text", "")[:160]
-                if key and key not in seen:
-                    seen.add(key)
-                    cards.append(card)
+                parsed_count = 0
+                failed_count = 0
+                for url in links[:40]:
+                    try:
+                        detail_response = detail_page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                        detail_status = detail_response.status if detail_response else None
+                        detail_page.wait_for_timeout(900)
+                        detail_title = detail_page.title()
+                        detail_text = detail_page.locator("body").inner_text(timeout=12000)
+                        if _looks_like_challenge(detail_status, detail_title, detail_text):
+                            failed_count += 1
+                            continue
+                        image_url = detail_page.locator('meta[property="og:image"]').get_attribute("content") \
+                            if detail_page.locator('meta[property="og:image"]').count() else None
+                        row = parse_dealer_detail(
+                            {"text": detail_text, "url": detail_page.url, "image_url": image_url}, dealer
+                        )
+                        if row:
+                            rows.append(row)
+                            parsed_count += 1
+                        else:
+                            failed_count += 1
+                    except Exception:
+                        failed_count += 1
+                print(
+                    f"VEHICLE_SOURCE_DETAIL source={source_id} parsed={parsed_count} failed={failed_count}"
+                )
+                if parsed_count == 0:
+                    errors[source_id] = "detail_pages_discovered_but_none_parsed"
+            except Exception as exc:
+                errors[source_id] = f"{type(exc).__name__}: {exc}"
+                print(f"VEHICLE_SOURCE_DEGRADED source={source_id} reason={errors[source_id]}")
 
         context.close()
         browser.close()
 
-    return cards
+    return rows, errors
 
 
 def listing_key(row: dict) -> str:
@@ -142,14 +178,14 @@ def main() -> int:
     args = parser.parse_args()
 
     cfg, policy = load_config(Path(args.config))
-    parsed = [parse_cars_com_card(card) for card in fetch_cards(cfg)]
-    rows = [row for row in parsed if row]
+    rows, source_errors = fetch_local_dealers(cfg)
     rows = list({listing_key(row): row for row in rows}.values())
     if not rows:
-        raise RuntimeError("vehicle source returned no parseable listings")
+        raise RuntimeError("all local dealer sources returned zero parseable RAV4 listings")
 
     add_history(rows, Path(args.previous))
     ranked = rank_vehicles(rows, policy)
+    source_counts = dict(sorted(Counter(str(row.get("source") or "unknown") for row in rows).items()))
 
     payload = {
         "schema": "vehicle-hunt-catalog-v1",
@@ -158,7 +194,8 @@ def main() -> int:
         "market": cfg["market"],
         "query": cfg["vehicle"],
         "ownership_cost": cfg["ownership_cost"],
-        "source_counts": {"cars.com": len(rows)},
+        "source_counts": source_counts,
+        "source_errors": source_errors,
         "raw_listing_count": len(rows),
         "eligible_count": len(ranked),
         "vehicles": ranked,
@@ -166,11 +203,17 @@ def main() -> int:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
     print(f"VEHICLE_MARKET={cfg['market']['label']} zip={cfg['market']['zip']}")
     print(f"VEHICLE_LOCALITY preferred={cfg['market']['preferred_radius_miles']} hard={cfg['market']['hard_radius_miles']}")
+    print(f"VEHICLE_SOURCES={json.dumps(source_counts, sort_keys=True)}")
+    print(f"VEHICLE_SOURCE_ERRORS={json.dumps(source_errors, sort_keys=True)}")
     print(f"VEHICLE_RAW={len(rows)} eligible={len(ranked)}")
     for row in ranked[:15]:
-        print(json.dumps({key: row.get(key) for key in ("rank", "title", "price", "mileage", "distance_miles", "locality", "deal_score", "estimated_otd", "source_url")}, sort_keys=True))
+        print(json.dumps({key: row.get(key) for key in (
+            "rank", "title", "dealer", "price", "mileage", "locality", "deal_score",
+            "estimated_otd", "dealer_mandatory_addon_amount", "source_url"
+        )}, sort_keys=True))
     return 0
 
 
