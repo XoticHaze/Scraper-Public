@@ -15,6 +15,7 @@ REPORT = Path("results/macbid-deal-engine.json")
 VEHICLE_REPORT = Path("results/vehicle-hunt.json")
 VEHICLE_PREVIOUS = Path("results/vehicle-previous.json")
 VEHICLE_UI = Path("ui/vehicle_catalog.json")
+VEHICLE_CONFIG = Path("config/vehicle_hunt.json")
 VEHICLE_LIVE_URL = "https://xotichaze.github.io/Scraper-Public/vehicle_catalog.json"
 
 
@@ -33,23 +34,45 @@ def exact_close_key(lot: dict[str, Any]) -> float:
         return float("inf")
 
 
+def previous_vehicle_age_minutes() -> float | None:
+    if not VEHICLE_PREVIOUS.exists():
+        return None
+    try:
+        data = json.loads(VEHICLE_PREVIOUS.read_text(encoding="utf-8"))
+        generated = int(data.get("generated_epoch_utc") or 0)
+        if generated <= 0:
+            return None
+        return max(0.0, (time.time() - generated) / 60.0)
+    except Exception:
+        return None
+
+
 def refresh_vehicle_hunt() -> None:
     VEHICLE_PREVIOUS.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with urllib.request.urlopen(VEHICLE_LIVE_URL, timeout=10) as response:
+        request = urllib.request.Request(VEHICLE_LIVE_URL, headers={"User-Agent": "Scraper-Public/1.0"})
+        with urllib.request.urlopen(request, timeout=10) as response:
             VEHICLE_PREVIOUS.write_bytes(response.read())
         print("VEHICLE_PREVIOUS=live_pages_snapshot")
     except Exception as exc:
         print(f"VEHICLE_PREVIOUS=unavailable reason={type(exc).__name__}")
 
-    try:
-        subprocess.run([sys.executable, "scripts/vehicle_scan.py"], check=True, timeout=90)
-        print("VEHICLE_REFRESH=PASS")
-    except Exception as exc:
-        print(f"VEHICLE_REFRESH=DEGRADED reason={type(exc).__name__}")
-        if VEHICLE_PREVIOUS.exists():
-            shutil.copyfile(VEHICLE_PREVIOUS, VEHICLE_REPORT)
-            print("VEHICLE_REFRESH=fallback_previous_catalog")
+    vehicle_config = json.loads(VEHICLE_CONFIG.read_text(encoding="utf-8"))
+    refresh_interval = int(vehicle_config.get("automation", {}).get("refresh_interval_minutes", 180))
+    age_minutes = previous_vehicle_age_minutes()
+
+    if age_minutes is not None and age_minutes < refresh_interval:
+        shutil.copyfile(VEHICLE_PREVIOUS, VEHICLE_REPORT)
+        print(f"VEHICLE_REFRESH=SKIP_FRESH age_minutes={age_minutes:.1f} interval_minutes={refresh_interval}")
+    else:
+        try:
+            subprocess.run([sys.executable, "scripts/vehicle_scan.py"], check=True, timeout=120)
+            print("VEHICLE_REFRESH=PASS")
+        except Exception as exc:
+            print(f"VEHICLE_REFRESH=DEGRADED reason={type(exc).__name__}")
+            if VEHICLE_PREVIOUS.exists():
+                shutil.copyfile(VEHICLE_PREVIOUS, VEHICLE_REPORT)
+                print("VEHICLE_REFRESH=fallback_previous_catalog")
 
     if VEHICLE_REPORT.exists():
         shutil.copyfile(VEHICLE_REPORT, VEHICLE_UI)
