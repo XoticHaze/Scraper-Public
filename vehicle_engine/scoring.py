@@ -11,7 +11,9 @@ def estimate_otd(price: float, policy: dict[str, Any]) -> float:
     return round(price * (1.0 + tax) + title_reg + doc, 2)
 
 
-def locality_bucket(distance_miles: int | None, policy: dict[str, Any]) -> str:
+def locality_bucket(distance_miles: int | None, policy: dict[str, Any], market_local: bool = False) -> str:
+    if market_local:
+        return "local"
     if distance_miles is None:
         return "unknown"
     preferred = int(policy.get("preferred_radius_miles", 50))
@@ -98,7 +100,7 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
     elif "front-wheel" in drive or "fwd" in drive:
         reasons.append("simpler_fwd_driveline")
 
-    bucket = locality_bucket(distance, policy)
+    bucket = locality_bucket(distance, policy, bool(row.get("market_local")))
     if bucket == "local":
         score += 16.0
         reasons.append("san_antonio_local")
@@ -117,6 +119,10 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
         score += 4.0
         reasons.append("certified")
 
+    if row.get("dealer_addon_warning"):
+        score -= 12.0
+        risks.append("dealer_mandatory_addon_risk")
+
     median = _comp_median(row, universe)
     market_delta_pct = None
     if median and median > 0:
@@ -134,11 +140,15 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
         score -= 5.0
         risks.append("direct_listing_link_missing")
 
+    otd_policy = dict(policy)
+    if row.get("dealer_doc_fee") is not None:
+        otd_policy["assumed_doc_fee"] = row["dealer_doc_fee"]
+
     out = dict(row)
     out.update({
         "deal_score": round(score, 1),
         "locality": bucket,
-        "estimated_otd": estimate_otd(price, policy),
+        "estimated_otd": estimate_otd(price, otd_policy),
         "comp_median_price": round(median, 2) if median else None,
         "market_delta_pct": round(market_delta_pct, 1) if market_delta_pct is not None else None,
         "reasons": reasons,
