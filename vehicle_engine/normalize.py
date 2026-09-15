@@ -168,6 +168,7 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         "transmission": _label_value(lines, ("transmission",)),
         "certified": bool(re.search(r"\bCertified\b", title_line, re.I) or re.search(r"\bGold Certified\b|\bSilver Certified\b", text, re.I)),
         "dealer_doc_fee": dealer.get("doc_fee"),
+        "dealer_doc_fee_included_in_price": bool(dealer.get("doc_fee_included_in_price", False)),
         "dealer_mandatory_addon_amount": float(dealer.get("mandatory_addon_amount") or 0),
         "dealer_addon_warning": dealer.get("addon_warning"),
     }
@@ -254,6 +255,7 @@ def parse_autotrader_card(card: dict[str, Any], source: dict[str, Any]) -> dict[
         "transmission": None,
         "certified": certified,
         "dealer_doc_fee": None,
+        "dealer_doc_fee_included_in_price": False,
         "dealer_mandatory_addon_amount": 0,
         "dealer_addon_warning": None,
     }
@@ -313,4 +315,6 @@ def parse_cars_com_card(card: dict[str, Any]) -> dict[str, Any] | None:
         "fuel_type": _line_after(lines, "Fuel type"),
         "transmission": _line_after(lines, "Transmission"),
         "certified": bool(re.search(r"\bCertified\b", title_line, re.I)),
+        "dealer_doc_fee": None,
+        "dealer_doc_fee_included_in_price": False,
     }
