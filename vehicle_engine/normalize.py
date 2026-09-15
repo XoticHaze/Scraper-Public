@@ -4,10 +4,13 @@ import re
 from typing import Any
 
 PRICE_RE = re.compile(r"\$\s*([0-9][0-9,]*)")
+PLAIN_PRICE_RE = re.compile(r"^\$?([0-9]{1,3}(?:,[0-9]{3})+)$")
 MILES_RE = re.compile(r"\b([0-9][0-9,]*)\s+(?:mi\.?|miles?)\b", re.I)
+MILES_K_RE = re.compile(r"\b([0-9]+(?:\.[0-9]+)?)K\s*mi\b", re.I)
 VIN_RE = re.compile(r"\b([A-HJ-NPR-Z0-9]{17})\b")
 YEAR_TITLE_RE = re.compile(r"\b(20\d{2})\s+([A-Za-z0-9.-]+)\s+([^\n]+)")
 DIST_RE = re.compile(r"\b([A-Za-z .'-]+),\s*TX\s*\((\d+)\s*mi\)", re.I)
+AWAY_RE = re.compile(r"\b([0-9]+(?:\.[0-9]+)?)\s*mi\.?\s*away\b", re.I)
 
 
 def _int_value(value: str | None) -> int | None:
@@ -17,6 +20,16 @@ def _int_value(value: str | None) -> int | None:
         return int(value.replace(",", ""))
     except ValueError:
         return None
+
+
+def _mileage_from_text(text: str) -> int | None:
+    match = MILES_RE.search(text)
+    if match:
+        return _int_value(match.group(1))
+    match = MILES_K_RE.search(text)
+    if match:
+        return int(round(float(match.group(1)) * 1000))
+    return None
 
 
 def _line_after(lines: list[str], needle: str) -> str | None:
@@ -111,8 +124,7 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
 
     price = _dealer_price(lines, text)
     mileage_value = _label_value(lines, ("odometer", "mileage"))
-    mileage_match = MILES_RE.search(mileage_value or "") or MILES_RE.search(text)
-    mileage = _int_value(mileage_match.group(1) if mileage_match else None)
+    mileage = _mileage_from_text(mileage_value or "") or _mileage_from_text(text)
     if price is None or mileage is None:
         return None
 
@@ -133,6 +145,7 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
 
     return {
         "source": str(dealer.get("id") or "local_dealer"),
+        "source_kind": "direct_dealer",
         "source_url": page.get("url"),
         "image_url": page.get("image_url"),
         "title": title,
@@ -149,6 +162,7 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         "distance_miles": dealer.get("distance_miles"),
         "market_local": bool(dealer.get("market_local", True)),
         "locality_hint": dealer.get("locality_hint"),
+        "area_priority": dealer.get("area_priority"),
         "drivetrain": drivetrain,
         "fuel_type": _label_value(lines, ("fuel type", "fuel")),
         "transmission": _label_value(lines, ("transmission",)),
@@ -156,6 +170,92 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         "dealer_doc_fee": dealer.get("doc_fee"),
         "dealer_mandatory_addon_amount": float(dealer.get("mandatory_addon_amount") or 0),
         "dealer_addon_warning": dealer.get("addon_warning"),
+    }
+
+
+def parse_autotrader_card(card: dict[str, Any], source: dict[str, Any]) -> dict[str, Any] | None:
+    """Normalize one rendered Autotrader result card without requiring its VDP."""
+    text = str(card.get("text") or "").replace("\xa0", " ")
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    title_idx = next((idx for idx, line in enumerate(lines) if re.search(r"\b20\d{2}\s+Toyota\s+RAV4\b", line, re.I)), None)
+    if title_idx is None:
+        return None
+    raw_title = re.sub(r"^(?:Used|Certified|Toyota Gold Certified|Toyota Silver Certified)\s*", "", lines[title_idx], flags=re.I)
+    title_match = re.search(r"\b(20\d{2})\s+Toyota\s+RAV4(?:\s+([^\n]+))?", raw_title, re.I)
+    if not title_match:
+        return None
+    year = int(title_match.group(1))
+    trim = (title_match.group(2) or "").strip() or None
+    if not trim and title_idx + 1 < len(lines):
+        candidate = lines[title_idx + 1].lstrip("* ").strip()
+        if candidate and not re.search(r"\b(?:mi|miles?)\b", candidate, re.I) and len(candidate) <= 60:
+            trim = candidate
+
+    mileage = _mileage_from_text(text)
+    if mileage is None:
+        return None
+
+    price = None
+    for line in lines[title_idx + 1:]:
+        match = PLAIN_PRICE_RE.match(line.replace("$", ""))
+        if not match:
+            continue
+        value = _int_value(match.group(1))
+        if value and 5000 <= value <= 100000:
+            price = value
+            break
+    if price is None:
+        match = PRICE_RE.search(text)
+        price = _int_value(match.group(1) if match else None)
+    if price is None:
+        return None
+
+    distance_match = AWAY_RE.search(text)
+    distance = float(distance_match.group(1)) if distance_match else None
+    dealer = None
+    if distance_match:
+        for idx, line in enumerate(lines):
+            if AWAY_RE.search(line):
+                for candidate in reversed(lines[max(0, idx - 4):idx]):
+                    low = candidate.lower().strip("* ")
+                    if not low or any(token in low for token in (
+                        "dealer fees", "great price", "good price", "no accidents", "sponsored",
+                        "online paperwork", "delivery", "request info", "see payment",
+                    )):
+                        continue
+                    dealer = candidate.strip("* ")
+                    break
+                break
+
+    certified = bool(re.search(r"\bCertified\b|Toyota Gold Certified|Toyota Silver Certified", text, re.I))
+    title = f"{year} Toyota RAV4{f' {trim}' if trim else ''}"
+    return {
+        "source": str(source.get("id") or "autotrader"),
+        "source_kind": "aggregator",
+        "source_url": card.get("url"),
+        "image_url": card.get("image_url"),
+        "title": title,
+        "year": year,
+        "make": "Toyota",
+        "model": "RAV4",
+        "trim": trim,
+        "price": price,
+        "mileage": mileage,
+        "vin": None,
+        "stock_number": None,
+        "dealer": dealer,
+        "location": source.get("location", "San Antonio, TX"),
+        "distance_miles": distance,
+        "market_local": bool(distance is not None and distance <= 25),
+        "locality_hint": None,
+        "area_priority": source.get("area_priority"),
+        "drivetrain": "All-wheel Drive" if re.search(r"\bAWD/4WD\b|\bAWD\b|All-Wheel", text, re.I) else None,
+        "fuel_type": "Hybrid" if re.search(r"\bHybrid\b", text, re.I) else "Gasoline",
+        "transmission": None,
+        "certified": certified,
+        "dealer_doc_fee": None,
+        "dealer_mandatory_addon_amount": 0,
+        "dealer_addon_warning": None,
     }
 
 
@@ -176,9 +276,9 @@ def parse_cars_com_card(card: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     price_match = PRICE_RE.search(text)
-    miles_match = MILES_RE.search(text)
+    miles = _mileage_from_text(text)
     price = _int_value(price_match.group(1) if price_match else None)
-    mileage = _int_value(miles_match.group(1) if miles_match else None)
+    mileage = miles
     if price is None or mileage is None:
         return None
 
@@ -194,6 +294,7 @@ def parse_cars_com_card(card: dict[str, Any]) -> dict[str, Any] | None:
 
     return {
         "source": "cars.com",
+        "source_kind": "aggregator",
         "source_url": card.get("url"),
         "image_url": card.get("image_url"),
         "title": title,
