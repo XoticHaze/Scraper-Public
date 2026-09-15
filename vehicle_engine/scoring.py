@@ -13,9 +13,17 @@ def estimate_otd(price: float, policy: dict[str, Any]) -> float:
     return round(taxable_subtotal * (1.0 + tax) + title_reg + doc, 2)
 
 
-def locality_bucket(distance_miles: int | None, policy: dict[str, Any], market_local: bool = False) -> str:
+def locality_bucket(
+    distance_miles: int | None,
+    policy: dict[str, Any],
+    market_local: bool = False,
+    locality_hint: str | None = None,
+) -> str:
     if market_local:
         return "local"
+    hint = str(locality_hint or "").strip().lower()
+    if hint in {"local", "nearby", "regional", "out_of_scope"}:
+        return hint
     if distance_miles is None:
         return "unknown"
     preferred = int(policy.get("preferred_radius_miles", 50))
@@ -40,6 +48,13 @@ def eligible(row: dict[str, Any], policy: dict[str, Any]) -> bool:
         return False
     distance = row.get("distance_miles")
     if distance is not None and int(distance) > int(policy.get("hard_radius_miles", 200)):
+        return False
+    if locality_bucket(
+        distance,
+        policy,
+        bool(row.get("market_local")),
+        row.get("locality_hint"),
+    ) == "out_of_scope":
         return False
     return True
 
@@ -102,7 +117,12 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
     elif "front-wheel" in drive or "fwd" in drive:
         reasons.append("simpler_fwd_driveline")
 
-    bucket = locality_bucket(distance, policy, bool(row.get("market_local")))
+    bucket = locality_bucket(
+        distance,
+        policy,
+        bool(row.get("market_local")),
+        row.get("locality_hint"),
+    )
     if bucket == "local":
         score += 16.0
         reasons.append("san_antonio_local")
@@ -110,8 +130,11 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
         score += 10.0
         reasons.append("nearby")
     elif bucket == "regional":
-        preferred = int(policy.get("preferred_radius_miles", 50))
-        score -= min(18.0, max(0.0, (int(distance) - preferred) * 0.10))
+        if distance is not None:
+            preferred = int(policy.get("preferred_radius_miles", 50))
+            score -= min(18.0, max(0.0, (int(distance) - preferred) * 0.10))
+        else:
+            score -= 10.0
         risks.append("regional_drive_required")
     else:
         score -= 8.0
