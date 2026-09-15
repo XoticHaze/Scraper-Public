@@ -130,7 +130,6 @@
         "enabled": true,
         "kind": "autotrader",
         "location": "San Antonio, TX",
-        "area_priority": "inner_sa",
         "inventory_url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx?zip=78237",
         "detail_url_contains": ["/cars-for-sale/inventory/"],
         "max_cards": 60,
