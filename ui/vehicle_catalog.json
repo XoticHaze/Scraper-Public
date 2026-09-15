@@ -1,0 +1,32 @@
+{
+  "schema": "vehicle-hunt-catalog-v1",
+  "generated_epoch_utc": 0,
+  "generated_utc": "1970-01-01T00:00:00+00:00",
+  "market": {
+    "label": "San Antonio, TX · inner-west / Kelly Field",
+    "zip": "78237",
+    "preferred_radius_miles": 50,
+    "hard_radius_miles": 200
+  },
+  "query": {
+    "make": "Toyota",
+    "model": "RAV4",
+    "year_min": 2018,
+    "year_max": 2025,
+    "target_price": 23000,
+    "max_price": 27000,
+    "preferred_mileage": 45000,
+    "maintenance_control_mileage": 35000,
+    "max_mileage": 100000,
+    "preferred_drivetrain": "All-wheel Drive"
+  },
+  "source_observations": {},
+  "source_counts": {},
+  "source_errors": {
+    "vehicle_scan": "No successful production vehicle catalog has been published yet. Automated refresh will replace this fallback."
+  },
+  "raw_listing_count": 0,
+  "deduped_listing_count": 0,
+  "eligible_count": 0,
+  "vehicles": []
+}
