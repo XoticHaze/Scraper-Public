@@ -84,9 +84,9 @@ def _merge(primary: dict[str, Any], duplicate: dict[str, Any]) -> dict[str, Any]
     for key in (
         "vin", "dealer", "drivetrain", "image_url", "stock_number", "transmission",
         "fuel_type", "distance_miles", "location", "area_priority", "locality_hint",
-        "dealer_doc_fee", "dealer_addon_warning",
+        "dealer_doc_fee", "dealer_doc_fee_included_in_price", "dealer_addon_warning",
     ):
-        if not out.get(key) and duplicate.get(key):
+        if out.get(key) in (None, "", False) and duplicate.get(key) not in (None, ""):
             out[key] = duplicate[key]
     return out
 
