@@ -70,6 +70,7 @@ def test_parse_direct_dealer_prefers_sale_price_and_preserves_priority():
         "market_local": True,
         "area_priority": "kelly_inner_west",
         "doc_fee": 225,
+        "doc_fee_included_in_price": True,
         "mandatory_addon_amount": 0,
     }
     row = parse_dealer_detail({
@@ -97,6 +98,8 @@ def test_parse_direct_dealer_prefers_sale_price_and_preserves_priority():
     assert row["source_kind"] == "direct_dealer"
     assert row["area_priority"] == "kelly_inner_west"
     assert row["certified"] is True
+    assert row["dealer_doc_fee"] == 225
+    assert row["dealer_doc_fee_included_in_price"] is True
 
 
 def test_parse_autotrader_card_supports_compact_mileage_and_distance():
@@ -113,7 +116,7 @@ def test_parse_autotrader_card_supports_compact_mileage_and_distance():
         Red McCombs Hyundai
         6.88 mi. away
         """,
-    }, {"id": "autotrader_inner_west_sa", "location": "San Antonio, TX", "area_priority": "inner_sa"})
+    }, {"id": "autotrader_inner_west_sa", "location": "San Antonio, TX"})
     assert row is not None
     assert row["year"] == 2023
     assert row["trim"] == "LE"
@@ -122,6 +125,7 @@ def test_parse_autotrader_card_supports_compact_mileage_and_distance():
     assert row["dealer"] == "Red McCombs Hyundai"
     assert row["distance_miles"] == 6.88
     assert row["source_kind"] == "aggregator"
+    assert row["area_priority"] is None
 
 
 def test_locality_is_first_class_and_supports_trusted_hint():
@@ -166,6 +170,7 @@ def test_cross_source_dedupe_prefers_direct_dealer_and_keeps_alternates():
         "source": "north_park_toyota", "source_kind": "direct_dealer", "source_url": "https://dealer/1",
         "year": 2021, "trim": "LE", "title": "2021 Toyota RAV4 LE", "price": 23178, "mileage": 20776,
         "vin": "2T3G1RFV9MC195862", "dealer": "North Park Toyota", "drivetrain": "All-wheel Drive",
+        "dealer_doc_fee": 225, "dealer_doc_fee_included_in_price": True,
     }
     aggregate = {
         "source": "autotrader_inner_west_sa", "source_kind": "aggregator", "source_url": "https://agg/1",
@@ -176,8 +181,22 @@ def test_cross_source_dedupe_prefers_direct_dealer_and_keeps_alternates():
     assert len(rows) == 1
     assert rows[0]["source"] == "north_park_toyota"
     assert rows[0]["source_url"] == "https://dealer/1"
+    assert rows[0]["dealer_doc_fee_included_in_price"] is True
     assert set(rows[0]["alternate_urls"]) == {"https://dealer/1", "https://agg/1"}
     assert set(rows[0]["sources"]) == {"north_park_toyota", "autotrader_inner_west_sa"}
+
+
+def test_included_doc_fee_is_not_added_twice_to_otd():
+    row = {
+        "source": "north_park_toyota", "source_kind": "direct_dealer", "source_url": "https://dealer/1",
+        "year": 2023, "price": 23000, "mileage": 25000, "market_local": True,
+        "area_priority": "kelly_inner_west", "vin": "2T3AAAAA1PC000001", "certified": False,
+        "dealer_doc_fee": 225, "dealer_doc_fee_included_in_price": True,
+    }
+    ranked = rank_vehicles([row], POLICY)
+    assert ranked[0]["estimated_otd"] == 24687.5
+    assert ranked[0]["incremental_doc_fee"] == 0
+    assert "dealer_doc_fee_already_in_advertised_price" in ranked[0]["reasons"]
 
 
 def test_otd_estimate_is_explicit_and_tax_aware():
