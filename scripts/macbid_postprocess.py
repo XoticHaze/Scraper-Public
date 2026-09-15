@@ -58,7 +58,9 @@ def refresh_vehicle_hunt() -> None:
         print(f"VEHICLE_PREVIOUS=unavailable reason={type(exc).__name__}")
 
     vehicle_config = json.loads(VEHICLE_CONFIG.read_text(encoding="utf-8"))
-    refresh_interval = int(vehicle_config.get("automation", {}).get("refresh_interval_minutes", 180))
+    automation = vehicle_config.get("automation", {})
+    refresh_interval = int(automation.get("refresh_interval_minutes", 180))
+    scanner_timeout = int(automation.get("scanner_timeout_seconds", 360))
     age_minutes = previous_vehicle_age_minutes()
 
     if age_minutes is not None and age_minutes < refresh_interval:
@@ -66,10 +68,14 @@ def refresh_vehicle_hunt() -> None:
         print(f"VEHICLE_REFRESH=SKIP_FRESH age_minutes={age_minutes:.1f} interval_minutes={refresh_interval}")
     else:
         try:
-            subprocess.run([sys.executable, "scripts/vehicle_scan.py"], check=True, timeout=120)
-            print("VEHICLE_REFRESH=PASS")
+            subprocess.run(
+                [sys.executable, "-u", "scripts/vehicle_scan.py"],
+                check=True,
+                timeout=scanner_timeout,
+            )
+            print(f"VEHICLE_REFRESH=PASS timeout_seconds={scanner_timeout}")
         except Exception as exc:
-            print(f"VEHICLE_REFRESH=DEGRADED reason={type(exc).__name__}")
+            print(f"VEHICLE_REFRESH=DEGRADED reason={type(exc).__name__} timeout_seconds={scanner_timeout}")
             if VEHICLE_PREVIOUS.exists():
                 shutil.copyfile(VEHICLE_PREVIOUS, VEHICLE_REPORT)
                 print("VEHICLE_REFRESH=fallback_previous_catalog")
