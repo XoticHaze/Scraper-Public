@@ -5,7 +5,7 @@ from typing import Any
 
 PRICE_RE = re.compile(r"\$\s*([0-9][0-9,]*)")
 PLAIN_PRICE_RE = re.compile(r"^\$?([0-9]{1,3}(?:,[0-9]{3})+)$")
-MILES_RE = re.compile(r"\b([0-9][0-9,]*)\s+(?:mi\.?|miles?)\b", re.I)
+MILES_RE = re.compile(r"(?<![.\d])\b([0-9][0-9,]*)\s+(?:mi\.?|miles?)\b", re.I)
 MILES_K_RE = re.compile(r"\b([0-9]+(?:\.[0-9]+)?)K\s*mi\b", re.I)
 VIN_RE = re.compile(r"\b([A-HJ-NPR-Z0-9]{17})\b")
 YEAR_TITLE_RE = re.compile(r"\b(20\d{2})\s+([A-Za-z0-9.-]+)\s+([^\n]+)")
@@ -23,12 +23,12 @@ def _int_value(value: str | None) -> int | None:
 
 
 def _mileage_from_text(text: str) -> int | None:
-    match = MILES_RE.search(text)
-    if match:
-        return _int_value(match.group(1))
     match = MILES_K_RE.search(text)
     if match:
         return int(round(float(match.group(1)) * 1000))
+    match = MILES_RE.search(text)
+    if match:
+        return _int_value(match.group(1))
     return None
 
 
