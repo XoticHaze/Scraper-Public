@@ -17,6 +17,8 @@ VEHICLE_PREVIOUS = Path("results/vehicle-previous.json")
 VEHICLE_UI = Path("ui/vehicle_catalog.json")
 VEHICLE_CONFIG = Path("config/vehicle_hunt.json")
 VEHICLE_LIVE_URL = "https://xotichaze.github.io/Scraper-Public/vehicle_catalog.json"
+MIN_CACHED_VEHICLE_PRICE = 5000
+MAX_CACHED_VEHICLE_PRICE = 100000
 
 
 def condition_rank(condition: str, config: dict[str, Any]) -> int:
@@ -34,11 +36,29 @@ def exact_close_key(lot: dict[str, Any]) -> float:
         return float("inf")
 
 
+def vehicle_catalog_cache_valid(data: dict[str, Any]) -> bool:
+    """Reject cached catalogs containing values that cannot be vehicle sale prices."""
+    vehicles = data.get("vehicles")
+    if not isinstance(vehicles, list):
+        return False
+    for row in vehicles:
+        try:
+            price = float(row.get("price"))
+        except (AttributeError, TypeError, ValueError):
+            return False
+        if not MIN_CACHED_VEHICLE_PRICE <= price <= MAX_CACHED_VEHICLE_PRICE:
+            return False
+    return True
+
+
 def previous_vehicle_age_minutes() -> float | None:
     if not VEHICLE_PREVIOUS.exists():
         return None
     try:
         data = json.loads(VEHICLE_PREVIOUS.read_text(encoding="utf-8"))
+        if not vehicle_catalog_cache_valid(data):
+            print("VEHICLE_PREVIOUS=invalid_catalog forcing_refresh=true")
+            return None
         generated = int(data.get("generated_epoch_utc") or 0)
         if generated <= 0:
             return None
@@ -76,7 +96,9 @@ def refresh_vehicle_hunt() -> None:
             print(f"VEHICLE_REFRESH=PASS timeout_seconds={scanner_timeout}")
         except Exception as exc:
             print(f"VEHICLE_REFRESH=DEGRADED reason={type(exc).__name__} timeout_seconds={scanner_timeout}")
-            if VEHICLE_PREVIOUS.exists():
+            if VEHICLE_PREVIOUS.exists() and vehicle_catalog_cache_valid(
+                json.loads(VEHICLE_PREVIOUS.read_text(encoding="utf-8"))
+            ):
                 shutil.copyfile(VEHICLE_PREVIOUS, VEHICLE_REPORT)
                 print("VEHICLE_REFRESH=fallback_previous_catalog")
 
