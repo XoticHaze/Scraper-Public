@@ -14,7 +14,7 @@ def estimate_otd(price: float, policy: dict[str, Any]) -> float:
 
 
 def locality_bucket(
-    distance_miles: int | None,
+    distance_miles: int | float | None,
     policy: dict[str, Any],
     market_local: bool = False,
     locality_hint: str | None = None,
@@ -28,11 +28,11 @@ def locality_bucket(
         return "unknown"
     preferred = int(policy.get("preferred_radius_miles", 50))
     hard = int(policy.get("hard_radius_miles", 200))
-    if distance_miles <= 25:
+    if float(distance_miles) <= 25:
         return "local"
-    if distance_miles <= preferred:
+    if float(distance_miles) <= preferred:
         return "nearby"
-    if distance_miles <= hard:
+    if float(distance_miles) <= hard:
         return "regional"
     return "out_of_scope"
 
@@ -47,7 +47,7 @@ def eligible(row: dict[str, Any], policy: dict[str, Any]) -> bool:
     if int(row.get("mileage") or 10**9) > int(policy.get("max_mileage", 100000)):
         return False
     distance = row.get("distance_miles")
-    if distance is not None and int(distance) > int(policy.get("hard_radius_miles", 200)):
+    if distance is not None and float(distance) > float(policy.get("hard_radius_miles", 200)):
         return False
     if locality_bucket(
         distance,
@@ -132,13 +132,23 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
     elif bucket == "regional":
         if distance is not None:
             preferred = int(policy.get("preferred_radius_miles", 50))
-            score -= min(18.0, max(0.0, (int(distance) - preferred) * 0.10))
+            score -= min(18.0, max(0.0, (float(distance) - preferred) * 0.10))
         else:
             score -= 10.0
         risks.append("regional_drive_required")
     else:
         score -= 8.0
         risks.append("distance_unknown")
+
+    area = str(row.get("area_priority") or "").strip()
+    area_weights = policy.get("priority_area_weights") or {}
+    area_adjustment = float(area_weights.get(area, 0) or 0)
+    if area_adjustment:
+        score += area_adjustment
+        if area_adjustment > 0:
+            reasons.append(f"priority_area_{area}")
+        else:
+            risks.append(f"lower_priority_area_{area}")
 
     if row.get("certified"):
         score += 4.0
@@ -175,6 +185,7 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
     out.update({
         "deal_score": round(score, 1),
         "locality": bucket,
+        "area_adjustment": area_adjustment,
         "estimated_otd": estimate_otd(price, otd_policy),
         "comp_median_price": round(median, 2) if median else None,
         "market_delta_pct": round(market_delta_pct, 1) if market_delta_pct is not None else None,
