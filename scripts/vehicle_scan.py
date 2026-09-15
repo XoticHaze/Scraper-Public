@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin
 
-from vehicle_engine.normalize import parse_dealer_detail
+from vehicle_engine.identity import dedupe_rows
+from vehicle_engine.normalize import parse_autotrader_card, parse_dealer_detail
 from vehicle_engine.scoring import rank_vehicles
 
 CONFIG = Path("config/vehicle_hunt.json")
@@ -28,6 +29,10 @@ def configured_dealers(cfg: dict) -> list[dict]:
         *list(source.get("local_dealers", [])),
         *list(source.get("nearby_dealers", [])),
     ]
+
+
+def configured_aggregators(cfg: dict) -> list[dict]:
+    return [row for row in cfg.get("source", {}).get("aggregators", []) if row.get("enabled", True)]
 
 
 def _looks_like_challenge(status: int | None, title: str, body: str) -> bool:
@@ -74,12 +79,7 @@ def _discover_detail_links(page, dealer: dict) -> list[str]:
 
 
 def fetch_local_dealers(cfg: dict) -> tuple[list[dict], dict[str, str]]:
-    """Render configured local/nearby dealer inventory and normalize detail pages.
-
-    Each dealer is independently best-effort. A blocked or redesigned dealer
-    does not suppress healthy sources, and zero total results is treated as a
-    failed refresh so the existing last-good catalog can remain live.
-    """
+    """Render configured local/nearby dealer inventory and normalize detail pages."""
     from playwright.sync_api import sync_playwright
 
     dealers = configured_dealers(cfg)
@@ -156,6 +156,93 @@ def fetch_local_dealers(cfg: dict) -> tuple[list[dict], dict[str, str]]:
     return rows, errors
 
 
+def _autotrader_cards(page) -> list[dict]:
+    return page.evaluate(
+        """
+        () => {
+          const anchors = Array.from(document.querySelectorAll('a[href*="/cars-for-sale/inventory/"]'));
+          const out = [];
+          const seen = new Set();
+          for (const a of anchors) {
+            const href = (a.href || '').split('#')[0];
+            if (!href || seen.has(href)) continue;
+            let node = a;
+            let best = null;
+            for (let i = 0; node && i < 8; i++, node = node.parentElement) {
+              const text = (node.innerText || '').trim();
+              if (/20\d{2}\s+Toyota\s+RAV4/i.test(text) && /\b(?:mi|miles)\b/i.test(text) && text.length < 2600) {
+                best = node;
+              }
+            }
+            if (!best) continue;
+            const text = (best.innerText || '').trim();
+            const img = best.querySelector('img[src]');
+            seen.add(href);
+            out.push({href, text, image_url: img ? img.src : null});
+          }
+          return out;
+        }
+        """
+    )
+
+
+def fetch_aggregators(cfg: dict) -> tuple[list[dict], dict[str, str]]:
+    """Best-effort discovery enrichment. Never required for dealer-direct refresh success."""
+    from playwright.sync_api import sync_playwright
+
+    rows: list[dict] = []
+    errors: dict[str, str] = {}
+    sources = configured_aggregators(cfg)
+    if not sources:
+        return rows, errors
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            viewport={"width": 1440, "height": 1400},
+            locale="en-US",
+            user_agent=(
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+            ),
+        )
+        page = context.new_page()
+        for source in sources:
+            source_id = str(source.get("id") or source.get("kind") or "aggregator")
+            try:
+                response = page.goto(str(source["inventory_url"]), wait_until="domcontentloaded", timeout=60000)
+                status = response.status if response else None
+                page.wait_for_timeout(2500)
+                for _ in range(3):
+                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    page.wait_for_timeout(900)
+                title = page.title()
+                body = page.locator("body").inner_text(timeout=15000)
+                if _looks_like_challenge(status, title, body):
+                    raise RuntimeError(f"aggregator blocked status={status} title={title!r}")
+
+                cards = _autotrader_cards(page) if source.get("kind") == "autotrader" else []
+                parsed_count = 0
+                max_cards = int(source.get("max_cards") or 60)
+                for card in cards[:max_cards]:
+                    parsed = parse_autotrader_card(
+                        {"text": card.get("text"), "url": card.get("href"), "image_url": card.get("image_url")},
+                        source,
+                    )
+                    if parsed:
+                        rows.append(parsed)
+                        parsed_count += 1
+                print(f"VEHICLE_AGGREGATOR source={source_id} status={status} cards={len(cards)} parsed={parsed_count}")
+                if parsed_count == 0:
+                    errors[source_id] = "no parseable aggregator cards"
+            except Exception as exc:
+                errors[source_id] = f"{type(exc).__name__}: {exc}"
+                print(f"VEHICLE_AGGREGATOR_DEGRADED source={source_id} reason={errors[source_id]}")
+        context.close()
+        browser.close()
+    return rows, errors
+
+
 def listing_key(row: dict) -> str:
     return str(row.get("vin") or row.get("source_url") or f"{row.get('year')}|{row.get('title')}|{row.get('dealer')}")
 
@@ -180,12 +267,13 @@ def add_history(rows: list[dict], previous_path: Path) -> None:
 
 def source_registry(cfg: dict) -> list[dict]:
     fields = (
-        "id", "name", "location", "market_local", "locality_hint",
-        "inventory_url", "doc_fee", "mandatory_addon_amount", "addon_warning",
+        "id", "name", "location", "market_local", "locality_hint", "area_priority",
+        "inventory_url", "doc_fee", "mandatory_addon_amount", "addon_warning", "role",
     )
+    sources = [*configured_dealers(cfg), *configured_aggregators(cfg)]
     return [
-        {key: dealer.get(key) for key in fields if dealer.get(key) is not None}
-        for dealer in configured_dealers(cfg)
+        {key: source.get(key) for key in fields if source.get(key) is not None}
+        for source in sources
     ]
 
 
@@ -197,14 +285,18 @@ def main() -> int:
     args = parser.parse_args()
 
     cfg, policy = load_config(Path(args.config))
-    rows, source_errors = fetch_local_dealers(cfg)
-    rows = list({listing_key(row): row for row in rows}.values())
+    dealer_rows, dealer_errors = fetch_local_dealers(cfg)
+    aggregator_rows, aggregator_errors = fetch_aggregators(cfg)
+    raw_rows = [*dealer_rows, *aggregator_rows]
+    source_observations = dict(sorted(Counter(str(row.get("source") or "unknown") for row in raw_rows).items()))
+    rows = dedupe_rows(raw_rows)
     if not rows:
-        raise RuntimeError("all configured dealer sources returned zero parseable RAV4 listings")
+        raise RuntimeError("all configured vehicle sources returned zero parseable RAV4 listings")
 
     add_history(rows, Path(args.previous))
     ranked = rank_vehicles(rows, policy)
     source_counts = dict(sorted(Counter(str(row.get("source") or "unknown") for row in rows).items()))
+    source_errors = {**dealer_errors, **aggregator_errors}
 
     payload = {
         "schema": "vehicle-hunt-catalog-v1",
@@ -215,9 +307,11 @@ def main() -> int:
         "ownership_cost": cfg["ownership_cost"],
         "source_registry": source_registry(cfg),
         "discovery_routes": list(cfg.get("source", {}).get("discovery_routes", [])),
+        "source_observations": source_observations,
         "source_counts": source_counts,
         "source_errors": source_errors,
-        "raw_listing_count": len(rows),
+        "raw_listing_count": len(raw_rows),
+        "deduped_listing_count": len(rows),
         "eligible_count": len(ranked),
         "vehicles": ranked,
     }
@@ -227,14 +321,15 @@ def main() -> int:
 
     print(f"VEHICLE_MARKET={cfg['market']['label']} zip={cfg['market']['zip']}")
     print(f"VEHICLE_LOCALITY preferred={cfg['market']['preferred_radius_miles']} hard={cfg['market']['hard_radius_miles']}")
+    print(f"VEHICLE_SOURCE_OBSERVATIONS={json.dumps(source_observations, sort_keys=True)}")
     print(f"VEHICLE_SOURCES={json.dumps(source_counts, sort_keys=True)}")
     print(f"VEHICLE_SOURCE_ERRORS={json.dumps(source_errors, sort_keys=True)}")
     print(f"VEHICLE_DISCOVERY_ROUTES={len(payload['discovery_routes'])}")
-    print(f"VEHICLE_RAW={len(rows)} eligible={len(ranked)}")
+    print(f"VEHICLE_RAW={len(raw_rows)} deduped={len(rows)} eligible={len(ranked)}")
     for row in ranked[:15]:
         print(json.dumps({key: row.get(key) for key in (
-            "rank", "title", "dealer", "price", "mileage", "locality", "deal_score",
-            "estimated_otd", "dealer_mandatory_addon_amount", "source_url"
+            "rank", "title", "dealer", "price", "mileage", "locality", "area_priority",
+            "deal_score", "estimated_otd", "dealer_mandatory_addon_amount", "source_url", "sources"
         )}, sort_keys=True))
     return 0
 
