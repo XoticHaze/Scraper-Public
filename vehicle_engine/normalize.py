@@ -148,6 +148,7 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         "location": dealer.get("location", "San Antonio, TX"),
         "distance_miles": dealer.get("distance_miles"),
         "market_local": bool(dealer.get("market_local", True)),
+        "locality_hint": dealer.get("locality_hint"),
         "drivetrain": drivetrain,
         "fuel_type": _label_value(lines, ("fuel type", "fuel")),
         "transmission": _label_value(lines, ("transmission",)),
