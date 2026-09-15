@@ -1,8 +1,8 @@
 {
   "schema": "vehicle-hunt-config-v1",
   "market": {
-    "label": "San Antonio, TX",
-    "zip": "78251",
+    "label": "San Antonio, TX · inner-west / Kelly Field",
+    "zip": "78237",
     "preferred_radius_miles": 50,
     "hard_radius_miles": 200,
     "priority_area_weights": {
@@ -119,12 +119,13 @@
     ],
     "aggregators": [
       {
-        "id": "autotrader_inner_sa",
-        "name": "Autotrader · inner San Antonio",
+        "id": "autotrader_inner_west_sa",
+        "name": "Autotrader · inner-west San Antonio",
         "enabled": true,
         "kind": "autotrader",
         "location": "San Antonio, TX",
-        "inventory_url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx?zip=78205",
+        "area_priority": "inner_sa",
+        "inventory_url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx?zip=78237",
         "detail_url_contains": ["/cars-for-sale/inventory/"],
         "max_cards": 60,
         "role": "discovery_enrichment"
@@ -132,15 +133,15 @@
     ],
     "discovery_routes": [
       {
-        "id": "autotrader_inner_sa",
-        "label": "Autotrader · inner San Antonio (78205)",
-        "url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx?zip=78205",
+        "id": "autotrader_inner_west_sa",
+        "label": "Autotrader · inner-west San Antonio (78237)",
+        "url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx?zip=78237",
         "role": "automated_and_manual_market_discovery"
       },
       {
-        "id": "kbb_inner_sa",
-        "label": "KBB · inner San Antonio (78201)",
-        "url": "https://www.kbb.com/cars-for-sale/used/toyota/rav4/san-antonio-tx?zip=78201",
+        "id": "kbb_inner_west_sa",
+        "label": "KBB · inner-west San Antonio (78237)",
+        "url": "https://www.kbb.com/cars-for-sale/used/toyota/rav4/san-antonio-tx?zip=78237",
         "role": "manual_market_discovery"
       },
       {
@@ -151,8 +152,8 @@
       },
       {
         "id": "autotrader_sa_rav4_awd",
-        "label": "Autotrader · San Antonio RAV4 AWD",
-        "url": "https://www.autotrader.com/cars-for-sale/awd-4wd/toyota/rav4/san-antonio-tx?zip=78205",
+        "label": "Autotrader · San Antonio RAV4 AWD (78237)",
+        "url": "https://www.autotrader.com/cars-for-sale/awd-4wd/toyota/rav4/san-antonio-tx?zip=78237",
         "role": "manual_market_discovery"
       },
       {
