@@ -4,6 +4,15 @@ a { color: inherit; }
 .controls { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px; border: 1px solid #2a2f37; border-radius: 12px; }
 .controls label { display: grid; gap: 4px; }
 .controls input { padding: 8px; }
+.source-panel { margin: 14px 0; padding: 12px; border: 1px solid #2a2f37; border-radius: 12px; background: #0e1217; }
+.source-panel h2, .source-panel h3 { margin: 0 0 8px; }
+.source-panel h3 { margin-top: 12px; font-size: 14px; }
+.source-panel p { color: #9aa4b2; font-size: 13px; }
+.route-links, .listing-links, .alternate-links { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.route-links a { padding: 7px 9px; border-radius: 8px; background: #20262e; font-size: 12px; text-decoration: none; }
+.listing-links { margin-top: 12px; }
+.alternate-links { font-size: 11px; color: #9aa4b2; }
+.alternate-links a { color: #d9e3ef; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
 .card { overflow: hidden; border: 1px solid #2a2f37; background: #11151a; border-radius: 14px; }
 .card img { width: 100%; height: 190px; object-fit: cover; }
@@ -12,6 +21,7 @@ a { color: inherit; }
 .badges span, .badges b, .tag { font-size: 11px; padding: 4px 7px; border-radius: 999px; background: #20262e; }
 .risk { color: #efc2a5; }
 .card p { color: #9aa4b2; font-size: 13px; }
+.warning { padding: 8px; border-radius: 8px; background: #241a14; color: #efc2a5 !important; }
 .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 12px 0; }
 .metric { background: #0d1116; padding: 8px; border-radius: 8px; }
 .metric span { display: block; color: #8f9aa8; font-size: 10px; text-transform: uppercase; }

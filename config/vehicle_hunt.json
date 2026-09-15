@@ -1,10 +1,18 @@
 {
   "schema": "vehicle-hunt-config-v1",
   "market": {
-    "label": "San Antonio, TX",
-    "zip": "78251",
+    "label": "San Antonio, TX · inner-west / Kelly Field",
+    "zip": "78237",
     "preferred_radius_miles": 50,
-    "hard_radius_miles": 200
+    "hard_radius_miles": 200,
+    "priority_area_weights": {
+      "kelly_inner_west": 10,
+      "inner_sa": 8,
+      "west_sa": 6,
+      "san_antonio_other": 2,
+      "nearby": 0,
+      "regional": -4
+    }
   },
   "vehicle": {
     "make": "Toyota",
@@ -29,9 +37,150 @@
   },
   "source": {
     "cars_com": {
-      "enabled": true,
-      "pages": 5,
-      "maximum_distance_query_miles": 250
-    }
+      "enabled": false,
+      "reason": "GitHub-hosted runner receives HTTP 403 from Cars.com; keep as a manual discovery route instead of an execution dependency."
+    },
+    "local_dealers": [
+      {
+        "id": "north_park_toyota",
+        "name": "North Park Toyota of San Antonio",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "area_priority": "kelly_inner_west",
+        "inventory_url": "https://www.northparktoyota.com/used-inventory/index.htm?make=Toyota&model=RAV4",
+        "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
+        "doc_fee": 225,
+        "doc_fee_included_in_price": true,
+        "mandatory_addon_amount": 0,
+        "addon_warning": "Dealer states advertised purchase prices include the $225 doc fee and listed dealer adds; optional equipment/upgrades may be removable at no additional cost. Verify buyer order."
+      },
+      {
+        "id": "red_mccombs_driveaway_west",
+        "name": "Red McCombs Drive Away Motors — WEST",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "area_priority": "west_sa",
+        "inventory_url": "https://www.redmccombsdriveaway.com/inventory-west",
+        "detail_url_contains": ["/used-San%2BAntonio-", "/used-San+Antonio-", "/used-"],
+        "doc_fee": 225,
+        "doc_fee_included_in_price": false,
+        "mandatory_addon_amount": 0,
+        "addon_warning": "General used-car inventory; require clean title/history and an independent pre-purchase inspection before treating as a buy."
+      },
+      {
+        "id": "cavender_toyota",
+        "name": "Cavender Toyota",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "area_priority": "west_sa",
+        "inventory_url": "https://www.cavendertoyota.com/used-cars/toyota-rav4.htm",
+        "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
+        "doc_fee": 225,
+        "doc_fee_included_in_price": true,
+        "mandatory_addon_amount": 0,
+        "addon_warning": "Dealer states pre-owned advertised prices include the $225 documentary fee; verify government fees and any vehicle-specific extras on the buyer order."
+      },
+      {
+        "id": "universal_toyota",
+        "name": "Red McCombs Universal Toyota",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "area_priority": "san_antonio_other",
+        "inventory_url": "https://www.universaltoyota.com/used-vehicles/?make=Toyota&model=RAV4",
+        "detail_url_contains": ["/used-San%2BAntonio-", "/used-San+Antonio-", "/used-"],
+        "doc_fee": 225,
+        "doc_fee_included_in_price": false,
+        "mandatory_addon_amount": 0,
+        "addon_warning": null
+      },
+      {
+        "id": "shottenkirk_toyota_sa",
+        "name": "Shottenkirk Toyota San Antonio",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "area_priority": "san_antonio_other",
+        "inventory_url": "https://www.shottenkirktoyotasanantonio.com/used-vehicles/?model=RAV4",
+        "detail_url_contains": ["/inventory/", "/used-vehicles/"],
+        "doc_fee": 225,
+        "doc_fee_included_in_price": false,
+        "mandatory_addon_amount": 3696,
+        "addon_warning": "Dealer currently discloses a $3,696 tint/nitrogen/VIP package on used vehicles; verify removal or full OTD before ranking as a buy."
+      }
+    ],
+    "nearby_dealers": [
+      {
+        "id": "toyota_of_boerne",
+        "name": "Vic Vaughan Toyota of Boerne",
+        "location": "Boerne, TX",
+        "market_local": false,
+        "locality_hint": "nearby",
+        "area_priority": "nearby",
+        "inventory_url": "https://www.toyotaofboerne.com/used-vehicles-boerne/rav4.aspx",
+        "detail_url_contains": ["/inventory/", "/used-", "/vehicle-details/"],
+        "doc_fee": 225,
+        "doc_fee_included_in_price": false,
+        "mandatory_addon_amount": 0,
+        "addon_warning": "Dealer states dealer-installed accessories are excluded from advertised pre-owned pricing; verify the buyer order before ranking final OTD."
+      }
+    ],
+    "aggregators": [
+      {
+        "id": "autotrader_inner_west_sa",
+        "name": "Autotrader · inner-west San Antonio",
+        "enabled": true,
+        "kind": "autotrader",
+        "location": "San Antonio, TX",
+        "inventory_url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx?zip=78237",
+        "detail_url_contains": ["/cars-for-sale/inventory/"],
+        "max_cards": 60,
+        "role": "discovery_enrichment"
+      }
+    ],
+    "discovery_routes": [
+      {
+        "id": "autotrader_inner_west_sa",
+        "label": "Autotrader · inner-west San Antonio (78237)",
+        "url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx?zip=78237",
+        "role": "automated_and_manual_market_discovery"
+      },
+      {
+        "id": "kbb_inner_west_sa",
+        "label": "KBB · inner-west San Antonio (78237)",
+        "url": "https://www.kbb.com/cars-for-sale/used/toyota/rav4/san-antonio-tx?zip=78237",
+        "role": "manual_market_discovery"
+      },
+      {
+        "id": "cargurus_sa_rav4",
+        "label": "CarGurus · San Antonio RAV4",
+        "url": "https://www.cargurus.com/Cars/l-Used-Toyota-RAV4-San-Antonio-d306_L34757",
+        "role": "manual_market_discovery"
+      },
+      {
+        "id": "autotrader_sa_rav4_awd",
+        "label": "Autotrader · San Antonio RAV4 AWD (78237)",
+        "url": "https://www.autotrader.com/cars-for-sale/awd-4wd/toyota/rav4/san-antonio-tx?zip=78237",
+        "role": "manual_market_discovery"
+      },
+      {
+        "id": "cars_sa_rav4",
+        "label": "Cars.com · San Antonio RAV4",
+        "url": "https://www.cars.com/shopping/toyota-rav4/san_antonio-tx/",
+        "role": "manual_market_discovery",
+        "warning": "Manual/browser route only; scheduled GitHub runner traffic is currently blocked with HTTP 403."
+      },
+      {
+        "id": "truecar_sa_rav4",
+        "label": "TrueCar · San Antonio RAV4",
+        "url": "https://www.truecar.com/used-cars-for-sale/listings/toyota/rav4/location-san-antonio-tx/",
+        "role": "manual_market_discovery"
+      },
+      {
+        "id": "corsicana_exception",
+        "label": "Chevrolet GMC of Corsicana · regional exception",
+        "url": "https://www.chevygmcofcorsicana.com/",
+        "role": "manual_exception_discovery",
+        "warning": "Outside the automated local/nearby preference. Use only when the deal is exceptional enough to justify the drive."
+      }
+    ]
   }
 }

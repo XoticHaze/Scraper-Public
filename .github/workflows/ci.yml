@@ -95,13 +95,17 @@ jobs:
           assert 'San Antonio' in cfg['sales_tax_scope']
 
           vehicle = json.loads(Path('config/vehicle_hunt.json').read_text())
-          assert vehicle['market']['label'] == 'San Antonio, TX'
-          assert vehicle['market']['zip'] == '78251'
+          assert vehicle['market']['label'].startswith('San Antonio, TX')
+          assert vehicle['market']['zip'] == '78237'
           assert vehicle['market']['preferred_radius_miles'] == 50
           assert vehicle['market']['hard_radius_miles'] == 200
+          assert vehicle['market']['priority_area_weights']['kelly_inner_west'] > vehicle['market']['priority_area_weights']['san_antonio_other']
           assert vehicle['vehicle']['target_price'] == 23000
           assert vehicle['vehicle']['maintenance_control_mileage'] == 35000
           assert abs(float(vehicle['ownership_cost']['sales_tax_rate']) - 0.0625) < 1e-12
+          assert any(row['id'] == 'north_park_toyota' and row['area_priority'] == 'kelly_inner_west' for row in vehicle['source']['local_dealers'])
+          assert any(row['kind'] == 'autotrader' and row['enabled'] for row in vehicle['source']['aggregators'])
+          assert all('78237' in row['url'] for row in vehicle['source']['discovery_routes'] if row['id'] in {'autotrader_inner_west_sa','kbb_inner_west_sa','autotrader_sa_rav4_awd'})
 
           manifest = json.loads(Path('app/actions.json').read_text())
           assert manifest['schema'] == 'repo-app-actions-v1'
@@ -129,6 +133,7 @@ jobs:
           assert Path('ui/vehicles.html').exists()
           assert Path('ui/vehicles.js').exists()
           assert Path('ui/vehicles.css').exists()
+          assert 'href="vehicles.html"' in Path('ui/index.html').read_text()
           assert Path('producer_worker/index.mjs').exists()
           assert Path('docs/PRIVACY_BOUNDARY.md').exists()
           assert Path('.github/workflows/encrypted-private-compute-runtime.yml').exists()
@@ -141,7 +146,10 @@ jobs:
           assert 'estimated_post_tax_total' in app_js
           assert 'Estimated all-in total' in app_js
           assert 'estimated_post_tax_total' in Path('ui/finds.js').read_text()
-          assert 'vehicle_catalog.json' in Path('ui/vehicles.js').read_text()
+          vehicle_js = Path('ui/vehicles.js').read_text()
+          assert 'vehicle_catalog.json' in vehicle_js
+          assert 'discovery_routes' in vehicle_js
+          assert 'source_registry' in vehicle_js
 
           producer_js = Path('producer_worker/index.mjs').read_text()
           assert '/v1/private-compute/notify' not in producer_js
