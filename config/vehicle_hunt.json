@@ -49,9 +49,10 @@
         "area_priority": "kelly_inner_west",
         "inventory_url": "https://www.northparktoyota.com/used-inventory/index.htm?make=Toyota&model=RAV4",
         "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
-        "doc_fee": 0,
+        "doc_fee": 225,
+        "doc_fee_included_in_price": true,
         "mandatory_addon_amount": 0,
-        "addon_warning": null
+        "addon_warning": "Dealer states advertised purchase prices include the $225 doc fee and listed dealer adds; optional equipment/upgrades may be removable at no additional cost. Verify buyer order."
       },
       {
         "id": "red_mccombs_driveaway_west",
@@ -62,6 +63,7 @@
         "inventory_url": "https://www.redmccombsdriveaway.com/inventory-west",
         "detail_url_contains": ["/used-San%2BAntonio-", "/used-San+Antonio-", "/used-"],
         "doc_fee": 225,
+        "doc_fee_included_in_price": false,
         "mandatory_addon_amount": 0,
         "addon_warning": "General used-car inventory; require clean title/history and an independent pre-purchase inspection before treating as a buy."
       },
@@ -74,8 +76,9 @@
         "inventory_url": "https://www.cavendertoyota.com/used-cars/toyota-rav4.htm",
         "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
         "doc_fee": 225,
+        "doc_fee_included_in_price": true,
         "mandatory_addon_amount": 0,
-        "addon_warning": null
+        "addon_warning": "Dealer states pre-owned advertised prices include the $225 documentary fee; verify government fees and any vehicle-specific extras on the buyer order."
       },
       {
         "id": "universal_toyota",
@@ -86,6 +89,7 @@
         "inventory_url": "https://www.universaltoyota.com/used-vehicles/?make=Toyota&model=RAV4",
         "detail_url_contains": ["/used-San%2BAntonio-", "/used-San+Antonio-", "/used-"],
         "doc_fee": 225,
+        "doc_fee_included_in_price": false,
         "mandatory_addon_amount": 0,
         "addon_warning": null
       },
@@ -98,6 +102,7 @@
         "inventory_url": "https://www.shottenkirktoyotasanantonio.com/used-vehicles/?model=RAV4",
         "detail_url_contains": ["/inventory/", "/used-vehicles/"],
         "doc_fee": 225,
+        "doc_fee_included_in_price": false,
         "mandatory_addon_amount": 3696,
         "addon_warning": "Dealer currently discloses a $3,696 tint/nitrogen/VIP package on used vehicles; verify removal or full OTD before ranking as a buy."
       }
@@ -113,6 +118,7 @@
         "inventory_url": "https://www.toyotaofboerne.com/used-vehicles-boerne/rav4.aspx",
         "detail_url_contains": ["/inventory/", "/used-", "/vehicle-details/"],
         "doc_fee": 225,
+        "doc_fee_included_in_price": false,
         "mandatory_addon_amount": 0,
         "addon_warning": "Dealer states dealer-installed accessories are excluded from advertised pre-owned pricing; verify the buyer order before ranking final OTD."
       }
