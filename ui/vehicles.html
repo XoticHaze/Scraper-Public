@@ -19,7 +19,14 @@
       <label>Max mileage <input id="max-mileage" type="number" value="100000" /></label>
       <label>Max distance <input id="max-distance" type="number" value="200" /></label>
       <label><input id="awd" type="checkbox" /> AWD only</label>
-      <label><input id="local" type="checkbox" /> 50 miles or less</label>
+      <label><input id="local" type="checkbox" /> local / nearby only</label>
+    </section>
+    <section class="source-panel">
+      <h2>Coverage</h2>
+      <p id="source-status">Loading source health…</p>
+      <div id="source-links" class="route-links"></div>
+      <h3>Broaden / verify the market</h3>
+      <div id="discovery-links" class="route-links"></div>
     </section>
     <p><strong id="count">0</strong> matching vehicles</p>
     <section id="grid" class="grid"></section>
