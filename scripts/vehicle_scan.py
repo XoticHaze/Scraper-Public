@@ -22,6 +22,14 @@ def load_config(path: Path) -> tuple[dict, dict]:
     return cfg, policy
 
 
+def configured_dealers(cfg: dict) -> list[dict]:
+    source = cfg.get("source", {})
+    return [
+        *list(source.get("local_dealers", [])),
+        *list(source.get("nearby_dealers", [])),
+    ]
+
+
 def _looks_like_challenge(status: int | None, title: str, body: str) -> bool:
     if status is not None and status >= 400:
         return True
@@ -66,15 +74,15 @@ def _discover_detail_links(page, dealer: dict) -> list[str]:
 
 
 def fetch_local_dealers(cfg: dict) -> tuple[list[dict], dict[str, str]]:
-    """Render local dealer inventory and normalize detail pages.
+    """Render configured local/nearby dealer inventory and normalize detail pages.
 
     Each dealer is independently best-effort. A blocked or redesigned dealer
-    does not suppress healthy local sources, and zero total results is treated
-    as a failed refresh so the existing last-good catalog can remain live.
+    does not suppress healthy sources, and zero total results is treated as a
+    failed refresh so the existing last-good catalog can remain live.
     """
     from playwright.sync_api import sync_playwright
 
-    dealers = list(cfg.get("source", {}).get("local_dealers", []))
+    dealers = configured_dealers(cfg)
     rows: list[dict] = []
     errors: dict[str, str] = {}
 
@@ -170,6 +178,17 @@ def add_history(rows: list[dict], previous_path: Path) -> None:
         row["price_delta"] = row["price"] - old_price if isinstance(old_price, (int, float)) else None
 
 
+def source_registry(cfg: dict) -> list[dict]:
+    fields = (
+        "id", "name", "location", "market_local", "locality_hint",
+        "inventory_url", "doc_fee", "mandatory_addon_amount", "addon_warning",
+    )
+    return [
+        {key: dealer.get(key) for key in fields if dealer.get(key) is not None}
+        for dealer in configured_dealers(cfg)
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=str(CONFIG))
@@ -181,7 +200,7 @@ def main() -> int:
     rows, source_errors = fetch_local_dealers(cfg)
     rows = list({listing_key(row): row for row in rows}.values())
     if not rows:
-        raise RuntimeError("all local dealer sources returned zero parseable RAV4 listings")
+        raise RuntimeError("all configured dealer sources returned zero parseable RAV4 listings")
 
     add_history(rows, Path(args.previous))
     ranked = rank_vehicles(rows, policy)
@@ -194,6 +213,8 @@ def main() -> int:
         "market": cfg["market"],
         "query": cfg["vehicle"],
         "ownership_cost": cfg["ownership_cost"],
+        "source_registry": source_registry(cfg),
+        "discovery_routes": list(cfg.get("source", {}).get("discovery_routes", [])),
         "source_counts": source_counts,
         "source_errors": source_errors,
         "raw_listing_count": len(rows),
@@ -208,6 +229,7 @@ def main() -> int:
     print(f"VEHICLE_LOCALITY preferred={cfg['market']['preferred_radius_miles']} hard={cfg['market']['hard_radius_miles']}")
     print(f"VEHICLE_SOURCES={json.dumps(source_counts, sort_keys=True)}")
     print(f"VEHICLE_SOURCE_ERRORS={json.dumps(source_errors, sort_keys=True)}")
+    print(f"VEHICLE_DISCOVERY_ROUTES={len(payload['discovery_routes'])}")
     print(f"VEHICLE_RAW={len(rows)} eligible={len(ranked)}")
     for row in ranked[:15]:
         print(json.dumps({key: row.get(key) for key in (
