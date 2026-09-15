@@ -30,7 +30,7 @@
   "source": {
     "cars_com": {
       "enabled": false,
-      "reason": "GitHub-hosted runner receives HTTP 403 from Cars.com"
+      "reason": "GitHub-hosted runner receives HTTP 403 from Cars.com; keep as a manual discovery route instead of an execution dependency."
     },
     "local_dealers": [
       {
@@ -76,6 +76,60 @@
         "doc_fee": 225,
         "mandatory_addon_amount": 3696,
         "addon_warning": "Dealer currently discloses a $3,696 tint/nitrogen/VIP package on used vehicles; verify removal or full OTD before ranking as a buy."
+      }
+    ],
+    "nearby_dealers": [
+      {
+        "id": "toyota_of_boerne",
+        "name": "Vic Vaughan Toyota of Boerne",
+        "location": "Boerne, TX",
+        "market_local": false,
+        "locality_hint": "nearby",
+        "inventory_url": "https://www.toyotaofboerne.com/used-vehicles-boerne/rav4.aspx",
+        "detail_url_contains": ["/inventory/", "/used-", "/vehicle-details/"],
+        "doc_fee": 225,
+        "mandatory_addon_amount": 0,
+        "addon_warning": "Dealer states dealer-installed accessories are excluded from advertised pre-owned pricing; verify the buyer order before ranking final OTD."
+      }
+    ],
+    "discovery_routes": [
+      {
+        "id": "cargurus_sa_rav4",
+        "label": "CarGurus · San Antonio RAV4",
+        "url": "https://www.cargurus.com/Cars/l-Used-Toyota-RAV4-San-Antonio-d306_L34757",
+        "role": "manual_market_discovery"
+      },
+      {
+        "id": "autotrader_sa_rav4",
+        "label": "Autotrader · San Antonio RAV4",
+        "url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx",
+        "role": "manual_market_discovery"
+      },
+      {
+        "id": "autotrader_sa_rav4_awd",
+        "label": "Autotrader · San Antonio RAV4 AWD",
+        "url": "https://www.autotrader.com/cars-for-sale/awd-4wd/toyota/rav4/san-antonio-tx",
+        "role": "manual_market_discovery"
+      },
+      {
+        "id": "cars_sa_rav4",
+        "label": "Cars.com · San Antonio RAV4",
+        "url": "https://www.cars.com/shopping/toyota-rav4/san_antonio-tx/",
+        "role": "manual_market_discovery",
+        "warning": "Manual/browser route only; scheduled GitHub runner traffic is currently blocked with HTTP 403."
+      },
+      {
+        "id": "truecar_sa_rav4",
+        "label": "TrueCar · San Antonio RAV4",
+        "url": "https://www.truecar.com/used-cars-for-sale/listings/toyota/rav4/location-san-antonio-tx/",
+        "role": "manual_market_discovery"
+      },
+      {
+        "id": "corsicana_exception",
+        "label": "Chevrolet GMC of Corsicana · regional exception",
+        "url": "https://www.chevygmcofcorsicana.com/",
+        "role": "manual_exception_discovery",
+        "warning": "About 235 driving miles from San Antonio, outside the automated 200-mile hard radius. Use only when the deal is exceptional."
       }
     ]
   }
