@@ -12,6 +12,11 @@ YEAR_TITLE_RE = re.compile(r"\b(20\d{2})\s+([A-Za-z0-9.-]+)\s+([^\n]+)")
 DIST_RE = re.compile(r"\b([A-Za-z .'-]+),\s*TX\s*\((\d+)\s*mi\)", re.I)
 AWAY_RE = re.compile(r"\b([0-9]+(?:\.[0-9]+)?)\s*mi\.?\s*away\b", re.I)
 
+# Vehicle Hunt currently targets late-model RAV4s. Values below this range are
+# fees/down-payments/monthly-payment fragments, not credible advertised prices.
+MIN_VEHICLE_PRICE = 5000
+MAX_VEHICLE_PRICE = 100000
+
 
 def _int_value(value: str | None) -> int | None:
     if not value:
@@ -20,6 +25,12 @@ def _int_value(value: str | None) -> int | None:
         return int(value.replace(",", ""))
     except ValueError:
         return None
+
+
+def _plausible_vehicle_price(value: int | None) -> int | None:
+    if value is None:
+        return None
+    return value if MIN_VEHICLE_PRICE <= value <= MAX_VEHICLE_PRICE else None
 
 
 def _mileage_from_text(text: str) -> int | None:
@@ -57,31 +68,39 @@ def _label_value(lines: list[str], labels: tuple[str, ...]) -> str | None:
 
 
 def _dealer_price(lines: list[str], text: str) -> int | None:
-    """Prefer an advertised/final dealer price over MSRP/retail values."""
+    """Prefer an advertised/final dealer price over MSRP/retail and fee values."""
     preferred_labels = (
         "cavender price", "shottenkirk price", "asking price", "internet price",
         "sale price", "our price", "price",
     )
     for label in preferred_labels:
         pattern = re.compile(rf"\b{re.escape(label)}\b[^$\n]*\$\s*([0-9][0-9,]*)", re.I)
-        match = pattern.search(text)
-        if match:
-            return _int_value(match.group(1))
+        # Do not stop at the first labeled dollar value. Dealer disclosure copy can
+        # contain e.g. "Price includes $225 documentary fee" before the real price.
+        for match in pattern.finditer(text):
+            value = _plausible_vehicle_price(_int_value(match.group(1)))
+            if value is not None:
+                return value
         value = _label_value(lines, (label,))
         if value:
             match = PRICE_RE.search(value)
             if match:
-                return _int_value(match.group(1))
+                parsed = _plausible_vehicle_price(_int_value(match.group(1)))
+                if parsed is not None:
+                    return parsed
 
     for idx, line in enumerate(lines):
         match = PRICE_RE.search(line)
         if not match:
             continue
         context = " ".join(lines[max(0, idx - 1): idx + 1]).lower()
-        if any(token in context for token in ("msrp", "retail", "market value", "per month", "/mo")):
+        if any(token in context for token in (
+            "msrp", "retail", "market value", "per month", "/mo",
+            "documentary fee", "doc fee", "down payment",
+        )):
             continue
-        value = _int_value(match.group(1))
-        if value and value >= 5000:
+        value = _plausible_vehicle_price(_int_value(match.group(1)))
+        if value is not None:
             return value
     return None
 
@@ -201,13 +220,16 @@ def parse_autotrader_card(card: dict[str, Any], source: dict[str, Any]) -> dict[
         match = PLAIN_PRICE_RE.match(line.replace("$", ""))
         if not match:
             continue
-        value = _int_value(match.group(1))
-        if value and 5000 <= value <= 100000:
+        value = _plausible_vehicle_price(_int_value(match.group(1)))
+        if value is not None:
             price = value
             break
     if price is None:
-        match = PRICE_RE.search(text)
-        price = _int_value(match.group(1) if match else None)
+        for match in PRICE_RE.finditer(text):
+            value = _plausible_vehicle_price(_int_value(match.group(1)))
+            if value is not None:
+                price = value
+                break
     if price is None:
         return None
 
@@ -277,9 +299,13 @@ def parse_cars_com_card(card: dict[str, Any]) -> dict[str, Any] | None:
     if not remainder.lower().startswith("rav4"):
         return None
 
-    price_match = PRICE_RE.search(text)
+    price = None
+    for match in PRICE_RE.finditer(text):
+        value = _plausible_vehicle_price(_int_value(match.group(1)))
+        if value is not None:
+            price = value
+            break
     miles = _mileage_from_text(text)
-    price = _int_value(price_match.group(1) if price_match else None)
     mileage = miles
     if price is None or mileage is None:
         return None
