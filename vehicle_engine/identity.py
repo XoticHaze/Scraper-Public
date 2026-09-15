@@ -32,17 +32,17 @@ def signature(row: dict[str, Any]) -> str:
 
 
 def market_signature(row: dict[str, Any]) -> str:
-    """Fallback signature for dealer-direct vs aggregator copies without VIN.
+    """Conservative fallback for dealer-direct vs aggregator copies without VIN.
 
-    Exact year, trim, mileage, and price is intentionally conservative. It is
-    strong enough to collapse the same advertised vehicle without merging two
-    merely similar RAV4s at the same dealer.
+    Require exact year, trim, mileage, price, and normalized dealer identity.
+    VIN remains the preferred cross-source identity whenever available.
     """
     return "|".join((
         str(int(row.get("year") or 0)),
         _trim_key(row),
         str(int(row.get("mileage") or -1)),
         str(int(float(row.get("price") or -1))),
+        _norm(row.get("dealer")),
     ))
 
 
