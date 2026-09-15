@@ -177,8 +177,12 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
         risks.append("direct_listing_link_missing")
 
     otd_policy = dict(policy)
-    if row.get("dealer_doc_fee") is not None:
-        otd_policy["assumed_doc_fee"] = row["dealer_doc_fee"]
+    doc_fee = row.get("dealer_doc_fee")
+    doc_included = bool(row.get("dealer_doc_fee_included_in_price"))
+    if doc_fee is not None:
+        otd_policy["assumed_doc_fee"] = 0 if doc_included else doc_fee
+        if doc_included:
+            reasons.append("dealer_doc_fee_already_in_advertised_price")
     otd_policy["dealer_addon_amount"] = addon_amount
 
     out = dict(row)
@@ -187,6 +191,7 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
         "locality": bucket,
         "area_adjustment": area_adjustment,
         "estimated_otd": estimate_otd(price, otd_policy),
+        "incremental_doc_fee": float(otd_policy.get("assumed_doc_fee") or 0),
         "comp_median_price": round(median, 2) if median else None,
         "market_delta_pct": round(market_delta_pct, 1) if market_delta_pct is not None else None,
         "reasons": reasons,
