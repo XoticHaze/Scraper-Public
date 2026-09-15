@@ -18,11 +18,13 @@ function localityPass(v, maxDistance, localOnly) {
 }
 
 function renderSourceCoverage() {
+  const observed = catalog.source_observations || {};
   const counts = catalog.source_counts || {};
   const errors = catalog.source_errors || {};
-  const healthy = Object.entries(counts).map(([name,count]) => `${name}: ${count}`).join(' · ');
+  const healthy = Object.entries(observed).map(([name,count]) => `${name}: ${count}`).join(' · ');
   const degraded = Object.keys(errors);
-  byId('source-status').textContent = `${healthy || 'No source counts'}${degraded.length ? ` · degraded: ${degraded.join(', ')}` : ''}`;
+  const dedupe = catalog.raw_listing_count == null ? '' : ` · ${catalog.raw_listing_count} observed → ${catalog.deduped_listing_count ?? Object.values(counts).reduce((a,b)=>a+b,0)} unique`;
+  byId('source-status').textContent = `${healthy || 'No source counts'}${dedupe}${degraded.length ? ` · degraded: ${degraded.join(', ')}` : ''}`;
 
   const sourceLinks = byId('source-links');
   sourceLinks.innerHTML = '';
@@ -49,6 +51,13 @@ function renderSourceCoverage() {
   }
 }
 
+function alternateLinks(v) {
+  const urls = (v.alternate_urls || []).filter((url) => url && url !== v.source_url);
+  if (!urls.length) return '';
+  const sources = v.sources || [];
+  return `<div class="alternate-links"><span>Also found:</span>${urls.map((url,idx) => `<a href="${url}" target="_blank" rel="noreferrer">${sources[idx + 1] || `source ${idx + 2}`}</a>`).join('')}</div>`;
+}
+
 function render() {
   if (!catalog) return;
   const maxPrice = Number(byId('max-price').value || Infinity);
@@ -70,9 +79,11 @@ function render() {
     const risks = (v.risks || []).map((r) => `<span class="tag risk">${text(r)}</span>`).join('');
     const image = v.image_url ? `<img src="${v.image_url}" alt="" loading="lazy" />` : '';
     const priceMove = v.price_delta == null ? 'new' : money(v.price_delta);
-    const listing = v.source_url ? `<a href="${v.source_url}" target="_blank" rel="noreferrer">Open dealer listing</a>` : '';
+    const listingLabel = v.source_kind === 'aggregator' ? 'Open discovery listing' : 'Open dealer listing';
+    const listing = v.source_url ? `<a href="${v.source_url}" target="_blank" rel="noreferrer">${listingLabel}</a>` : '';
     const addon = v.dealer_addon_warning ? `<p class="warning">${v.dealer_addon_warning}</p>` : '';
-    card.innerHTML = `${image}<div class="body"><div class="badges"><b>#${v.rank}</b><span>score ${v.deal_score}</span><span>${v.locality}${v.distance_miles == null ? '' : ` · ${v.distance_miles} mi`}</span></div><h2>${v.title || `${v.year} ${v.make} ${v.model}`}</h2><p>${[v.dealer,v.location].filter(Boolean).join(' · ') || 'Dealer/location pending verification'}</p><div class="metrics">${metric('Price',money(v.price))}${metric('Est. OTD',money(v.estimated_otd))}${metric('Mileage',number(v.mileage))}${metric('Drivetrain',v.drivetrain || '—')}${metric('vs comps',v.market_delta_pct == null ? '—' : `${v.market_delta_pct}%`)}${metric('Price move',priceMove)}</div><div class="tags">${reasons}${risks}</div>${addon}${listing}</div>`;
+    const sourceBadge = (v.sources || []).length > 1 ? `<span>${v.sources.length} sources</span>` : '';
+    card.innerHTML = `${image}<div class="body"><div class="badges"><b>#${v.rank}</b><span>score ${v.deal_score}</span><span>${v.locality}${v.distance_miles == null ? '' : ` · ${v.distance_miles} mi`}</span>${sourceBadge}</div><h2>${v.title || `${v.year} ${v.make} ${v.model}`}</h2><p>${[v.dealer,v.location].filter(Boolean).join(' · ') || 'Dealer/location pending verification'}</p><div class="metrics">${metric('Price',money(v.price))}${metric('Est. OTD',money(v.estimated_otd))}${metric('Mileage',number(v.mileage))}${metric('Drivetrain',v.drivetrain || '—')}${metric('vs comps',v.market_delta_pct == null ? '—' : `${v.market_delta_pct}%`)}${metric('Price move',priceMove)}</div><div class="tags">${reasons}${risks}</div>${addon}<div class="listing-links">${listing}${alternateLinks(v)}</div></div>`;
     grid.appendChild(card);
   }
 }
@@ -83,7 +94,7 @@ async function load() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     catalog = await response.json();
     const market = catalog.market || {};
-    byId('meta').textContent = `${catalog.eligible_count || 0} eligible · ${market.label || 'San Antonio, TX'} · preferred within ${market.preferred_radius_miles || 50} mi · updated ${new Date(catalog.generated_utc).toLocaleString()}`;
+    byId('meta').textContent = `${catalog.eligible_count || 0} eligible · ${market.label || 'San Antonio, TX'} · centered ${market.zip || '78237'} · preferred within ${market.preferred_radius_miles || 50} mi · updated ${new Date(catalog.generated_utc).toLocaleString()}`;
     ['max-price','max-mileage','max-distance','awd','local'].forEach((id) => byId(id).addEventListener('input', render));
     renderSourceCoverage();
     render();
