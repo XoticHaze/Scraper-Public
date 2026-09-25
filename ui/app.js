@@ -15,7 +15,7 @@ const state = {
   noBidders: false,
   watchOnly: false,
   visible: 160,
-  watchlist: new Set(JSON.parse(localStorage.getItem('macbid-hunt-watchlist') || '[]')),
+  watchlist: window.MacbidBrowserState?.watchlistSet?.() ?? new Set(JSON.parse(localStorage.getItem('macbid-hunt-watchlist') || '[]')),
 };
 
 function money(value) {
@@ -55,6 +55,10 @@ function lotAllIn(lot) {
 }
 
 function saveWatchlist() {
+  if (window.MacbidBrowserState?.replaceWatchlist) {
+    state.watchlist = window.MacbidBrowserState.replaceWatchlist([...state.watchlist]);
+    return;
+  }
   localStorage.setItem('macbid-hunt-watchlist', JSON.stringify([...state.watchlist]));
 }
 
@@ -254,7 +258,7 @@ function openDetails(row) {
         <div class="cost-row"><span>Stated-retail savings</span><strong class="good">${money(lot.stated_retail_savings)}</strong></div>
         <div class="cost-row"><span>Provisional max bid</span><strong>${money(lot.provisional_max_bid)}</strong></div>
       </div>
-      <p class="muted">Sales tax is an estimate using the configured San Antonio rate and current assumed taxable basis. Provisional ceiling is discovery-only until the exact model, real market price, and actual MAC.BID invoice treatment are verified.</p>
+      <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. Provisional ceiling is discovery-only until the exact model, real market price, and actual MAC.BID invoice treatment are verified.</p>
       ${verifiedMarkup(product, lot)}
       <div class="lot-box">
         <strong>Lot state</strong>
