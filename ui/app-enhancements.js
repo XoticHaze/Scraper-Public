@@ -20,6 +20,17 @@
 
   function setHunt(value) {
     const hunt = String(value || '').trim();
+    const minRetail = document.querySelector('#min-retail');
+    if (minRetail?.dataset.huntDefault === 'premium-dishwashers' && hunt !== 'premium-dishwashers') {
+      minRetail.value = '';
+      minRetail.dataset.huntDefault = '';
+      state.minRetail = null;
+    }
+    if (hunt === 'premium-dishwashers' && minRetail && !minRetail.value) {
+      minRetail.value = '800';
+      minRetail.dataset.huntDefault = 'premium-dishwashers';
+      state.minRetail = 800;
+    }
     state.hunt = hunt;
     const url = new URL(window.location.href);
     if (hunt) url.searchParams.set('hunt', hunt);
@@ -68,7 +79,7 @@
   }
 
   function activeFilterCount() {
-    return [state.hunt, state.category, state.condition, state.closesWithin, state.maxTotal, state.noBidders].filter(Boolean).length;
+    return [state.hunt, state.category, state.condition, state.closesWithin, state.minRetail, state.maxTotal, state.noBidders].filter(Boolean).length;
   }
 
   function updateFilterToggle() {
@@ -92,7 +103,7 @@
     });
     controls.querySelector('.view-tabs')?.after(button);
 
-    ['#category', '#condition', '#closes-within', '#max-total', '#no-bidders'].forEach((selector) => {
+    ['#category', '#condition', '#closes-within', '#min-retail', '#max-total', '#no-bidders'].forEach((selector) => {
       document.querySelector(selector)?.addEventListener('change', updateFilterToggle);
       document.querySelector(selector)?.addEventListener('input', updateFilterToggle);
     });
