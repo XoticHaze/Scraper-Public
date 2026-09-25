@@ -59,7 +59,7 @@ jobs:
           set -euo pipefail
           pytest -q tests/test_deal_scoring.py tests/test_hunts.py
 
-      - name: Run San Antonio inventory deal engine
+      - name: Run configured inventory deal engine
         run: |
           set -euo pipefail
           python scripts/macbid_deal_engine.py
@@ -72,6 +72,8 @@ jobs:
       - name: Build static hunt UI
         run: |
           set -euo pipefail
+          node --check ui/browser-state.js
+          node --check ui/browser-profile.js
           node --check ui/app.js
           node --check ui/app-enhancements.js
           node --check ui/action-center.js
@@ -82,11 +84,17 @@ jobs:
           from pathlib import Path
           data = json.loads(Path('site/catalog.json').read_text())
           actions = json.loads(Path('site/actions.json').read_text())
-          assert data['locations'] == ['San Antonio'], data['locations']
+          policy = json.loads(Path('config/macbid_deal_engine.json').read_text())
+          allowed_locations = set(policy.get('locations') or [])
+          assert set(data['locations']) == allowed_locations, data['locations']
           assert data['product_count'] > 0
           assert data['lot_count'] > 0
-          assert len(data.get('hunt_profiles', [])) >= 10
+          assert len(data.get('hunt_profiles', [])) >= 16
+          hunt_ids = {profile['id'] for profile in data.get('hunt_profiles', [])}
+          assert {'premium-dishwashers', 'compact-sinks', 'medicine-cabinet-mirrors'} <= hunt_ids
           assert Path('site/catalog.js').exists()
+          assert Path('site/browser-state.js').exists()
+          assert Path('site/browser-profile.js').exists()
           assert Path('site/app-enhancements.js').exists()
           assert Path('site/action-center.js').exists()
           assert Path('site/enhancements.css').exists()
@@ -94,7 +102,7 @@ jobs:
           assert actions['schema'] == 'repo-app-actions-v1'
           assert {a['id'] for a in actions['actions']} >= {'refresh', 'visual-review', 'actions', 'source'}
           assert all(
-              lot.get('auction_location') == 'San Antonio'
+              lot.get('auction_location') in allowed_locations
               for product in data['products']
               for lot in product['lots']
           )
@@ -103,7 +111,7 @@ jobs:
               for product in data['products'][:500]
               for lot in product['lots'][:1]
           )
-          print(f"UI_CATALOG_SAN_ANTONIO products={data['product_count']} lots={data['lot_count']}")
+          print(f"UI_CATALOG_SCOPE locations={sorted(allowed_locations)} products={data['product_count']} lots={data['lot_count']}")
           print(f"UI_HUNTS={len(data.get('hunt_profiles', []))}")
           print(f"UI_ACTIONS={len(actions['actions'])}")
           PY
@@ -128,7 +136,9 @@ jobs:
               assert desktop.locator('.quick-chip').count() >= 6
               assert desktop.locator('#snapshot-health').inner_text()
               assert desktop.locator('#app-actions-open').is_visible()
+              assert desktop.locator('#browser-profile-open').is_visible()
               assert 'products' in desktop.locator('#catalog-meta').inner_text().lower()
+              assert 'san antonio' not in desktop.locator('.topbar').inner_text().lower()
               first_hunt = desktop.locator('.quick-chip').first
               first_hunt.click()
               desktop.wait_for_timeout(100)
@@ -144,13 +154,14 @@ jobs:
               mobile.wait_for_selector('.app-status', timeout=30000)
               mobile.wait_for_selector('#app-actions-open', timeout=30000)
               assert mobile.locator('#app-actions-open').is_visible(), 'app actions hidden on mobile'
+              assert mobile.locator('#browser-profile-open').is_visible(), 'browser profile hidden on mobile'
               assert mobile.locator('a[href*="macbid-deal-engine.yml"]').first.is_visible(), 'refresh hidden on mobile'
               assert mobile.locator('a[href="https://github.com/XoticHaze/Scraper-Public/actions"]').first.is_visible(), 'actions hidden on mobile'
               close_metric = mobile.locator('.card').first.locator('.metric').nth(3)
               assert close_metric.is_visible(), 'close time hidden on mobile'
               assert close_metric.inner_text().strip()
               assert mobile.evaluate('document.body.scrollWidth') <= 390
-              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile+semantic-hunts+actions')
+              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile+semantic-hunts+browser-profile+actions')
               mobile.close()
               browser.close()
           PY
