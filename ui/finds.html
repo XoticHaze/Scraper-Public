@@ -12,14 +12,14 @@
 <body>
   <header class="topbar">
     <div>
-      <p class="eyebrow">SAN ANTONIO · CURRENT HUNT SHORTLISTS</p>
+      <p class="eyebrow">CURRENT HUNT SHORTLISTS</p>
       <h1>MAC.BID Finds & Watchlists</h1>
       <p id="finds-meta" class="muted">Loading current snapshot…</p>
     </div>
     <div class="top-actions">
       <a class="ghost" href="./">← Hunt</a>
       <a class="ghost" href="https://github.com/XoticHaze/Scraper-Public/actions/workflows/macbid-deal-engine.yml" target="_blank" rel="noreferrer">Refresh now ↗</a>
-      <a class="ghost" href="https://www.mac.bid/locations/san-antonio" target="_blank" rel="noreferrer">MAC.BID ↗</a>
+      <a class="ghost" href="https://www.mac.bid/" target="_blank" rel="noreferrer">MAC.BID ↗</a>
     </div>
   </header>
 
@@ -27,7 +27,7 @@
     <section class="finds-intro panel">
       <div>
         <strong>Follow-along view</strong>
-        <p class="muted">Automatically rebuilt from the latest San Antonio catalog. Hunt lanes stay current and researched items carry our public model/compatibility notes and source links. Your starred Watchlist stays only in this browser/device; it is not uploaded to GitHub or published in Pages. Discovery candidates are not final BUY calls until verification clears.</p>
+        <p class="muted">Automatically rebuilt from the latest configured catalog snapshot. Hunt lanes stay current and researched items carry public model/compatibility notes and source links. Your starred Watchlist and browser profile stay only in this browser/device; they are not uploaded to GitHub or published in Pages. Discovery candidates are not final BUY calls until verification clears.</p>
       </div>
       <div id="finds-status" class="finds-status">Loading…</div>
     </section>
@@ -37,6 +37,7 @@
 
   <script src="catalog.js"></script>
   <script src="catalog-loader.js"></script>
+  <script src="browser-state.js"></script>
   <script src="research-findings.js"></script>
   <script src="finds.js" defer></script>
 </body>
