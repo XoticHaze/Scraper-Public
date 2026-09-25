@@ -13,7 +13,7 @@
     {
       "id": "refresh",
       "label": "Refresh catalog",
-      "description": "Run a fresh San Antonio catalog scan, scoring pass, UI build, browser validation, and Pages deployment.",
+      "description": "Run a fresh configured catalog scan, scoring pass, UI build, browser validation, and Pages deployment.",
       "kind": "workflow",
       "risk": "read_only_compute",
       "workflow": "macbid-deal-engine.yml",
