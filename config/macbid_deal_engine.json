@@ -1,22 +1,16 @@
 {
-  "locations": [
-    "San Antonio"
-  ],
-  "preferred_conditions": [
-    "LIKE NEW",
-    "OPEN BOX"
-  ],
-  "excluded_conditions": [
-    "DAMAGED"
-  ],
+  "locations": ["San Antonio"],
+  "bootstrap_location_url": "https://www.mac.bid/locations/san-antonio",
+  "preferred_conditions": ["LIKE NEW", "OPEN BOX"],
+  "excluded_conditions": ["DAMAGED"],
   "condition_priority": {
     "LIKE NEW": 0,
     "OPEN BOX": 1
   },
   "include_pallets": false,
-  "minimum_stated_retail": 40,
+  "minimum_stated_retail": 40.0,
   "buyer_premium_rate": 0.15,
-  "lot_fee": 3,
+  "lot_fee": 3.0,
   "sales_tax_rate": 0.0825,
   "sales_tax_scope": "San Antonio estimate; applied to hammer + buyer premium + lot fee until reconciled against an actual MAC.BID invoice",
   "provisional_ceiling_ratio": {
@@ -28,6 +22,5 @@
     "best_value": 100,
     "low_competition": 100,
     "verification_queue": 100
-  },
-  "bootstrap_location_url": "https://www.mac.bid/locations/san-antonio"
+  }
 }
