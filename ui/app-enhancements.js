@@ -197,5 +197,6 @@
     updateStatus();
     updateFilterToggle();
   }, 100);
+  window.addEventListener('macbid-browser-profile-changed', updateStatus);
   setInterval(updateStatus, 30_000);
 })();
