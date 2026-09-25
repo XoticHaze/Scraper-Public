@@ -1,134 +1,629 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 2,
+  "version": 3,
   "profiles": [
     {
       "id": "4k-projectors",
       "label": "4K Projectors",
       "kind": "semantic",
-      "required_any": ["projector", "projection"],
-      "boost_any": ["4k", "uhd", "3840", "2160", "laser projector", "home theater"],
-      "exclude_any": ["projector screen", "mount only", "replacement lamp"],
+      "required_any": [
+        "projector",
+        "projection"
+      ],
+      "boost_any": [
+        "4k",
+        "uhd",
+        "3840",
+        "2160",
+        "laser projector",
+        "home theater"
+      ],
+      "exclude_any": [
+        "projector screen",
+        "mount only",
+        "replacement lamp"
+      ],
       "minimum_signal_score": 3,
-      "verification": ["exact_model", "verified_market_price", "native_resolution", "lamp_or_laser_health"]
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "native_resolution",
+        "lamp_or_laser_health"
+      ]
     },
     {
       "id": "curved-monitors",
       "label": "Curved Monitors",
       "kind": "semantic",
-      "required_any": ["monitor", "display"],
-      "must_match_any": ["curved", "1000r", "1500r", "1800r"],
-      "boost_any": ["gaming", "odyssey", "alienware", "rog", "predator", "ultrawide", "ultra wide", "oled", "240hz", "165hz", "144hz"],
-      "exclude_any": ["monitor arm", "monitor stand", "screen protector"],
+      "required_any": [
+        "monitor",
+        "display"
+      ],
+      "must_match_any": [
+        "curved",
+        "1000r",
+        "1500r",
+        "1800r"
+      ],
+      "boost_any": [
+        "gaming",
+        "odyssey",
+        "alienware",
+        "rog",
+        "predator",
+        "ultrawide",
+        "ultra wide",
+        "oled",
+        "240hz",
+        "165hz",
+        "144hz"
+      ],
+      "exclude_any": [
+        "monitor arm",
+        "monitor stand",
+        "screen protector"
+      ],
       "minimum_signal_score": 4,
-      "verification": ["exact_model", "verified_market_price", "panel_size", "refresh_rate", "resolution", "curvature"]
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "panel_size",
+        "refresh_rate",
+        "resolution",
+        "curvature"
+      ]
     },
     {
       "id": "large-gaming-monitors",
       "label": "Large Gaming Monitor Candidates",
       "kind": "semantic",
-      "required_any": ["monitor", "display"],
-      "boost_any": ["curved", "ultrawide", "ultra wide", "gaming", "odyssey", "alienware", "rog", "predator", "240hz", "165hz", "144hz", "oled", "34 inch", "35 inch", "38 inch", "40 inch", "45 inch", "49 inch", "57 inch"],
-      "exclude_any": ["monitor arm", "monitor stand", "screen protector"],
+      "required_any": [
+        "monitor",
+        "display"
+      ],
+      "boost_any": [
+        "curved",
+        "ultrawide",
+        "ultra wide",
+        "gaming",
+        "odyssey",
+        "alienware",
+        "rog",
+        "predator",
+        "240hz",
+        "165hz",
+        "144hz",
+        "oled",
+        "34 inch",
+        "35 inch",
+        "38 inch",
+        "40 inch",
+        "45 inch",
+        "49 inch",
+        "57 inch"
+      ],
+      "exclude_any": [
+        "monitor arm",
+        "monitor stand",
+        "screen protector"
+      ],
       "minimum_signal_score": 3,
-      "numeric_hints": {"preferred_diagonal_inches_min": 34},
-      "verification": ["exact_model", "verified_market_price", "panel_size", "refresh_rate", "resolution"]
+      "numeric_hints": {
+        "preferred_diagonal_inches_min": 34
+      },
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "panel_size",
+        "refresh_rate",
+        "resolution"
+      ]
     },
     {
       "id": "quality-speakers",
       "label": "Quality Speaker Candidates",
       "kind": "semantic",
-      "required_any": ["speaker", "speakers", "soundbar", "subwoofer", "bookshelf"],
-      "boost_any": ["sonos", "klipsch", "jbl", "bose", "polk", "yamaha", "denon", "sony", "kef", "edifier", "marshall", "harman kardon", "subwoofer", "powered", "wireless"],
-      "exclude_any": ["speaker wire", "speaker stand", "speaker mount", "replacement speaker"],
+      "required_any": [
+        "speaker",
+        "speakers",
+        "soundbar",
+        "subwoofer",
+        "bookshelf"
+      ],
+      "boost_any": [
+        "sonos",
+        "klipsch",
+        "jbl",
+        "bose",
+        "polk",
+        "yamaha",
+        "denon",
+        "sony",
+        "kef",
+        "edifier",
+        "marshall",
+        "harman kardon",
+        "subwoofer",
+        "powered",
+        "wireless"
+      ],
+      "exclude_any": [
+        "speaker wire",
+        "speaker stand",
+        "speaker mount",
+        "replacement speaker"
+      ],
       "minimum_signal_score": 2,
-      "verification": ["exact_model", "verified_market_price", "completeness"]
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "completeness"
+      ]
     },
     {
       "id": "solar-panels",
       "label": "Solar Panels",
       "kind": "semantic",
-      "required_any": ["solar panel", "solar panels", "photovoltaic"],
-      "boost_any": ["100w", "200w", "300w", "400w", "bifacial", "monocrystalline", "foldable solar", "portable solar"],
-      "exclude_any": ["solar light", "solar charger cable", "panel mount only", "security camera", "camera", "charger", "bracket", "mount"],
+      "required_any": [
+        "solar panel",
+        "solar panels",
+        "photovoltaic"
+      ],
+      "boost_any": [
+        "100w",
+        "200w",
+        "300w",
+        "400w",
+        "bifacial",
+        "monocrystalline",
+        "foldable solar",
+        "portable solar"
+      ],
+      "exclude_any": [
+        "solar light",
+        "solar charger cable",
+        "panel mount only",
+        "security camera",
+        "camera",
+        "charger",
+        "bracket",
+        "mount"
+      ],
       "minimum_signal_score": 2,
-      "verification": ["exact_model", "verified_market_price", "rated_wattage", "electrical_condition"]
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "rated_wattage",
+        "electrical_condition"
+      ]
     },
     {
       "id": "ptz-cameras-haos",
       "label": "PTZ Cameras · HAOS Check",
       "kind": "semantic",
-      "required_any": ["camera", "security camera", "ip camera"],
-      "must_match_any": ["ptz", "pan tilt", "pan/tilt", "pan-tilt"],
-      "boost_any": ["onvif", "rtsp", "reolink", "amcrest", "poe", "ip camera", "optical zoom"],
-      "exclude_any": ["camera mount", "camera battery", "dummy camera", "dash cam", "webcam", "solar panel charger", "digital camera"],
+      "required_any": [
+        "camera",
+        "security camera",
+        "ip camera"
+      ],
+      "must_match_any": [
+        "ptz",
+        "pan tilt",
+        "pan/tilt",
+        "pan-tilt"
+      ],
+      "boost_any": [
+        "onvif",
+        "rtsp",
+        "reolink",
+        "amcrest",
+        "poe",
+        "ip camera",
+        "optical zoom"
+      ],
+      "exclude_any": [
+        "camera mount",
+        "camera battery",
+        "dummy camera",
+        "dash cam",
+        "webcam",
+        "solar panel charger",
+        "digital camera"
+      ],
       "minimum_signal_score": 4,
-      "verification": ["exact_model", "verified_market_price", "haos_compatibility", "local_stream_protocol", "account_lock_risk"],
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "haos_compatibility",
+        "local_stream_protocol",
+        "account_lock_risk"
+      ],
       "compatibility_gate": "haos"
     },
     {
       "id": "smart-door-locks-haos",
       "label": "Smart Door Locks · HAOS Check",
       "kind": "semantic",
-      "required_any": ["smart lock", "smart deadbolt", "electronic deadbolt", "door lock", "deadbolt"],
-      "must_match_any": ["smart", "z-wave", "matter", "thread", "zigbee", "wifi", "wi-fi", "bluetooth", "home connect", "connect", "encode", "aqara", "yale assure", "fingerprint"],
-      "boost_any": ["z-wave", "matter", "thread", "zigbee", "home connect", "schlage connect", "aqara", "yale", "kwikset", "encode", "u100", "u200", "u300"],
-      "exclude_any": ["lock box", "cabinet lock", "padlock", "keypad only"],
+      "required_any": [
+        "smart lock",
+        "smart deadbolt",
+        "electronic deadbolt",
+        "door lock",
+        "deadbolt"
+      ],
+      "must_match_any": [
+        "smart",
+        "z-wave",
+        "matter",
+        "thread",
+        "zigbee",
+        "wifi",
+        "wi-fi",
+        "bluetooth",
+        "home connect",
+        "connect",
+        "encode",
+        "aqara",
+        "yale assure",
+        "fingerprint"
+      ],
+      "boost_any": [
+        "z-wave",
+        "matter",
+        "thread",
+        "zigbee",
+        "home connect",
+        "schlage connect",
+        "aqara",
+        "yale",
+        "kwikset",
+        "encode",
+        "u100",
+        "u200",
+        "u300"
+      ],
+      "exclude_any": [
+        "lock box",
+        "cabinet lock",
+        "padlock",
+        "keypad only"
+      ],
       "minimum_signal_score": 4,
-      "verification": ["exact_model", "verified_market_price", "haos_compatibility", "required_coordinator", "factory_reset", "completeness"],
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "haos_compatibility",
+        "required_coordinator",
+        "factory_reset",
+        "completeness"
+      ],
       "compatibility_gate": "haos"
     },
     {
       "id": "large-area-rugs",
       "label": "Large Gray / Blue Rug Candidates",
       "kind": "semantic",
-      "required_any": ["area rug", "rug"],
-      "boost_any": ["8x10", "8 x 10", "8' x 10'", "9x12", "9 x 12", "10x14", "10 x 14", "large area rug", "gray", "grey", "navy", "deep blue", "dark blue", "blue"],
-      "exclude_any": ["runner rug", "bath rug", "door mat", "doormat", "rug pad"],
+      "required_any": [
+        "area rug",
+        "rug"
+      ],
+      "boost_any": [
+        "8x10",
+        "8 x 10",
+        "8' x 10'",
+        "9x12",
+        "9 x 12",
+        "10x14",
+        "10 x 14",
+        "large area rug",
+        "gray",
+        "grey",
+        "navy",
+        "deep blue",
+        "dark blue",
+        "blue"
+      ],
+      "exclude_any": [
+        "runner rug",
+        "bath rug",
+        "door mat",
+        "doormat",
+        "rug pad"
+      ],
       "minimum_signal_score": 3,
-      "numeric_hints": {"preferred_sizes": ["8x10", "9x12", "10x14"], "preferred_colors": ["gray", "grey", "navy", "deep blue", "dark blue"]},
-      "verification": ["dimensions", "color_from_image", "condition_from_image", "verified_market_price"]
+      "numeric_hints": {
+        "preferred_sizes": [
+          "8x10",
+          "9x12",
+          "10x14"
+        ],
+        "preferred_colors": [
+          "gray",
+          "grey",
+          "navy",
+          "deep blue",
+          "dark blue"
+        ]
+      },
+      "verification": [
+        "dimensions",
+        "color_from_image",
+        "condition_from_image",
+        "verified_market_price"
+      ]
+    },
+    {
+      "id": "premium-dishwashers",
+      "label": "Dishwashers · $800+ Retail",
+      "kind": "semantic",
+      "required_any": [
+        "dishwasher",
+        "dish washer"
+      ],
+      "boost_any": [
+        "built-in dishwasher",
+        "top control",
+        "third rack",
+        "stainless steel",
+        "bosch",
+        "kitchenaid",
+        "ge profile",
+        "cafe",
+        "lg",
+        "samsung",
+        "whirlpool"
+      ],
+      "exclude_any": [
+        "dishwasher rack",
+        "dishwasher part",
+        "replacement part",
+        "installation kit",
+        "drain hose",
+        "mounting bracket"
+      ],
+      "minimum_signal_score": 2,
+      "minimum_stated_retail": 800,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "dimensions",
+        "installation_type",
+        "completeness"
+      ]
+    },
+    {
+      "id": "compact-sinks",
+      "label": "Sinks · Under 36 in",
+      "kind": "semantic",
+      "required_any": [
+        "sink",
+        "kitchen sink",
+        "bathroom sink",
+        "vanity sink",
+        "workstation sink"
+      ],
+      "boost_any": [
+        "undermount",
+        "drop-in",
+        "drop in",
+        "workstation",
+        "granite composite",
+        "stainless steel",
+        "fireclay",
+        "porcelain",
+        "single bowl",
+        "double bowl"
+      ],
+      "exclude_any": [
+        "sink faucet",
+        "faucet",
+        "sink grid only",
+        "strainer only",
+        "drain only",
+        "sink accessory",
+        "replacement part",
+        "mounting clips"
+      ],
+      "minimum_signal_score": 2,
+      "maximum_width_inches_exclusive": 36,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "dimensions",
+        "cutout_dimensions",
+        "mounting_type",
+        "completeness"
+      ]
+    },
+    {
+      "id": "medicine-cabinet-mirrors",
+      "label": "Medicine Cabinet Mirrors",
+      "kind": "semantic",
+      "required_any": [
+        "medicine cabinet",
+        "mirror cabinet",
+        "mirrored cabinet"
+      ],
+      "boost_any": [
+        "bathroom",
+        "led",
+        "lighted",
+        "recessed",
+        "surface mount",
+        "frameless",
+        "mirror",
+        "anti-fog",
+        "defogger"
+      ],
+      "exclude_any": [
+        "replacement mirror",
+        "replacement door",
+        "cabinet hinge",
+        "mounting hardware only"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "dimensions",
+        "mounting_type",
+        "electrical_requirements",
+        "completeness"
+      ]
     },
     {
       "id": "tools",
       "label": "Tools",
       "kind": "semantic",
-      "required_any": ["tool", "drill", "impact", "saw", "compressor", "nailer", "grinder", "wrench", "socket", "shop vac", "pressure washer"],
-      "boost_any": ["milwaukee", "dewalt", "makita", "bosch", "ridgid", "craftsman", "metabo", "hilti", "ryobi", "flex"],
-      "exclude_any": ["toy tool", "tool organizer only"],
+      "required_any": [
+        "tool",
+        "drill",
+        "impact",
+        "saw",
+        "compressor",
+        "nailer",
+        "grinder",
+        "wrench",
+        "socket",
+        "shop vac",
+        "pressure washer"
+      ],
+      "boost_any": [
+        "milwaukee",
+        "dewalt",
+        "makita",
+        "bosch",
+        "ridgid",
+        "craftsman",
+        "metabo",
+        "hilti",
+        "ryobi",
+        "flex"
+      ],
+      "exclude_any": [
+        "toy tool",
+        "tool organizer only"
+      ],
       "minimum_signal_score": 2,
-      "verification": ["exact_model", "verified_market_price", "battery_or_accessory_completeness"]
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "battery_or_accessory_completeness"
+      ]
     },
     {
       "id": "samsung-tablets",
       "label": "Samsung Tablets",
       "kind": "semantic",
-      "required_all": ["samsung"],
-      "required_any": ["tablet", "galaxy tab", "tab s", "tab a"],
-      "boost_any": ["galaxy tab s", "tab s9", "tab s10", "tab s8", "ultra", "plus", "5g", "wifi"],
-      "exclude_any": ["case", "screen protector", "keyboard cover", "stylus only"],
+      "required_all": [
+        "samsung"
+      ],
+      "required_any": [
+        "tablet",
+        "galaxy tab",
+        "tab s",
+        "tab a"
+      ],
+      "boost_any": [
+        "galaxy tab s",
+        "tab s9",
+        "tab s10",
+        "tab s8",
+        "ultra",
+        "plus",
+        "5g",
+        "wifi"
+      ],
+      "exclude_any": [
+        "case",
+        "screen protector",
+        "keyboard cover",
+        "stylus only"
+      ],
       "minimum_signal_score": 3,
-      "verification": ["exact_model", "storage", "carrier_lock", "activation_lock", "verified_market_price"]
+      "verification": [
+        "exact_model",
+        "storage",
+        "carrier_lock",
+        "activation_lock",
+        "verified_market_price"
+      ]
     },
     {
       "id": "apple-devices",
       "label": "Apple Devices",
       "kind": "semantic",
-      "required_any": ["iphone", "ipad", "macbook", "apple watch", "airpods", "mac mini", "imac", "apple tv"],
-      "boost_any": ["pro", "air", "max", "ultra", "m1", "m2", "m3", "m4", "256gb", "512gb", "1tb"],
-      "exclude_any": ["case", "screen protector", "charger only", "watch band", "replacement cable", "laptop stand", "battery", "replacement", "riser", "adapter", "dock", "keyboard cover"],
+      "required_any": [
+        "iphone",
+        "ipad",
+        "macbook",
+        "apple watch",
+        "airpods",
+        "mac mini",
+        "imac",
+        "apple tv"
+      ],
+      "boost_any": [
+        "pro",
+        "air",
+        "max",
+        "ultra",
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "256gb",
+        "512gb",
+        "1tb"
+      ],
+      "exclude_any": [
+        "case",
+        "screen protector",
+        "charger only",
+        "watch band",
+        "replacement cable",
+        "laptop stand",
+        "battery",
+        "replacement",
+        "riser",
+        "adapter",
+        "dock",
+        "keyboard cover"
+      ],
       "minimum_signal_score": 2,
-      "verification": ["exact_model", "storage", "activation_lock", "battery_health_if_available", "verified_market_price"]
+      "verification": [
+        "exact_model",
+        "storage",
+        "activation_lock",
+        "battery_health_if_available",
+        "verified_market_price"
+      ]
     },
     {
       "id": "best-tech-deals",
       "label": "Best Tech Candidates",
       "kind": "ranked",
-      "category_signals": ["computer", "tablet", "monitor", "projector", "camera", "speaker", "electronics", "network", "smart home", "phone", "laptop", "tv"],
+      "category_signals": [
+        "computer",
+        "tablet",
+        "monitor",
+        "projector",
+        "camera",
+        "speaker",
+        "electronics",
+        "network",
+        "smart home",
+        "phone",
+        "laptop",
+        "tv"
+      ],
       "minimum_stated_retail": 100,
       "maximum_bidders": 4,
       "minimum_deal_score": 35,
-      "verification": ["exact_model", "verified_market_price"]
+      "verification": [
+        "exact_model",
+        "verified_market_price"
+      ]
     },
     {
       "id": "resale-watch",
@@ -137,9 +632,25 @@
       "minimum_stated_retail": 80,
       "maximum_bidders": 3,
       "minimum_deal_score": 45,
-      "preferred_conditions": ["LIKE NEW", "OPEN BOX"],
-      "exclude_signals": ["mattress", "food", "consumable", "replacement part", "damaged", "pallet"],
-      "verification": ["exact_model", "verified_market_price", "resale_liquidity", "estimated_net_resale_margin", "shipping_or_local_sale_risk"]
+      "preferred_conditions": [
+        "LIKE NEW",
+        "OPEN BOX"
+      ],
+      "exclude_signals": [
+        "mattress",
+        "food",
+        "consumable",
+        "replacement part",
+        "damaged",
+        "pallet"
+      ],
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "resale_liquidity",
+        "estimated_net_resale_margin",
+        "shipping_or_local_sale_risk"
+      ]
     }
   ]
 }
