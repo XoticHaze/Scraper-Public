@@ -124,7 +124,7 @@
         <span class="status-badge"><span class="status-dot"></span><strong id="snapshot-health">Loading snapshot</strong></span>
         <span id="snapshot-age" class="status-copy">—</span>
         <span id="next-refresh" class="status-copy">—</span>
-        <span class="status-scope">San Antonio · Like New + Open Box</span>
+        <span class="status-scope" id="status-scope">Current catalog · Like New + Open Box</span>
       </div>
       <div class="status-links">
         <a href="https://github.com/XoticHaze/Scraper-Public/actions" target="_blank" rel="noreferrer">Actions ↗</a>
@@ -146,6 +146,13 @@
     document.querySelector('#snapshot-health').textContent = healthLabel;
     document.querySelector('#snapshot-age').textContent = ageMinutes < 1 ? 'Updated just now' : `Updated ${ageMinutes}m ago`;
     document.querySelector('#next-refresh').textContent = nextScheduleText();
+    const profile = window.MacbidBrowserState?.getProfile?.() || {};
+    const localLocation = window.MacbidBrowserState?.locationLabel?.() || '';
+    const conditions = (profile.preferred_conditions || []).length
+      ? profile.preferred_conditions.join(' + ')
+      : 'Like New + Open Box';
+    const scope = document.querySelector('#status-scope');
+    if (scope) scope.textContent = localLocation ? `${localLocation} · ${conditions}` : `Current catalog · ${conditions}`;
   }
 
   installStatusStrip();
