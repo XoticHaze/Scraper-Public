@@ -10,11 +10,12 @@
   const priority = [
     '4k-projectors','curved-monitors','large-gaming-monitors','quality-speakers',
     'solar-panels','ptz-cameras-haos','smart-door-locks-haos','large-area-rugs',
+    'premium-dishwashers','compact-sinks','medicine-cabinet-mirrors',
     'tools','samsung-tablets','apple-devices','best-tech-deals','resale-watch'
   ];
   const profileMap = new Map((catalog.hunt_profiles || []).map((p) => [p.id, p]));
   const researchMap = new Map((research.findings || []).map((item) => [item.identity, item]));
-  const watched = new Set(JSON.parse(localStorage.getItem('macbid-hunt-watchlist') || '[]'));
+  const watched = window.MacbidBrowserState?.watchlistSet?.() ?? new Set(JSON.parse(localStorage.getItem('macbid-hunt-watchlist') || '[]'));
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const safeUrl = (value, hosts = null) => {
     try {
@@ -115,7 +116,8 @@
   const generated = Number(catalog.generated_epoch_utc || 0);
   const age = generated ? Math.max(0, Math.round(Date.now()/1000 - generated)) : null;
   const taxPct = Number(catalog.sales_tax_rate || 0) * 100;
-  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${researchMap.size} researched · est. tax ${taxPct.toFixed(2)}% · San Antonio`;
+  const browserLocation = window.MacbidBrowserState?.locationLabel?.() || '';
+  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${researchMap.size} researched · est. tax ${taxPct.toFixed(2)}%${browserLocation ? ` · ${browserLocation}` : ''}`;
   status.textContent = age == null ? 'Snapshot age unknown' : age < 60 ? 'Updated just now' : `Updated ${Math.round(age/60)}m ago`;
 
   const watchedProducts = (catalog.products || []).filter((p) => watched.has(p.identity));
