@@ -54,6 +54,37 @@ def _any(text: str, terms: list[str] | None) -> list[str]:
     return [term for term in (terms or []) if _contains(text, term)]
 
 
+
+def _number(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _width_inches(text: str) -> float | None:
+    """Extract an explicit product width from common auction-title dimension shapes."""
+
+    unit = r'(?:in(?:ch(?:es)?)?\.?|["”])'
+    explicit = [
+        rf'(?:width|wide)\s*[:=-]?\s*(\d+(?:\.\d+)?)\s*{unit}',
+        rf'(\d+(?:\.\d+)?)\s*{unit}\s*(?:wide|width)',
+    ]
+    for pattern in explicit:
+        match = re.search(pattern, text, re.I)
+        if match:
+            return float(match.group(1))
+
+    pair = re.search(
+        rf'(?<!\d)(\d+(?:\.\d+)?)\s*{unit}?\s*[x×]\s*\d+(?:\.\d+)?',
+        text,
+        re.I,
+    )
+    if pair:
+        return float(pair.group(1))
+    return None
+
+
 def match_profile(
     profile: dict[str, Any],
     product: dict[str, Any],
@@ -64,6 +95,16 @@ def match_profile(
     kind = profile.get("kind", "semantic")
 
     if kind == "semantic":
+        retail_floor = profile.get("minimum_stated_retail")
+        retail = _number(lot.get("retail_price") or product.get("retail_price"))
+        if retail_floor is not None and (retail is None or retail < float(retail_floor)):
+            return None
+
+        width_limit = profile.get("maximum_width_inches_exclusive")
+        matched_width = _width_inches(text) if width_limit is not None else None
+        if width_limit is not None and (matched_width is None or matched_width >= float(width_limit)):
+            return None
+
         excluded = _any(text, profile.get("exclude_any"))
         if excluded:
             return None
@@ -88,12 +129,17 @@ def match_profile(
         )
         if score < int(profile.get("minimum_signal_score") or 1):
             return None
-        return {
+        result = {
             "score": score,
             "signals": (required_hits + required_all + must_hits + boost_hits)[:12],
             "verification": profile.get("verification") or [],
             "compatibility_gate": profile.get("compatibility_gate"),
         }
+        if retail_floor is not None:
+            result["retail_price"] = retail
+        if matched_width is not None:
+            result["width_inches"] = matched_width
+        return result
 
     if kind == "ranked":
         excluded = _any(text, profile.get("exclude_signals"))

@@ -11,11 +11,12 @@ const state = {
   category: '',
   condition: '',
   closesWithin: null,
+  minRetail: null,
   maxTotal: null,
   noBidders: false,
   watchOnly: false,
   visible: 160,
-  watchlist: new Set(JSON.parse(localStorage.getItem('macbid-hunt-watchlist') || '[]')),
+  watchlist: window.MacbidBrowserState?.watchlistSet?.() ?? new Set(JSON.parse(localStorage.getItem('macbid-hunt-watchlist') || '[]')),
 };
 
 function money(value) {
@@ -55,6 +56,10 @@ function lotAllIn(lot) {
 }
 
 function saveWatchlist() {
+  if (window.MacbidBrowserState?.replaceWatchlist) {
+    state.watchlist = window.MacbidBrowserState.replaceWatchlist([...state.watchlist]);
+    return;
+  }
   localStorage.setItem('macbid-hunt-watchlist', JSON.stringify([...state.watchlist]));
 }
 
@@ -72,6 +77,7 @@ function activeLots(product) {
     if (close !== null && close <= now) return false;
     if (state.condition && lot.condition !== state.condition) return false;
     if (state.noBidders && Number(lot.unique_bidders || 0) !== 0) return false;
+    if (state.minRetail !== null && Number(lot.retail_price ?? 0) < state.minRetail) return false;
     if (state.maxTotal !== null && Number(lotAllIn(lot) ?? Infinity) > state.maxTotal) return false;
     if (state.closesWithin !== null && (close === null || close > now + state.closesWithin * 3600)) return false;
     return true;
@@ -254,7 +260,7 @@ function openDetails(row) {
         <div class="cost-row"><span>Stated-retail savings</span><strong class="good">${money(lot.stated_retail_savings)}</strong></div>
         <div class="cost-row"><span>Provisional max bid</span><strong>${money(lot.provisional_max_bid)}</strong></div>
       </div>
-      <p class="muted">Sales tax is an estimate using the configured San Antonio rate and current assumed taxable basis. Provisional ceiling is discovery-only until the exact model, real market price, and actual MAC.BID invoice treatment are verified.</p>
+      <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. Provisional ceiling is discovery-only until the exact model, real market price, and actual MAC.BID invoice treatment are verified.</p>
       ${verifiedMarkup(product, lot)}
       <div class="lot-box">
         <strong>Lot state</strong>
@@ -323,6 +329,7 @@ $('#search').addEventListener('input', (event) => { state.query = event.target.v
 $('#category').addEventListener('change', (event) => { state.category = event.target.value; resetVisible(); });
 $('#condition').addEventListener('change', (event) => { state.condition = event.target.value; resetVisible(); });
 $('#closes-within').addEventListener('change', (event) => { state.closesWithin = event.target.value ? Number(event.target.value) : null; resetVisible(); });
+$('#min-retail').addEventListener('input', (event) => { state.minRetail = event.target.value ? Number(event.target.value) : null; event.target.dataset.huntDefault = ''; resetVisible(); });
 $('#max-total').addEventListener('input', (event) => { state.maxTotal = event.target.value ? Number(event.target.value) : null; resetVisible(); });
 $('#no-bidders').addEventListener('change', (event) => { state.noBidders = event.target.checked; resetVisible(); });
 $('#watch-toggle').addEventListener('click', () => { state.watchOnly = !state.watchOnly; resetVisible(); });
@@ -341,6 +348,7 @@ $('#clear-filters').addEventListener('click', () => {
   state.category = '';
   state.condition = '';
   state.closesWithin = null;
+  state.minRetail = null;
   state.maxTotal = null;
   state.noBidders = false;
   state.watchOnly = false;
@@ -348,6 +356,8 @@ $('#clear-filters').addEventListener('click', () => {
   $('#category').value = '';
   $('#condition').value = '';
   $('#closes-within').value = '';
+  $('#min-retail').value = '';
+  $('#min-retail').dataset.huntDefault = '';
   $('#max-total').value = '';
   $('#no-bidders').checked = false;
   resetVisible();

@@ -20,6 +20,17 @@
 
   function setHunt(value) {
     const hunt = String(value || '').trim();
+    const minRetail = document.querySelector('#min-retail');
+    if (minRetail?.dataset.huntDefault === 'premium-dishwashers' && hunt !== 'premium-dishwashers') {
+      minRetail.value = '';
+      minRetail.dataset.huntDefault = '';
+      state.minRetail = null;
+    }
+    if (hunt === 'premium-dishwashers' && minRetail && !minRetail.value) {
+      minRetail.value = '800';
+      minRetail.dataset.huntDefault = 'premium-dishwashers';
+      state.minRetail = 800;
+    }
     state.hunt = hunt;
     const url = new URL(window.location.href);
     if (hunt) url.searchParams.set('hunt', hunt);
@@ -68,7 +79,7 @@
   }
 
   function activeFilterCount() {
-    return [state.hunt, state.category, state.condition, state.closesWithin, state.maxTotal, state.noBidders].filter(Boolean).length;
+    return [state.hunt, state.category, state.condition, state.closesWithin, state.minRetail, state.maxTotal, state.noBidders].filter(Boolean).length;
   }
 
   function updateFilterToggle() {
@@ -92,7 +103,7 @@
     });
     controls.querySelector('.view-tabs')?.after(button);
 
-    ['#category', '#condition', '#closes-within', '#max-total', '#no-bidders'].forEach((selector) => {
+    ['#category', '#condition', '#closes-within', '#min-retail', '#max-total', '#no-bidders'].forEach((selector) => {
       document.querySelector(selector)?.addEventListener('change', updateFilterToggle);
       document.querySelector(selector)?.addEventListener('input', updateFilterToggle);
     });
@@ -124,7 +135,7 @@
         <span class="status-badge"><span class="status-dot"></span><strong id="snapshot-health">Loading snapshot</strong></span>
         <span id="snapshot-age" class="status-copy">—</span>
         <span id="next-refresh" class="status-copy">—</span>
-        <span class="status-scope">San Antonio · Like New + Open Box</span>
+        <span class="status-scope" id="status-scope">Current catalog · Like New + Open Box</span>
       </div>
       <div class="status-links">
         <a href="https://github.com/XoticHaze/Scraper-Public/actions" target="_blank" rel="noreferrer">Actions ↗</a>
@@ -146,6 +157,13 @@
     document.querySelector('#snapshot-health').textContent = healthLabel;
     document.querySelector('#snapshot-age').textContent = ageMinutes < 1 ? 'Updated just now' : `Updated ${ageMinutes}m ago`;
     document.querySelector('#next-refresh').textContent = nextScheduleText();
+    const profile = window.MacbidBrowserState?.getProfile?.() || {};
+    const localLocation = window.MacbidBrowserState?.locationLabel?.() || '';
+    const conditions = (profile.preferred_conditions || []).length
+      ? profile.preferred_conditions.join(' + ')
+      : 'Like New + Open Box';
+    const scope = document.querySelector('#status-scope');
+    if (scope) scope.textContent = localLocation ? `${localLocation} · ${conditions}` : `Current catalog · ${conditions}`;
   }
 
   installStatusStrip();
@@ -190,5 +208,6 @@
     updateStatus();
     updateFilterToggle();
   }, 100);
+  window.addEventListener('macbid-browser-profile-changed', updateStatus);
   setInterval(updateStatus, 30_000);
 })();

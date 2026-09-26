@@ -11,7 +11,7 @@
 <body>
   <header class="topbar">
     <div>
-      <p class="eyebrow">SAN ANTONIO · LOCAL DEAL ENGINE</p>
+      <p class="eyebrow">LIVE AUCTION DEAL ENGINE</p>
       <h1>MAC.BID Hunt</h1>
       <p id="catalog-meta" class="muted">Loading catalog…</p>
     </div>
@@ -21,7 +21,7 @@
       <a class="ghost" href="finds.html">Finds & Watchlists</a>
       <a class="ghost" href="https://github.com/XoticHaze/Scraper-Public/actions/workflows/macbid-deal-engine.yml" target="_blank" rel="noreferrer">Refresh now ↗</a>
       <a class="ghost" href="https://github.com/XoticHaze/Scraper-Public/actions" target="_blank" rel="noreferrer">Actions ↗</a>
-      <a class="ghost" href="https://www.mac.bid/locations/san-antonio" target="_blank" rel="noreferrer">Open MAC.BID ↗</a>
+      <a class="ghost" href="https://www.mac.bid/" target="_blank" rel="noreferrer">Open MAC.BID ↗</a>
     </div>
   </header>
 
@@ -58,6 +58,9 @@
             <option value="12">12 hours</option>
             <option value="24">24 hours</option>
           </select>
+        </label>
+        <label>Min stated retail
+          <input id="min-retail" type="number" min="0" step="50" placeholder="Any" />
         </label>
         <label>Max est. all-in
           <input id="max-total" type="number" min="0" step="5" placeholder="Any" />
@@ -98,6 +101,8 @@
 
   <script src="catalog.js"></script>
   <script src="catalog-loader.js"></script>
+  <script src="browser-state.js"></script>
+  <script src="browser-profile.js" defer></script>
   <script src="app.js" defer></script>
   <script src="app-enhancements.js" defer></script>
   <script src="action-center.js" defer></script>

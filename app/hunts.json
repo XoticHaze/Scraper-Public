@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 2,
+  "version": 3,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -88,6 +88,38 @@
       "minimum_signal_score": 3,
       "numeric_hints": {"preferred_sizes": ["8x10", "9x12", "10x14"], "preferred_colors": ["gray", "grey", "navy", "deep blue", "dark blue"]},
       "verification": ["dimensions", "color_from_image", "condition_from_image", "verified_market_price"]
+    },
+    {
+      "id": "premium-dishwashers",
+      "label": "Dishwashers · $800+ Retail",
+      "kind": "semantic",
+      "required_any": ["dishwasher", "dish washer"],
+      "boost_any": ["built-in dishwasher", "top control", "third rack", "stainless steel", "bosch", "kitchenaid", "ge profile", "cafe", "lg", "samsung", "whirlpool"],
+      "exclude_any": ["dishwasher rack", "dishwasher part", "replacement part", "installation kit", "drain hose", "mounting bracket"],
+      "minimum_signal_score": 2,
+      "minimum_stated_retail": 800,
+      "verification": ["exact_model", "verified_market_price", "dimensions", "installation_type", "completeness"]
+    },
+    {
+      "id": "compact-sinks",
+      "label": "Sinks · Under 36 in",
+      "kind": "semantic",
+      "required_any": ["sink", "kitchen sink", "bathroom sink", "vanity sink", "workstation sink"],
+      "boost_any": ["undermount", "drop-in", "drop in", "workstation", "granite composite", "stainless steel", "fireclay", "porcelain", "single bowl", "double bowl"],
+      "exclude_any": ["sink faucet", "faucet", "sink grid only", "strainer only", "drain only", "sink accessory", "replacement part", "mounting clips"],
+      "minimum_signal_score": 2,
+      "maximum_width_inches_exclusive": 36,
+      "verification": ["exact_model", "verified_market_price", "dimensions", "cutout_dimensions", "mounting_type", "completeness"]
+    },
+    {
+      "id": "medicine-cabinet-mirrors",
+      "label": "Medicine Cabinet Mirrors",
+      "kind": "semantic",
+      "required_any": ["medicine cabinet", "mirror cabinet", "mirrored cabinet"],
+      "boost_any": ["bathroom", "led", "lighted", "recessed", "surface mount", "frameless", "mirror", "anti-fog", "defogger"],
+      "exclude_any": ["replacement mirror", "replacement door", "cabinet hinge", "mounting hardware only"],
+      "minimum_signal_score": 2,
+      "verification": ["exact_model", "verified_market_price", "dimensions", "mounting_type", "electrical_requirements", "completeness"]
     },
     {
       "id": "tools",

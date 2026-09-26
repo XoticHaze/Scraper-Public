@@ -1,5 +1,6 @@
 {
   "locations": ["San Antonio"],
+  "bootstrap_location_url": "https://www.mac.bid/locations/san-antonio",
   "preferred_conditions": ["LIKE NEW", "OPEN BOX"],
   "excluded_conditions": ["DAMAGED"],
   "condition_priority": {

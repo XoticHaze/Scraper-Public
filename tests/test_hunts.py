@@ -169,3 +169,57 @@ def test_ranked_resale_profile_is_value_and_competition_gated():
         product("Replacement Part"),
         lot(),
     )
+
+
+def test_premium_dishwasher_enforces_stated_retail_floor():
+    profile = PROFILES["premium-dishwashers"]
+    assert match_profile(
+        profile,
+        product("Bosch 800 Series Built-In Dishwasher with Third Rack"),
+        lot(retail_price=1199),
+    )
+    assert not match_profile(
+        profile,
+        product("Whirlpool Built-In Dishwasher"),
+        lot(retail_price=799.99),
+    )
+    assert not match_profile(
+        profile,
+        product("Dishwasher Installation Kit and Drain Hose"),
+        lot(retail_price=999),
+    )
+
+
+def test_compact_sink_requires_verified_width_under_36_inches():
+    profile = PROFILES["compact-sinks"]
+    match = match_profile(
+        profile,
+        product('33" x 22" Stainless Steel Workstation Kitchen Sink'),
+        lot(retail_price=450),
+    )
+    assert match
+    assert match["width_inches"] == 33
+    assert not match_profile(
+        profile,
+        product('36" x 22" Stainless Steel Kitchen Sink'),
+        lot(retail_price=450),
+    )
+    assert not match_profile(
+        profile,
+        product("Undermount Stainless Steel Kitchen Sink"),
+        lot(retail_price=450),
+    )
+
+
+def test_medicine_cabinet_mirror_profile_rejects_replacement_parts():
+    profile = PROFILES["medicine-cabinet-mirrors"]
+    assert match_profile(
+        profile,
+        product("LED Lighted Mirrored Medicine Cabinet with Defogger"),
+        lot(retail_price=600),
+    )
+    assert not match_profile(
+        profile,
+        product("Replacement Mirror Door for Medicine Cabinet"),
+        lot(retail_price=600),
+    )

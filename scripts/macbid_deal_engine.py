@@ -12,7 +12,6 @@ from playwright.sync_api import Request, sync_playwright
 
 from deal_engine.scoring import score_lot
 
-LOCATION_PAGE = "https://www.mac.bid/locations/san-antonio"
 CONFIG_PATH = Path("config/macbid_deal_engine.json")
 OUTPUT = Path("results/macbid-deal-engine.json")
 
@@ -144,6 +143,7 @@ def exact_close_key(lot: dict[str, Any]) -> float:
 def main() -> int:
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     locations = [str(v) for v in config["locations"]]
+    bootstrap_location_url = str(config.get("bootstrap_location_url") or "https://www.mac.bid/")
     preferred_condition_list = [str(v).upper() for v in config["preferred_conditions"]]
     preferred_conditions = set(preferred_condition_list)
     excluded_conditions = {str(v).upper() for v in config["excluded_conditions"]}
@@ -156,7 +156,7 @@ def main() -> int:
 
     report: dict[str, Any] = {
         "schema": "macbid-deal-engine-v3",
-        "source": LOCATION_PAGE,
+        "source": bootstrap_location_url,
         "policy": config,
         "privacy": {
             "public_catalog_only": True,
@@ -188,7 +188,7 @@ def main() -> int:
                 candidates.append((request.url, payload))
 
         page.on("request", on_request)
-        nav = page.goto(LOCATION_PAGE, wait_until="domcontentloaded", timeout=60_000)
+        nav = page.goto(bootstrap_location_url, wait_until="domcontentloaded", timeout=60_000)
         report["scan"]["bootstrap_status"] = nav.status if nav else None
         page.wait_for_timeout(4_000)
         if not candidates:
