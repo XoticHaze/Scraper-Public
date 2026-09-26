@@ -25,6 +25,12 @@
       return url.href;
     } catch { return ''; }
   };
+  const macProductUrl = (product, lot = {}) => {
+    const key = product?.upc || lot?.upc || product?.asin || lot?.asin;
+    if (key) return safeUrl(`https://www.mac.bid/products/${encodeURIComponent(String(key))}`, ['mac.bid','www.mac.bid']);
+    return safeUrl(lot?.macbid_url, ['mac.bid','www.mac.bid']);
+  };
+  const lotRef = (lot) => [lot?.auction_number, lot?.lot_number ? `lot ${lot.lot_number}` : ''].filter(Boolean).join(' · ');
   const money = (v) => Number.isFinite(Number(v)) ? `$${Number(v).toFixed(2)}` : '—';
   const lotAllIn = (lot) => Number(lot?.estimated_post_tax_total ?? lot?.estimated_all_in_total ?? lot?.estimated_pre_tax_total);
   const closeText = (epoch) => {
@@ -66,7 +72,7 @@
     const imageUrl = safeUrl(image);
     const haos = match.compatibility_gate === 'haos';
     const verify = (match.verification || []).map((v) => String(v).replaceAll('_',' ')).join(' · ');
-    const lotUrl = safeUrl(lot.macbid_url, ['mac.bid','www.mac.bid']);
+    const productUrl = macProductUrl(product, lot);
     article.innerHTML = `
       <div class="image-wrap">${imageUrl ? `<img loading="lazy" src="${esc(imageUrl)}" alt="">` : ''}</div>
       <div class="find-body">
@@ -86,8 +92,9 @@
         </div>
         ${researchMarkup(product)}
         ${verify ? `<div class="verify-line">Verify: ${esc(verify)}</div>` : ''}
+        ${lotRef(lot) ? `<div class="verify-line">Target: ${esc(lotRef(lot))}</div>` : ''}
         <div class="find-links">
-          ${lotUrl ? `<a href="${esc(lotUrl)}" target="_blank" rel="noreferrer">Open lot ↗</a>` : ''}
+          ${productUrl ? `<a href="${esc(productUrl)}" target="_blank" rel="noreferrer">Open product in MAC.BID ↗</a>` : ''}
           ${profileId ? `<a href="./?hunt=${encodeURIComponent(profileId)}">Open hunt →</a>` : '<a href="./">Open catalog →</a>'}
         </div>
       </div>`;
