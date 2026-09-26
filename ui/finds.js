@@ -116,12 +116,15 @@
         ${verify ? `<div class="verify-line">Verify: ${esc(verify)}</div>` : ''}
         ${lotRef(lot) ? `<div class="verify-line">Target: ${esc(lotRef(lot))}</div>` : ''}
         <div class="find-links">
-          ${productUrl ? `<a href="${esc(productUrl)}" target="_blank" rel="noreferrer">MAC.BID website ↗</a>` : ''}
+          ${productUrl ? `<a href="${esc(productUrl)}" target="_blank" rel="noreferrer">MAC.BID page ↗</a><button type="button" class="copy-web-link">Copy web link</button>` : ''}
           <button type="button" class="copy-mac-id">Copy item ID</button>
           <button type="button" class="copy-lot-ref">Copy lot ref</button>
           ${profileId ? `<a href="./?hunt=${encodeURIComponent(profileId)}">Open hunt →</a>` : '<a href="./">Open catalog →</a>'}
         </div>
       </div>`;
+    article.querySelector('.copy-web-link')?.addEventListener('click', (event) => {
+      copyText(productUrl, event.currentTarget);
+    });
     article.querySelector('.copy-mac-id')?.addEventListener('click', (event) => {
       copyText(macLookupKey(product, lot), event.currentTarget);
     });
