@@ -224,6 +224,16 @@ function safeMacUrl(value) {
   } catch { return '#'; }
 }
 
+function macProductUrl(product, lot = {}) {
+  const key = product?.upc || lot?.upc || product?.asin || lot?.asin;
+  if (key) return safeMacUrl(`https://www.mac.bid/products/${encodeURIComponent(String(key))}`);
+  return safeMacUrl(lot?.macbid_url);
+}
+
+function lotRef(lot) {
+  return [lot?.auction_number, lot?.lot_number ? `lot ${lot.lot_number}` : ''].filter(Boolean).join(' · ');
+}
+
 function openDetails(row) {
   const { product, lot } = row;
   const bid = Number(lot.current_bid || 0);
@@ -239,7 +249,7 @@ function openDetails(row) {
     .filter((entry) => Number(entry.expected_closing_utc || 0) > Date.now() / 1000)
     .sort((a, b) => Number(a.expected_closing_utc || Infinity) - Number(b.expected_closing_utc || Infinity))
     .slice(0, 20)
-    .map((entry) => `<div class="alt"><span>${escapeHtml(entry.condition || '')} · ${money(entry.current_bid)} · ${money(lotAllIn(entry))} all-in · ${closeText(entry.expected_closing_utc)}</span><span>${Number(entry.unique_bidders || 0)} bidders</span><a href="${safeMacUrl(entry.macbid_url)}" target="_blank" rel="noreferrer">Open ↗</a></div>`)
+    .map((entry) => `<div class="alt"><span>${escapeHtml(entry.condition || '')} · ${money(entry.current_bid)} · ${money(lotAllIn(entry))} all-in · ${closeText(entry.expected_closing_utc)}</span><span>${Number(entry.unique_bidders || 0)} bidders · ${escapeHtml(lotRef(entry))}</span><a href="${macProductUrl(product, entry)}" target="_blank" rel="noreferrer">Open product ↗</a></div>`)
     .join('');
 
   detailContent.innerHTML = `<div class="detail">
@@ -268,10 +278,11 @@ function openDetails(row) {
         <div class="cost-row"><span>Local close time</span><strong>${escapeHtml(localClose(lot.expected_closing_utc))}</strong></div>
         <div class="cost-row"><span>Competition</span><strong>${Number(lot.unique_bidders || 0)} bidders · ${Number(lot.total_bids || 0)} bids</strong></div>
         <div class="cost-row"><span>Deal discovery score</span><strong>${Number(lot.deal_score || 0).toFixed(1)}</strong></div>
+        <div class="cost-row"><span>Target lot</span><strong>${escapeHtml(lotRef(lot) || 'Unknown')}</strong></div>
       </div>
       ${product.lot_count > 1 ? `<div class="lot-box"><strong>Other active lots</strong><div class="alt-list">${altRows}</div></div>` : ''}
       <div class="detail-actions">
-        <a class="primary-link" href="${safeMacUrl(lot.macbid_url)}" target="_blank" rel="noreferrer">View lot on MAC.BID ↗</a>
+        <a class="primary-link" href="${macProductUrl(product, lot)}" target="_blank" rel="noreferrer">Open product in MAC.BID ↗</a>
         <button id="detail-watch" type="button">${state.watchlist.has(product.identity) ? '★ Watching' : '☆ Add to watchlist'}</button>
       </div>
     </div>
