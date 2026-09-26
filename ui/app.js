@@ -309,13 +309,17 @@ function openDetails(row) {
       ${product.lot_count > 1 ? `<div class="lot-box"><strong>Other active lots</strong><div class="alt-list">${altRows}</div></div>` : ''}
       <p class="muted">iPhone note: MAC.BID currently opens from universal links without reliably navigating to the linked item. If that happens, copy the item ID into MAC.BID search, or copy the web link and paste it into Safari's address bar.</p>
       <div class="detail-actions">
-        <a class="primary-link" href="${macProductUrl(product, lot)}" target="_blank" rel="noreferrer">MAC.BID website ↗</a>
+        <a class="primary-link" href="${macProductUrl(product, lot)}" target="_blank" rel="noreferrer">MAC.BID page ↗</a>
+        <button id="copy-web-link" type="button">Copy web link</button>
         <button id="copy-mac-id" type="button">Copy item ID</button>
         <button id="copy-lot-ref" type="button">Copy lot ref</button>
         <button id="detail-watch" type="button">${state.watchlist.has(product.identity) ? '★ Watching' : '☆ Add to watchlist'}</button>
       </div>
     </div>
   </div>`;
+  detailContent.querySelector('#copy-web-link')?.addEventListener('click', (event) => {
+    copyText(macProductUrl(product, lot), event.currentTarget);
+  });
   detailContent.querySelector('#copy-mac-id')?.addEventListener('click', (event) => {
     copyText(macLookupKey(product, lot), event.currentTarget);
   });
