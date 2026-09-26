@@ -25,6 +25,34 @@
       return url.href;
     } catch { return ''; }
   };
+  const macProductUrl = (product, lot = {}) => {
+    const key = product?.upc || lot?.upc || product?.asin || lot?.asin;
+    if (key) return safeUrl(`https://www.mac.bid/products/${encodeURIComponent(String(key))}`, ['mac.bid','www.mac.bid']);
+    return safeUrl(lot?.macbid_url, ['mac.bid','www.mac.bid']);
+  };
+  const lotRef = (lot) => [lot?.auction_number, lot?.lot_number ? `lot ${lot.lot_number}` : ''].filter(Boolean).join(' · ');
+  const macLookupKey = (product, lot = {}) => String(product?.upc || lot?.upc || product?.asin || lot?.asin || product?.name || '').trim();
+  const copyText = async (value, button) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = value;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.append(input);
+      input.select();
+      document.execCommand('copy');
+      input.remove();
+    }
+    if (button) {
+      const original = button.textContent;
+      button.textContent = 'Copied ✓';
+      setTimeout(() => { button.textContent = original; }, 1400);
+    }
+  };
   const money = (v) => Number.isFinite(Number(v)) ? `$${Number(v).toFixed(2)}` : '—';
   const lotAllIn = (lot) => Number(lot?.estimated_post_tax_total ?? lot?.estimated_all_in_total ?? lot?.estimated_pre_tax_total);
   const closeText = (epoch) => {
@@ -66,7 +94,7 @@
     const imageUrl = safeUrl(image);
     const haos = match.compatibility_gate === 'haos';
     const verify = (match.verification || []).map((v) => String(v).replaceAll('_',' ')).join(' · ');
-    const lotUrl = safeUrl(lot.macbid_url, ['mac.bid','www.mac.bid']);
+    const productUrl = macProductUrl(product, lot);
     article.innerHTML = `
       <div class="image-wrap">${imageUrl ? `<img loading="lazy" src="${esc(imageUrl)}" alt="">` : ''}</div>
       <div class="find-body">
@@ -86,11 +114,23 @@
         </div>
         ${researchMarkup(product)}
         ${verify ? `<div class="verify-line">Verify: ${esc(verify)}</div>` : ''}
+        ${lotRef(lot) ? `<div class="verify-line">Target: ${esc(lotRef(lot))}</div>` : ''}
         <div class="find-links">
-          ${lotUrl ? `<a href="${esc(lotUrl)}" target="_blank" rel="noreferrer">Open lot ↗</a>` : ''}
+          ${productUrl ? `<a href="${esc(productUrl)}" target="_blank" rel="noreferrer">MAC.BID page ↗</a><button type="button" class="copy-web-link">Copy web link</button>` : ''}
+          <button type="button" class="copy-mac-id">Copy item ID</button>
+          <button type="button" class="copy-lot-ref">Copy lot ref</button>
           ${profileId ? `<a href="./?hunt=${encodeURIComponent(profileId)}">Open hunt →</a>` : '<a href="./">Open catalog →</a>'}
         </div>
       </div>`;
+    article.querySelector('.copy-web-link')?.addEventListener('click', (event) => {
+      copyText(productUrl, event.currentTarget);
+    });
+    article.querySelector('.copy-mac-id')?.addEventListener('click', (event) => {
+      copyText(macLookupKey(product, lot), event.currentTarget);
+    });
+    article.querySelector('.copy-lot-ref')?.addEventListener('click', (event) => {
+      copyText(lotRef(lot), event.currentTarget);
+    });
     return article;
   };
 
