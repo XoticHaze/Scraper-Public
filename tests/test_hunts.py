@@ -190,15 +190,35 @@ def test_premium_dishwasher_enforces_stated_retail_floor():
     )
 
 
-def test_compact_sink_requires_verified_width_under_36_inches():
+def test_vanity_sink_targets_standard_36_inch_class():
     profile = PROFILES["compact-sinks"]
+
     match = match_profile(
         profile,
-        product('33" x 22" Stainless Steel Workstation Kitchen Sink'),
-        lot(retail_price=450),
+        product('36-in Bathroom Vanity with Ceramic Sink'),
+        lot(retail_price=650),
     )
     assert match
-    assert match["width_inches"] == 33
+    assert match["width_inches"] == 36
+
+    top = match_profile(
+        profile,
+        product('37" x 22" Vanity Top with Sink Included'),
+        lot(retail_price=520),
+    )
+    assert top
+    assert top["width_inches"] == 37
+
+    assert not match_profile(
+        profile,
+        product('30" Bathroom Vanity with Sink'),
+        lot(retail_price=450),
+    )
+    assert not match_profile(
+        profile,
+        product('42" Bathroom Vanity with Sink'),
+        lot(retail_price=800),
+    )
     assert not match_profile(
         profile,
         product('36" x 22" Stainless Steel Kitchen Sink'),
@@ -206,8 +226,8 @@ def test_compact_sink_requires_verified_width_under_36_inches():
     )
     assert not match_profile(
         profile,
-        product("Undermount Stainless Steel Kitchen Sink"),
-        lot(retail_price=450),
+        product("Bathroom Vanity with Sink"),
+        lot(retail_price=650),
     )
 
 
