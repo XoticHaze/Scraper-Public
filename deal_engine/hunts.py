@@ -75,6 +75,14 @@ def _width_inches(text: str) -> float | None:
         if match:
             return float(match.group(1))
 
+    named_size = re.search(
+        rf'(?<!\d)(\d+(?:\.\d+)?)\s*[- ]?\s*{unit}\s*(?:bathroom\s+vanity|vanity\s+top|vanity|sink)\b',
+        text,
+        re.I,
+    )
+    if named_size:
+        return float(named_size.group(1))
+
     pair = re.search(
         rf'(?<!\d)(\d+(?:\.\d+)?)\s*[- ]?\s*{unit}?\s*[x×]\s*\d+(?:\.\d+)?',
         text,
