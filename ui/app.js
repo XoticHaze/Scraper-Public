@@ -234,6 +234,32 @@ function lotRef(lot) {
   return [lot?.auction_number, lot?.lot_number ? `lot ${lot.lot_number}` : ''].filter(Boolean).join(' · ');
 }
 
+function macLookupKey(product, lot = {}) {
+  return String(product?.upc || lot?.upc || product?.asin || lot?.asin || product?.name || '').trim();
+}
+
+async function copyText(value, button) {
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    const input = document.createElement('textarea');
+    input.value = value;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.append(input);
+    input.select();
+    document.execCommand('copy');
+    input.remove();
+  }
+  if (button) {
+    const original = button.textContent;
+    button.textContent = 'Copied ✓';
+    setTimeout(() => { button.textContent = original; }, 1400);
+  }
+}
+
 function openDetails(row) {
   const { product, lot } = row;
   const bid = Number(lot.current_bid || 0);
@@ -281,12 +307,21 @@ function openDetails(row) {
         <div class="cost-row"><span>Target lot</span><strong>${escapeHtml(lotRef(lot) || 'Unknown')}</strong></div>
       </div>
       ${product.lot_count > 1 ? `<div class="lot-box"><strong>Other active lots</strong><div class="alt-list">${altRows}</div></div>` : ''}
+      <p class="muted">iPhone note: MAC.BID currently opens from universal links without reliably navigating to the linked item. If that happens, copy the item ID into MAC.BID search, or copy the web link and paste it into Safari's address bar.</p>
       <div class="detail-actions">
-        <a class="primary-link" href="${macProductUrl(product, lot)}" target="_blank" rel="noreferrer">Open product in MAC.BID ↗</a>
+        <a class="primary-link" href="${macProductUrl(product, lot)}" target="_blank" rel="noreferrer">MAC.BID website ↗</a>
+        <button id="copy-mac-id" type="button">Copy item ID</button>
+        <button id="copy-lot-ref" type="button">Copy lot ref</button>
         <button id="detail-watch" type="button">${state.watchlist.has(product.identity) ? '★ Watching' : '☆ Add to watchlist'}</button>
       </div>
     </div>
   </div>`;
+  detailContent.querySelector('#copy-mac-id')?.addEventListener('click', (event) => {
+    copyText(macLookupKey(product, lot), event.currentTarget);
+  });
+  detailContent.querySelector('#copy-lot-ref')?.addEventListener('click', (event) => {
+    copyText(lotRef(lot), event.currentTarget);
+  });
   detailContent.querySelector('#detail-watch')?.addEventListener('click', () => {
     toggleWatch(product.identity);
     dialog.close();
