@@ -67,8 +67,8 @@ def _width_inches(text: str) -> float | None:
 
     unit = r'(?:in(?:ch(?:es)?)?\.?|["”])'
     explicit = [
-        rf'(?:width|wide)\s*[:=-]?\s*(\d+(?:\.\d+)?)\s*{unit}',
-        rf'(\d+(?:\.\d+)?)\s*{unit}\s*(?:wide|width)',
+        rf'(?:width|wide)\s*[:=-]?\s*(\d+(?:\.\d+)?)\s*[- ]?\s*{unit}',
+        rf'(\d+(?:\.\d+)?)\s*[- ]?\s*{unit}\s*(?:wide|width)',
     ]
     for pattern in explicit:
         match = re.search(pattern, text, re.I)
@@ -76,7 +76,7 @@ def _width_inches(text: str) -> float | None:
             return float(match.group(1))
 
     pair = re.search(
-        rf'(?<!\d)(\d+(?:\.\d+)?)\s*{unit}?\s*[x×]\s*\d+(?:\.\d+)?',
+        rf'(?<!\d)(\d+(?:\.\d+)?)\s*[- ]?\s*{unit}?\s*[x×]\s*\d+(?:\.\d+)?',
         text,
         re.I,
     )
@@ -100,9 +100,18 @@ def match_profile(
         if retail_floor is not None and (retail is None or retail < float(retail_floor)):
             return None
 
-        width_limit = profile.get("maximum_width_inches_exclusive")
-        matched_width = _width_inches(text) if width_limit is not None else None
-        if width_limit is not None and (matched_width is None or matched_width >= float(width_limit)):
+        min_width = profile.get("minimum_width_inches")
+        max_width = profile.get("maximum_width_inches")
+        legacy_max_width = profile.get("maximum_width_inches_exclusive")
+        width_gated = min_width is not None or max_width is not None or legacy_max_width is not None
+        matched_width = _width_inches(text) if width_gated else None
+        if width_gated and matched_width is None:
+            return None
+        if min_width is not None and matched_width < float(min_width):
+            return None
+        if max_width is not None and matched_width > float(max_width):
+            return None
+        if legacy_max_width is not None and matched_width >= float(legacy_max_width):
             return None
 
         excluded = _any(text, profile.get("exclude_any"))
