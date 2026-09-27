@@ -242,6 +242,13 @@ def main() -> int:
         if matches:
             product["hunt_matches"] = matches
             product["hunt_ids"] = list(matches)
+            wattages = [
+                float(match["rated_wattage"])
+                for match in matches.values()
+                if match.get("rated_wattage") is not None
+            ]
+            if wattages:
+                product["rated_wattage"] = max(wattages)
             for profile_id in matches:
                 profile_counts[profile_id] = profile_counts.get(profile_id, 0) + 1
         product["lots"] = [compact_lot(row) for row in lots]
