@@ -125,7 +125,12 @@ jobs:
           assert 'resale-watch' in priority['fallback']
           assert 'best-tech-deals' in priority['secondary']
           assert {'smart-door-locks-haos', 'premium-dishwashers', 'tools'} <= set(priority['primary'])
-          assert {'high-power-solar-panels', 'solar-batteries', 'solar-charge-controllers', 'solar-inverters'} <= set(priority['primary'])
+          assert {'high-power-solar-panels', 'solar-charge-controllers', 'solar-inverters'} <= set(priority['primary'])
+          assert 'solar-batteries' not in set(priority['primary'])
+          assert 'solar-batteries' in set(priority['secondary'])
+          energy = enrichment['energy_priority']
+          assert set(energy['primary']) == {'solar-panels', 'high-power-solar-panels', 'solar-charge-controllers', 'solar-inverters'}
+          assert energy['opportunistic'] == ['solar-batteries']
           assert not (set(priority['primary']) & set(priority['fallback']))
 
           compatibility = json.loads(Path('app/compatibility_matrix.json').read_text())
