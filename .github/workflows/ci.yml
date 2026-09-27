@@ -121,6 +121,11 @@ jobs:
           assert 1 <= int(enrichment['max_candidates_per_run']) <= 50
           provider_ids = {row['id'] for row in enrichment['providers']}
           assert {'bigbangprice', 'amazon', 'upcitemdb'} <= provider_ids
+          priority = enrichment['profile_priority']
+          assert 'resale-watch' in priority['fallback']
+          assert 'best-tech-deals' in priority['secondary']
+          assert {'smart-door-locks-haos', 'premium-dishwashers', 'tools'} <= set(priority['primary'])
+          assert not (set(priority['primary']) & set(priority['fallback']))
 
           hunts = json.loads(Path('app/hunts.json').read_text())
           assert hunts['schema'] == 'macbid-hunt-profiles-v1'
