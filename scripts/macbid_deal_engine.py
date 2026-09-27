@@ -235,6 +235,7 @@ def main() -> int:
     page_num = 0
     selected_url = None
     selected_search = None
+    selected_contract_source = None
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -279,6 +280,7 @@ def main() -> int:
                 search = local_contract(payload)
                 if search is not None:
                     selected_url, selected_search = raw_url, search
+                    selected_contract_source = "location_bootstrap"
                     break
             if selected_search is not None:
                 break
@@ -288,6 +290,7 @@ def main() -> int:
                 search = generic_catalog_contract(payload)
                 if search is not None:
                     selected_url, selected_search = raw_url, search
+                    selected_contract_source = "generic_public_search"
                     break
 
         report["scan"]["bootstrap_attempts"] = bootstrap_attempts
@@ -315,11 +318,7 @@ def main() -> int:
             report["scan"]["scan_epoch_utc"] = now_epoch
             report["scan"]["inventory_source_epoch_utc"] = now_epoch
             report["scan"]["degraded_inventory_source"] = False
-            report["scan"]["contract_source"] = (
-                "location_bootstrap"
-                if local_contract({"searches": [selected_search]}) is not None
-                else "generic_public_search"
-            )
+            report["scan"]["contract_source"] = selected_contract_source
 
             page_num = 1
             max_pages = 200
@@ -386,7 +385,7 @@ def main() -> int:
     report["scan"]["reported_found"] = total_found
     report["scan"]["pages_scanned"] = page_num
     report["scan"]["deduped_inventory"] = len(inventory)
-    if total_found is not None:
+    if total_found is not None and not report["scan"].get("degraded_inventory_source"):
         report["scan"]["complete"] = len(inventory) >= total_found
 
     eligible: list[dict[str, Any]] = []
