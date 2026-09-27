@@ -62,6 +62,23 @@ def _number(value: Any) -> float | None:
         return None
 
 
+def _diagonal_inches(text: str) -> float | None:
+    """Extract a monitor/display diagonal from common auction title shapes."""
+
+    unit = r'(?:in(?:ch(?:es)?)?\.?|["”])'
+    patterns = [
+        rf'(?<!\d)(\d{{2}}(?:\.\d+)?)\s*[- ]?\s*{unit}\s*(?:curved\s+|oled\s+|gaming\s+|ultrawide\s+)*(?:monitor|display)\b',
+        rf'(?:monitor|display)\s*[-: ]*\s*(\d{{2}}(?:\.\d+)?)\s*[- ]?\s*{unit}',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.I)
+        if match:
+            value = float(match.group(1))
+            if 10 <= value <= 100:
+                return value
+    return None
+
+
 def _width_inches(text: str) -> float | None:
     """Extract an explicit product width from common auction-title dimension shapes."""
 
@@ -122,6 +139,13 @@ def match_profile(
         if legacy_max_width is not None and matched_width >= float(legacy_max_width):
             return None
 
+        min_diagonal = profile.get("minimum_diagonal_inches")
+        matched_diagonal = _number(product.get("display_diagonal_inches"))
+        if matched_diagonal is None and min_diagonal is not None:
+            matched_diagonal = _diagonal_inches(text)
+        if min_diagonal is not None and (matched_diagonal is None or matched_diagonal < float(min_diagonal)):
+            return None
+
         excluded = _any(text, profile.get("exclude_any"))
         if excluded:
             return None
@@ -156,6 +180,8 @@ def match_profile(
             result["retail_price"] = retail
         if matched_width is not None:
             result["width_inches"] = matched_width
+        if matched_diagonal is not None:
+            result["diagonal_inches"] = matched_diagonal
         return result
 
     if kind == "ranked":

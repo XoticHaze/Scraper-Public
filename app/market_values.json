@@ -1,0 +1,168 @@
+{
+  "schema": "macbid-market-values-v1",
+  "version": 1,
+  "updated_at": "2026-09-26",
+  "defaults": {
+    "authority": "external_exact_identity",
+    "default_allocation_ratio": 0.65,
+    "like_new_fallback_ratio": 0.8,
+    "open_box_fallback_ratio": 0.75,
+    "rule": "When an exact-identity external valuation exists, use it for acquisition ceilings and real-value comparisons. MAC.BID stated retail remains reference-only."
+  },
+  "valuations": [
+    {
+      "identity": "upc:796435814533",
+      "model": "Optoma UHD35STx",
+      "status": "verified_external",
+      "identity_confidence": "high",
+      "price_confidence": "high",
+      "observed_at": "2026-09-26",
+      "allocation_ratio": 0.52,
+      "risk_note": "Lamp hours, optics, remote and completeness materially affect value.",
+      "observations": [
+        {
+          "condition": "new",
+          "price": 1299,
+          "source_label": "Abt",
+          "url": "https://www.abt.com/Optoma-White-4K-UHD-Short-Throw-Gaming-Entertainment-Projector-UHD35STX/p/184077.html",
+          "observed_at": "2026-09-26"
+        },
+        {
+          "condition": "new",
+          "price": 1549,
+          "source_label": "B&H",
+          "url": "https://www.bhphotovideo.com/c/product/1718606-REG/optoma_technology_uhd35stx_3600_lumen_4k_uhd.html",
+          "observed_at": "2026-09-26"
+        },
+        {
+          "condition": "open_box",
+          "price": 1199,
+          "source_label": "eBay Certified Open Box",
+          "url": "https://www.ebay.com/itm/188137800124",
+          "observed_at": "2026-09-26"
+        },
+        {
+          "condition": "used",
+          "price": 1115.95,
+          "source_label": "B&H Used",
+          "url": "https://www.bhphotovideo.com/c/product/1718606-REG/optoma_technology_uhd35stx_3600_lumen_4k_uhd.html",
+          "observed_at": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "identity": "upc:B0BZSD2L1W",
+      "model": "Aqara Smart Lock U100",
+      "status": "verified_external",
+      "identity_confidence": "high",
+      "price_confidence": "high",
+      "observed_at": "2026-09-26",
+      "allocation_ratio": 0.58,
+      "risk_note": "HAOS-compatible through an Aqara hub/Matter bridge; hub dependency lowers the acquisition ceiling.",
+      "price_history": {
+        "average": 142.1,
+        "low": 119.9,
+        "high": 199.99,
+        "source": "BigBangPrice / Amazon history"
+      },
+      "observations": [
+        {
+          "condition": "new",
+          "price": 189.99,
+          "source_label": "Aqara official",
+          "url": "https://us.aqara.com/products/smart-lock-u100",
+          "observed_at": "2026-09-26"
+        },
+        {
+          "condition": "new",
+          "price": 134.99,
+          "source_label": "Amazon tracker",
+          "url": "https://bigbangprice.com/product/B0BZSD2L1W/",
+          "observed_at": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "identity": "upc:058465805104",
+      "model": "Hamilton Beach RDW1809-B-WHITE",
+      "status": "verified_external",
+      "identity_confidence": "high",
+      "price_confidence": "medium",
+      "observed_at": "2026-09-26",
+      "allocation_ratio": 0.6,
+      "risk_note": "Portable dishwasher function, hose/faucet adapter, racks and leak-free operation must be verified.",
+      "price_history": {
+        "low": 499,
+        "high": 570.93,
+        "source": "Home Depot recent observed range"
+      },
+      "observations": [
+        {
+          "condition": "new",
+          "price": 570.93,
+          "source_label": "Home Depot",
+          "url": "https://www.homedepot.com/b/Appliances-Dishwashers-Portable-Dishwashers/18-In/N-5yc1vZc3p1Z1z0zbkl",
+          "observed_at": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "identity": "upc:B0FSP6VF5V",
+      "model": "Westinghouse 49-inch Curved Ultrawide Gaming Monitor",
+      "status": "verified_external",
+      "identity_confidence": "high",
+      "price_confidence": "medium",
+      "observed_at": "2026-09-26",
+      "allocation_ratio": 0.55,
+      "risk_note": "Large curved panels carry elevated hidden panel, shipping and return-risk; inspect for cracks, lines and dead zones.",
+      "specs": {
+        "display_diagonal_inches": 49
+      },
+      "observations": [
+        {
+          "condition": "new",
+          "price": 599.99,
+          "source_label": "Walmart / Westinghouse",
+          "url": "https://www.walmart.com/ip/18025153558",
+          "observed_at": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "identity": "upc:195532003510",
+      "model": "Kobalt KCIW 224B-03 24V 1/2-inch Compact Impact Wrench",
+      "status": "verified_external",
+      "identity_confidence": "high",
+      "price_confidence": "high",
+      "observed_at": "2026-09-26",
+      "allocation_ratio": 0.75,
+      "risk_note": "Bare-tool value; battery and charger are not included in the normal $79 configuration.",
+      "observations": [
+        {
+          "condition": "new",
+          "price": 79,
+          "source_label": "Lowe's",
+          "url": "https://www.lowes.com/pd/Kobalt-24-Volt-1-2-In-Compact-Impact-Wrench-Bare-Tool/5014781111",
+          "observed_at": "2026-09-26"
+        },
+        {
+          "condition": "new",
+          "price": 79,
+          "source_label": "Slickdeals price history",
+          "url": "https://slickdeals.net/f/19263724-kobalt-24-volt-variable-speed-brushless-cordless-impact-wrenches-1-2-or-3-8-drive-tool-only-79-lowe-s",
+          "observed_at": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "identity": "upc:B0C79LRT8X",
+      "model": "Klipsch The Three Plus",
+      "status": "identity_only",
+      "identity_confidence": "high",
+      "price_confidence": "unknown",
+      "observed_at": "2026-09-26",
+      "risk_note": "Identity corrected from MAC.BID title; pricing still needs exact current observations.",
+      "observations": []
+    }
+  ]
+}

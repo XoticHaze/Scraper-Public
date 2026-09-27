@@ -84,9 +84,16 @@ function activeLots(product) {
   });
 }
 
+function marketValueRank(lot) {
+  if (lot.market_price_status === 'verified_external' && number(lot.verified_discount_pct) !== null) {
+    return 1000 + Number(lot.verified_discount_pct) - Number(lot.unique_bidders || 0) * 2;
+  }
+  return Number(lot.deal_score || -9999);
+}
+
 function lotComparator(mode) {
   if (mode === 'value') {
-    return (a, b) => Number(b.deal_score || -9999) - Number(a.deal_score || -9999) || Number(a.expected_closing_utc || Infinity) - Number(b.expected_closing_utc || Infinity);
+    return (a, b) => marketValueRank(b) - marketValueRank(a) || Number(a.expected_closing_utc || Infinity) - Number(b.expected_closing_utc || Infinity);
   }
   if (mode === 'competition') {
     return (a, b) => Number(a.unique_bidders || 0) - Number(b.unique_bidders || 0) || Number(a.total_bids || 0) - Number(b.total_bids || 0) || Number(b.deal_score || -9999) - Number(a.deal_score || -9999);
@@ -163,14 +170,16 @@ function renderCard(row) {
   img.onerror = () => { img.style.opacity = '.18'; img.removeAttribute('src'); };
 
   chips.append(chip(lot.condition === 'LIKE NEW' ? 'Like New' : 'Open Box', lot.condition === 'LIKE NEW' ? 'good' : 'warn'));
+  if (lot.market_price_status === 'verified_external') chips.append(chip('Market verified', 'good'));
   if (lots.length > 1) chips.append(chip(`${lots.length} lots`));
   title.textContent = product.name;
   brand.textContent = [product.brand, product.category].filter(Boolean).join(' · ');
 
+  const marketMedian = product.verified_new_price ?? lot.verified_new_price;
   metrics.append(
     metric('Current bid', money(lot.current_bid)),
     metric('Est. all-in', money(lotAllIn(lot)), 'good'),
-    metric('Stated retail', money(lot.retail_price || product.retail_price)),
+    metric(marketMedian != null ? 'Ext. median' : 'Stated retail', money(marketMedian ?? lot.retail_price ?? product.retail_price)),
     metric('Closes', closeText(lot.expected_closing_utc))
   );
   metrics.lastElementChild.querySelector('strong').dataset.close = lot.expected_closing_utc || '';
@@ -178,7 +187,9 @@ function renderCard(row) {
   const left = document.createElement('span');
   left.textContent = `${Number(lot.unique_bidders || 0)} bidders · ${Number(lot.total_bids || 0)} bids`;
   const right = document.createElement('span');
-  right.textContent = `${pct(lot.stated_retail_discount_pct)} off`;
+  right.textContent = lot.market_price_status === 'verified_external'
+    ? `${pct(lot.verified_discount_pct)} vs market`
+    : `${pct(lot.stated_retail_discount_pct)} off`;
   foot.append(left, right);
 
   if (state.watchlist.has(product.identity)) {
@@ -196,20 +207,40 @@ function renderCard(row) {
 
 function verifiedMarkup(product, lot) {
   const status = product.market_price_status || lot.market_price_status || 'unverified';
+  const market = product.market_value || {};
+  const currentNew = market.current_new || {};
+  const history = market.price_history || {};
   const verifiedNew = product.verified_new_price ?? lot.verified_new_price;
+  const average = product.current_new_average ?? lot.current_new_average ?? currentNew.average;
+  const low = product.current_new_low ?? lot.current_new_low ?? currentNew.low;
+  const high = product.current_new_high ?? lot.current_new_high ?? currentNew.high;
+  const samples = product.current_new_samples ?? lot.current_new_samples ?? currentNew.samples;
   const openBoxValue = product.realistic_open_box_value ?? lot.realistic_open_box_value;
-  const verdict = product.verdict ?? lot.verdict;
-  const maxBid = product.verified_max_bid ?? product.max_bid ?? lot.verified_max_bid ?? lot.max_bid;
-  if (status === 'unverified' && verifiedNew == null && openBoxValue == null && verdict == null) {
-    return `<div class="verify-box"><strong>Market verification</strong><p class="muted">Not verified yet. The current score uses MAC.BID catalog data only. External model/market-price validation will populate verified new price, realistic open-box value, verdict, and final max bid here.</p></div>`;
+  const maxAllIn = lot.max_all_in;
+  const maxBid = lot.verified_max_bid ?? lot.max_bid;
+  const confidence = product.market_value_confidence || lot.market_value_confidence || market.price_confidence;
+  const observed = product.market_value_observed_at || lot.market_value_observed_at || market.observed_at;
+  const sourceLinks = (market.sources || [])
+    .filter((source) => source?.url && /^https:\/\//i.test(source.url))
+    .slice(0, 8)
+    .map((source) => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.label || 'Source')} · ${money(source.price)} ↗</a>`)
+    .join(' · ');
+  if (status !== 'verified_external' || verifiedNew == null) {
+    return `<div class="verify-box"><strong>External market verification</strong><p class="muted">Not verified yet. MAC.BID retail is discovery-only until exact identity is matched to external current-market observations.</p></div>`;
   }
   return `<div class="verify-box">
-    <strong>Market verification</strong>
-    <div class="cost-row"><span>Verified new price</span><strong>${money(verifiedNew)}</strong></div>
+    <strong>External market valuation</strong>
+    <div class="cost-row"><span>Current-new median</span><strong>${money(verifiedNew)}</strong></div>
+    <div class="cost-row"><span>Current-new average</span><strong>${money(average)}</strong></div>
+    <div class="cost-row"><span>Observed range</span><strong>${money(low)} – ${money(high)}</strong></div>
+    <div class="cost-row"><span>Samples / confidence</span><strong>${Number(samples || 0)} · ${escapeHtml(confidence || 'unknown')}</strong></div>
+    ${history.average != null ? `<div class="cost-row"><span>Tracked historical avg.</span><strong>${money(history.average)}</strong></div>` : ''}
     <div class="cost-row"><span>Realistic open-box value</span><strong>${money(openBoxValue)}</strong></div>
-    <div class="cost-row"><span>Verified discount</span><strong class="good">${pct(product.verified_discount_pct ?? lot.verified_discount_pct)}</strong></div>
-    <div class="cost-row"><span>Verdict</span><strong>${verdict || '—'}</strong></div>
-    <div class="cost-row total"><span>Final max bid</span><strong>${money(maxBid)}</strong></div>
+    <div class="cost-row"><span>Current discount vs market</span><strong class="good">${pct(lot.verified_discount_pct)}</strong></div>
+    <div class="cost-row total"><span>Max all-in allocation</span><strong>${money(maxAllIn)}</strong></div>
+    <div class="cost-row total"><span>Max hammer bid</span><strong>${money(maxBid)}</strong></div>
+    <p class="muted">External valuation observed ${escapeHtml(observed || 'unknown date')}. MAC.BID stated retail is reference-only for this item.</p>
+    ${sourceLinks ? `<div class="research-sources">${sourceLinks}</div>` : ''}
   </div>`;
 }
 
@@ -294,9 +325,9 @@ function openDetails(row) {
         <div class="cost-row"><span>MAC.BID stated retail</span><strong>${money(lot.retail_price || product.retail_price)}</strong></div>
         <div class="cost-row"><span>Stated-retail discount</span><strong class="good">${pct(lot.stated_retail_discount_pct)}</strong></div>
         <div class="cost-row"><span>Stated-retail savings</span><strong class="good">${money(lot.stated_retail_savings)}</strong></div>
-        <div class="cost-row"><span>Provisional max bid</span><strong>${money(lot.provisional_max_bid)}</strong></div>
+        <div class="cost-row"><span>${lot.market_price_status === 'verified_external' ? 'Legacy MAC-retail ceiling' : 'Provisional max bid'}</span><strong>${money(lot.provisional_max_bid)}</strong></div>
       </div>
-      <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. Provisional ceiling is discovery-only until the exact model, real market price, and actual MAC.BID invoice treatment are verified.</p>
+      <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. When external market verification is present, its allocation ceiling supersedes the legacy MAC.BID-retail ceiling.</p>
       ${verifiedMarkup(product, lot)}
       <div class="lot-box">
         <strong>Lot state</strong>
@@ -371,7 +402,8 @@ async function loadCatalog() {
   }
   const generated = new Date(state.catalog.generated_epoch_utc * 1000).toLocaleString();
   const tax = Number(state.catalog.sales_tax_rate || 0) * 100;
-  $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
+  const verified = Number(state.catalog.market_value_count || 0);
+  $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · ${verified} market-verified · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
   render();
 }
 
