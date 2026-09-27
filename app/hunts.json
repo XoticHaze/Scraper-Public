@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 3,
+  "version": 4,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -31,7 +31,7 @@
       "boost_any": ["curved", "ultrawide", "ultra wide", "gaming", "odyssey", "alienware", "rog", "predator", "240hz", "165hz", "144hz", "oled", "34 inch", "35 inch", "38 inch", "40 inch", "45 inch", "49 inch", "57 inch"],
       "exclude_any": ["monitor arm", "monitor stand", "screen protector"],
       "minimum_signal_score": 3,
-      "numeric_hints": {"preferred_diagonal_inches_min": 34},
+      "minimum_diagonal_inches": 34,
       "verification": ["exact_model", "verified_market_price", "panel_size", "refresh_rate", "resolution"]
     },
     {
