@@ -50,7 +50,7 @@
       "kind": "semantic",
       "required_any": ["solar panel", "solar panels", "photovoltaic"],
       "boost_any": ["100w", "200w", "300w", "400w", "500w", "550w", "600w", "650w", "700w", "750w", "800w", "850w", "900w", "high watt", "high power", "bifacial", "monocrystalline", "foldable solar", "portable solar"],
-      "exclude_any": ["solar light", "solar charger cable", "panel mount only", "security camera", "camera", "charger", "bracket", "mount"],
+      "exclude_any": ["solar light", "solar charger cable", "panel mount only", "security camera", "camera", "charger", "bracket", "mount", "ring solar panel", "tactacam solar panel", "trail camera solar panel", "solar panel brush", "solar panel cleaning", "solar panel cleaning kit"],
       "minimum_signal_score": 2,
       "capture_wattage": true,
       "verification": ["exact_model", "verified_market_price", "rated_wattage", "voc", "vmp", "isc", "imp", "connector_type", "electrical_condition"]
@@ -61,7 +61,7 @@
       "kind": "semantic",
       "required_any": ["solar panel", "solar panels", "photovoltaic"],
       "boost_any": ["500w", "550w", "600w", "650w", "700w", "750w", "800w", "850w", "900w", "bifacial", "monocrystalline", "n-type", "topcon"],
-      "exclude_any": ["solar light", "solar charger cable", "panel mount only", "security camera", "camera", "charger", "bracket", "mount"],
+      "exclude_any": ["solar light", "solar charger cable", "panel mount only", "security camera", "camera", "charger", "bracket", "mount", "ring solar panel", "tactacam solar panel", "trail camera solar panel", "solar panel brush", "solar panel cleaning", "solar panel cleaning kit"],
       "minimum_signal_score": 2,
       "capture_wattage": true,
       "minimum_wattage": 500,
