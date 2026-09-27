@@ -1,13 +1,15 @@
 {
   "schema": "macbid-market-values-v1",
-  "version": 1,
+  "version": 2,
   "updated_at": "2026-09-26",
   "defaults": {
     "authority": "external_exact_identity",
     "default_allocation_ratio": 0.65,
     "like_new_fallback_ratio": 0.8,
     "open_box_fallback_ratio": 0.75,
-    "rule": "When an exact-identity external valuation exists, use it for acquisition ceilings and real-value comparisons. MAC.BID stated retail remains reference-only."
+    "rule": "When an exact-identity external valuation exists, use it for acquisition ceilings and real-value comparisons. MAC.BID stated retail remains reference-only.",
+    "fresh_days": 7,
+    "stale_after_days": 30
   },
   "valuations": [
     {
