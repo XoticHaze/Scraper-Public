@@ -192,6 +192,20 @@ function renderCard(row) {
 
   chips.append(chip(lot.condition === 'LIKE NEW' ? 'Like New' : 'Open Box', lot.condition === 'LIKE NEW' ? 'good' : 'warn'));
   if (lot.market_price_status === 'verified_external') chips.append(chip('Market verified', 'good'));
+  const compatibility = product.compatibility || {};
+  const compatibilityLabels = {
+    verified: ['HAOS verified', 'good'],
+    verified_with_requirements: ['HAOS + prerequisites', 'good'],
+    variant_required: ['HAOS variant check', 'warn'],
+    candidate: ['HAOS candidate', 'warn'],
+    ruled_out: ['HAOS ruled out', 'warn'],
+  };
+  const compatibilityChip = compatibilityLabels[compatibility.status];
+  if (compatibilityChip) chips.append(chip(compatibilityChip[0], compatibilityChip[1]));
+  if (Number.isFinite(Number(product.rated_wattage))) {
+    const watts = Number(product.rated_wattage);
+    chips.append(chip(watts >= 1000 ? `${(watts / 1000).toFixed(watts % 1000 ? 1 : 0)} kW` : `${watts.toFixed(0)}W`, watts >= 500 ? 'good' : ''));
+  }
   if (lot.market_value_freshness === 'aging') chips.append(chip('Price aging', 'warn'));
   if (lot.market_price_status === 'stale_external') chips.append(chip('Price stale', 'warn'));
   const cardCeilings = effectiveCeilings(product, lot);
@@ -276,6 +290,47 @@ function verifiedMarkup(product, lot) {
   </div>`;
 }
 
+function compatibilityMarkup(product) {
+  const compatibility = product.compatibility || {};
+  const status = compatibility.status || 'unknown';
+  const labels = {
+    verified: 'HAOS verified',
+    verified_with_requirements: 'HAOS verified with prerequisites',
+    variant_required: 'HAOS variant must be confirmed',
+    candidate: 'HAOS candidate',
+    unknown: 'HAOS compatibility unknown',
+    ruled_out: 'HAOS ruled out',
+  };
+  const requirements = (compatibility.requirements || [])
+    .map((value) => `<li>${escapeHtml(value)}</li>`)
+    .join('');
+  const paths = (compatibility.detected_paths || [])
+    .map((path) => [path.integration, path.status].filter(Boolean).join(' · '))
+    .filter(Boolean)
+    .slice(0, 6)
+    .map((value) => `<li>${escapeHtml(value)}</li>`)
+    .join('');
+  const sources = [
+    ...(compatibility.sources || []),
+    ...(compatibility.source ? [compatibility.source] : []),
+  ]
+    .filter((value, index, all) => value && all.indexOf(value) === index && /^https:\/\//i.test(value))
+    .slice(0, 6)
+    .map((value) => `<a href="${escapeHtml(value)}" target="_blank" rel="noreferrer">Compatibility source ↗</a>`)
+    .join(' · ');
+  return `<div class="verify-box">
+    <strong>Compatibility · ${escapeHtml(labels[status] || status)}</strong>
+    <div class="cost-row"><span>Integration/path</span><strong>${escapeHtml(compatibility.integration || 'Not established')}</strong></div>
+    <div class="cost-row"><span>Evidence basis</span><strong>${escapeHtml(compatibility.basis || 'none')}</strong></div>
+    <div class="cost-row"><span>Local control</span><strong>${escapeHtml(compatibility.local_control === true ? 'Yes' : compatibility.local_control === false ? 'No' : compatibility.local_control || 'Unknown')}</strong></div>
+    ${compatibility.model ? `<div class="cost-row"><span>Exact model</span><strong>${escapeHtml(compatibility.model)}</strong></div>` : ''}
+    ${compatibility.note ? `<p class="muted">${escapeHtml(compatibility.note)}</p>` : ''}
+    ${requirements ? `<div class="compat-list"><strong>Requirements</strong><ul>${requirements}</ul></div>` : ''}
+    ${paths ? `<div class="compat-list"><strong>Detected paths</strong><ul>${paths}</ul></div>` : ''}
+    ${sources ? `<div class="research-sources">${sources}</div>` : ''}
+  </div>`;
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
 }
@@ -348,7 +403,7 @@ function openDetails(row) {
   detailContent.innerHTML = `<div class="detail">
     <div class="detail-media">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}">` : ''}</div>
     <div class="detail-body">
-      <div class="chips"><span class="chip ${lot.condition === 'LIKE NEW' ? 'good' : 'warn'}">${escapeHtml(lot.condition)}</span><span class="chip">${escapeHtml(product.category || 'Uncategorized')}</span>${product.lot_count > 1 ? `<span class="chip">${product.lot_count} lots</span>` : ''}</div>
+      <div class="chips"><span class="chip ${lot.condition === 'LIKE NEW' ? 'good' : 'warn'}">${escapeHtml(lot.condition)}</span><span class="chip">${escapeHtml(product.category || 'Uncategorized')}</span>${product.compatibility?.status ? `<span class="chip ${['verified','verified_with_requirements'].includes(product.compatibility.status) ? 'good' : 'warn'}">${escapeHtml((product.compatibility.status === 'verified' ? 'HAOS verified' : product.compatibility.status === 'verified_with_requirements' ? 'HAOS + prerequisites' : product.compatibility.status === 'variant_required' ? 'HAOS variant check' : product.compatibility.status === 'candidate' ? 'HAOS candidate' : product.compatibility.status === 'ruled_out' ? 'HAOS ruled out' : 'HAOS unknown'))}</span>` : ''}${product.lot_count > 1 ? `<span class="chip">${product.lot_count} lots</span>` : ''}</div>
       <h2>${escapeHtml(product.name)}</h2>
       <p class="sub">${escapeHtml([product.brand, product.model, product.upc ? `UPC ${product.upc}` : null].filter(Boolean).join(' · '))}</p>
       <div class="cost-box">
@@ -365,6 +420,7 @@ function openDetails(row) {
       </div>
       <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. When external market verification is present, its allocation ceiling supersedes the legacy MAC.BID-retail ceiling.</p>
       ${verifiedMarkup(product, lot)}
+      ${compatibilityMarkup(product)}
       <div class="plan-box">
         <strong>Your plan · browser-local</strong>
         <div class="cost-row"><span>Effective max bid</span><strong>${money(ceilings.maxBid)}</strong></div>

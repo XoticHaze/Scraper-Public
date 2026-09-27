@@ -7,6 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from deal_engine.compatibility import compatibility_allows_hunt, evaluate_compatibility
 from deal_engine.grouping import product_identity
 from deal_engine.hunts import match_profiles
 from deal_engine.valuation import derive_market_valuation, summarize_market_value
@@ -16,6 +17,7 @@ UI_SOURCE = Path("ui")
 APP_ACTIONS = Path("app/actions.json")
 APP_HUNTS = Path("app/hunts.json")
 APP_FINDINGS = Path("app/research_findings.json")
+APP_COMPATIBILITY = Path("app/compatibility_matrix.json")
 APP_MARKET_VALUES = Path("app/market_values.json")
 RUNTIME_MARKET_VALUES = Path("results/market-values.runtime.json")
 SITE = Path("site")
@@ -124,6 +126,11 @@ def main() -> int:
         for row in (finding_doc.get("findings") or [])
         if isinstance(row, dict) and row.get("identity")
     }
+    compatibility_doc = (
+        json.loads(APP_COMPATIBILITY.read_text(encoding="utf-8"))
+        if APP_COMPATIBILITY.exists()
+        else {"schema": "macbid-compatibility-matrix-v1", "capability_rules": [], "vendor_rules": [], "exact_overrides": []}
+    )
     market_source = RUNTIME_MARKET_VALUES if RUNTIME_MARKET_VALUES.exists() else APP_MARKET_VALUES
     market_doc = json.loads(market_source.read_text(encoding="utf-8")) if market_source.exists() else {"valuations": []}
     market_defaults = market_doc.get("defaults") or {}
@@ -200,7 +207,28 @@ def main() -> int:
                 float(row.get("deal_score") or -10_000),
             ),
         )
+        compatibility = evaluate_compatibility(
+            compatibility_doc,
+            product,
+            best_value_lot,
+            target="haos",
+        )
+        product["compatibility"] = compatibility
+
         matches = match_profiles(profiles, product, best_value_lot)
+        if matches:
+            gated_out = {
+                profile_id
+                for profile_id, match in matches.items()
+                if not compatibility_allows_hunt(compatibility, match.get("compatibility_gate"))
+            }
+            if gated_out:
+                matches = {
+                    profile_id: match
+                    for profile_id, match in matches.items()
+                    if profile_id not in gated_out
+                }
+                product["compatibility_suppressed_hunts"] = sorted(gated_out)
 
         # Model/market research is allowed to narrow semantic discovery. This is
         # deliberately one-way: a research note can suppress a disproven match,
@@ -214,6 +242,13 @@ def main() -> int:
         if matches:
             product["hunt_matches"] = matches
             product["hunt_ids"] = list(matches)
+            wattages = [
+                float(match["rated_wattage"])
+                for match in matches.values()
+                if match.get("rated_wattage") is not None
+            ]
+            if wattages:
+                product["rated_wattage"] = max(wattages)
             for profile_id in matches:
                 profile_counts[profile_id] = profile_counts.get(profile_id, 0) + 1
         product["lots"] = [compact_lot(row) for row in lots]
@@ -255,6 +290,15 @@ def main() -> int:
         "stale_market_value_count": sum(1 for product in products if product.get("market_price_status") == "stale_external"),
         "market_values_updated_at": market_doc.get("updated_at"),
         "market_value_authority": market_defaults.get("authority"),
+        "compatibility_matrix_version": compatibility_doc.get("version"),
+        "compatibility_counts": {
+            status: sum(
+                1
+                for product in products
+                if (product.get("compatibility") or {}).get("status") == status
+            )
+            for status in ("verified", "verified_with_requirements", "variant_required", "candidate", "unknown", "ruled_out")
+        },
         "products": products,
     }
 
@@ -278,6 +322,11 @@ def main() -> int:
             json.dumps(hunt_doc, separators=(",", ":"), ensure_ascii=False),
             encoding="utf-8",
         )
+    if APP_COMPATIBILITY.exists():
+        (SITE / "compatibility-matrix.json").write_text(
+            json.dumps(compatibility_doc, separators=(",", ":"), ensure_ascii=False),
+            encoding="utf-8",
+        )
     if market_source.exists():
         compact_market = json.dumps(market_doc, separators=(",", ":"), ensure_ascii=False)
         (SITE / "market-values.json").write_text(compact_market, encoding="utf-8")
@@ -299,6 +348,7 @@ def main() -> int:
         print(f"UI_HUNT {profile['id']}={profile['count']}")
     print(f"UI_ACTION_MANIFEST={'yes' if APP_ACTIONS.exists() else 'no'}")
     print(f"UI_RESEARCH_FINDINGS={'yes' if APP_FINDINGS.exists() else 'no'}")
+    print(f"UI_COMPATIBILITY_COUNTS={json.dumps(catalog['compatibility_counts'], sort_keys=True)}")
     print(f"UI_MARKET_VALUES={catalog['market_value_count']}")
     print(f"UI_STALE_MARKET_VALUES={catalog['stale_market_value_count']}")
     print(f"UI_MARKET_VALUES_UPDATED_AT={catalog['market_values_updated_at']}")

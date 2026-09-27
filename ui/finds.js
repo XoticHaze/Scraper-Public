@@ -9,7 +9,8 @@
 
   const priority = [
     '4k-projectors','curved-monitors','large-gaming-monitors','quality-speakers',
-    'solar-panels','ptz-cameras-haos','smart-door-locks-haos','large-area-rugs',
+    'solar-panels','high-power-solar-panels','solar-batteries','solar-charge-controllers','solar-inverters',
+    'ptz-cameras-haos','smart-door-locks-haos','large-area-rugs',
     'premium-dishwashers','compact-sinks','medicine-cabinet-mirrors',
     'tools','samsung-tablets','apple-devices','best-tech-deals','resale-watch'
   ];
@@ -99,6 +100,14 @@
     const image = product.image_url || lot.image_url || lot.stock_image_url || '';
     const imageUrl = safeUrl(image);
     const haos = match.compatibility_gate === 'haos';
+    const compatibility = product.compatibility || {};
+    const compatibilityBadge = {
+      verified: 'HAOS VERIFIED',
+      verified_with_requirements: 'HAOS + PREREQS',
+      variant_required: 'HAOS VARIANT CHECK',
+      candidate: 'HAOS CANDIDATE',
+      ruled_out: 'HAOS RULED OUT',
+    }[compatibility.status] || '';
     const verify = (match.verification || []).map((v) => String(v).replaceAll('_',' ')).join(' · ');
     const productUrl = macProductUrl(product, lot);
     const itemMeta = window.MacbidBrowserState?.getItemMetadata?.(product.identity) || {};
@@ -111,7 +120,7 @@
       <div class="find-body">
         <div class="find-badges">
           <span class="find-badge">${esc(lot.condition || 'Unknown')}</span>
-          ${haos ? '<span class="find-badge haos">HAOS VERIFY</span>' : ''}
+          ${compatibilityBadge ? `<span class="find-badge haos">${esc(compatibilityBadge)}</span>` : haos ? '<span class="find-badge haos">HAOS VERIFY</span>' : ''}
           ${researchMap.has(product.identity) ? '<span class="find-badge research">RESEARCHED</span>' : ''}
           ${lot.market_price_status === 'verified_external' ? '<span class="find-badge research">MARKET VERIFIED</span>' : ''}
           ${lot.market_value_freshness === 'aging' ? '<span class="find-badge">PRICE AGING</span>' : ''}
@@ -131,6 +140,7 @@
         ${['verified_external','stale_external'].includes(lot.market_price_status) ? `<div class="verify-line">External avg ${money(lot.current_new_average)} · range ${money(lot.current_new_low)}–${money(lot.current_new_high)} · ${esc(lot.market_value_freshness || 'unknown')} ${lot.market_value_age_days != null ? `(${Number(lot.market_value_age_days)}d)` : ''}${lot.verified_max_bid != null ? ` · max bid ${money(lot.verified_max_bid)}` : ' · refresh before bidding'}</div>` : ''}
         ${headroom != null ? `<div class="verify-line">${headroom >= 0 ? `${money(headroom)} all-in headroom remaining` : `${money(Math.abs(headroom))} over effective max`}</div>` : ''}
         ${itemMeta.note ? `<div class="verify-line">Note: ${esc(itemMeta.note)}</div>` : ''}
+        ${compatibility.status && compatibility.status !== 'unknown' ? `<div class="verify-line">HAOS: ${esc(String(compatibility.status).replaceAll('_',' '))}${compatibility.integration ? ` · ${esc(compatibility.integration)}` : ''}${(compatibility.requirements || []).length ? ` · requires ${esc((compatibility.requirements || []).join(', '))}` : ''}</div>` : ''}
         ${verify ? `<div class="verify-line">Verify: ${esc(verify)}</div>` : ''}
         ${lotRef(lot) ? `<div class="verify-line">Target: ${esc(lotRef(lot))}</div>` : ''}
         <div class="find-links">

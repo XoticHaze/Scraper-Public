@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 4,
+  "version": 5,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -46,13 +46,59 @@
     },
     {
       "id": "solar-panels",
-      "label": "Solar Panels",
+      "label": "Solar Panels · All Wattages",
       "kind": "semantic",
       "required_any": ["solar panel", "solar panels", "photovoltaic"],
-      "boost_any": ["100w", "200w", "300w", "400w", "bifacial", "monocrystalline", "foldable solar", "portable solar"],
+      "boost_any": ["100w", "200w", "300w", "400w", "500w", "550w", "600w", "650w", "700w", "750w", "800w", "850w", "900w", "high watt", "high power", "bifacial", "monocrystalline", "foldable solar", "portable solar"],
       "exclude_any": ["solar light", "solar charger cable", "panel mount only", "security camera", "camera", "charger", "bracket", "mount"],
       "minimum_signal_score": 2,
-      "verification": ["exact_model", "verified_market_price", "rated_wattage", "electrical_condition"]
+      "capture_wattage": true,
+      "verification": ["exact_model", "verified_market_price", "rated_wattage", "voc", "vmp", "isc", "imp", "connector_type", "electrical_condition"]
+    },
+    {
+      "id": "high-power-solar-panels",
+      "label": "High-Power Solar Panels · 500W+",
+      "kind": "semantic",
+      "required_any": ["solar panel", "solar panels", "photovoltaic"],
+      "boost_any": ["500w", "550w", "600w", "650w", "700w", "750w", "800w", "850w", "900w", "bifacial", "monocrystalline", "n-type", "topcon"],
+      "exclude_any": ["solar light", "solar charger cable", "panel mount only", "security camera", "camera", "charger", "bracket", "mount"],
+      "minimum_signal_score": 2,
+      "capture_wattage": true,
+      "minimum_wattage": 500,
+      "verification": ["exact_model", "verified_market_price", "rated_wattage", "voc", "vmp", "isc", "imp", "connector_type", "dimensions", "electrical_condition"]
+    },
+    {
+      "id": "solar-batteries",
+      "label": "Solar Batteries & Storage",
+      "kind": "semantic",
+      "required_any": ["solar battery", "lifepo4 battery", "lithium iron phosphate battery", "battery bank", "home battery", "portable power station"],
+      "boost_any": ["lifepo4", "48v", "24v", "12v", "100ah", "200ah", "5kwh", "10kwh", "rack battery", "server rack battery", "bluetti", "ecoflow", "anker solix", "renogy", "eg4", "victron"],
+      "exclude_any": ["car battery", "automotive battery", "jump starter", "phone power bank", "replacement battery for", "tool battery"],
+      "minimum_signal_score": 2,
+      "capture_wattage": true,
+      "verification": ["exact_model", "verified_market_price", "chemistry", "nominal_voltage", "capacity_ah_or_kwh", "continuous_output", "bms", "cycle_count_or_health", "completeness", "haos_compatibility_if_connected"]
+    },
+    {
+      "id": "solar-charge-controllers",
+      "label": "Solar Charge Controllers",
+      "kind": "semantic",
+      "required_any": ["solar charge controller", "mppt charge controller", "pwm charge controller", "mppt controller"],
+      "boost_any": ["mppt", "victron", "renogy", "morningstar", "ep ever", "epever", "bluetooth", "rs485", "modbus", "12v", "24v", "48v", "60a", "80a", "100a"],
+      "exclude_any": ["remote display only", "monitor only", "cable only", "sensor only", "mounting bracket"],
+      "minimum_signal_score": 2,
+      "capture_wattage": true,
+      "verification": ["exact_model", "verified_market_price", "controller_type", "max_pv_voltage", "max_charge_current", "battery_voltage_support", "battery_chemistry_support", "communications", "haos_compatibility"]
+    },
+    {
+      "id": "solar-inverters",
+      "label": "Solar / Hybrid Inverters",
+      "kind": "semantic",
+      "required_any": ["solar inverter", "hybrid inverter", "off-grid inverter", "off grid inverter", "grid-tie inverter", "grid tie inverter", "battery inverter"],
+      "boost_any": ["pure sine", "mppt", "48v", "24v", "12v", "5kw", "6kw", "8kw", "10kw", "goodwe", "sma", "sofar", "solax", "saj", "victron", "growatt", "eg4", "sol-ark"],
+      "exclude_any": ["inverter generator", "automotive inverter", "car inverter", "replacement board", "remote control only"],
+      "minimum_signal_score": 2,
+      "capture_wattage": true,
+      "verification": ["exact_model", "verified_market_price", "rated_ac_output", "pv_input_range", "battery_voltage_support", "split_phase_or_single_phase", "grid_tie_certification", "communications", "haos_compatibility"]
     },
     {
       "id": "ptz-cameras-haos",

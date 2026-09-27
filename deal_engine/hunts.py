@@ -79,6 +79,19 @@ def _diagonal_inches(text: str) -> float | None:
     return None
 
 
+def _wattage(text: str) -> float | None:
+    """Extract a plausible rated power from product text, including kW forms."""
+    values: list[float] = []
+    for match in re.finditer(r'(?<![\d.])(\d+(?:\.\d+)?)\s*(kw|kilowatt(?:s)?|w|watt(?:s)?)(?![a-z])', text, re.I):
+        value = float(match.group(1))
+        unit = match.group(2).lower()
+        if unit.startswith("k"):
+            value *= 1000.0
+        if 10 <= value <= 25000:
+            values.append(value)
+    return max(values) if values else None
+
+
 def _width_inches(text: str) -> float | None:
     """Extract an explicit product width from common auction-title dimension shapes."""
 
@@ -146,6 +159,14 @@ def match_profile(
         if min_diagonal is not None and (matched_diagonal is None or matched_diagonal < float(min_diagonal)):
             return None
 
+        min_wattage = profile.get("minimum_wattage")
+        capture_wattage = bool(profile.get("capture_wattage")) or min_wattage is not None
+        matched_wattage = _number(product.get("rated_wattage"))
+        if matched_wattage is None and capture_wattage:
+            matched_wattage = _wattage(text)
+        if min_wattage is not None and (matched_wattage is None or matched_wattage < float(min_wattage)):
+            return None
+
         excluded = _any(text, profile.get("exclude_any"))
         if excluded:
             return None
@@ -182,6 +203,8 @@ def match_profile(
             result["width_inches"] = matched_width
         if matched_diagonal is not None:
             result["diagonal_inches"] = matched_diagonal
+        if matched_wattage is not None:
+            result["rated_wattage"] = matched_wattage
         return result
 
     if kind == "ranked":
