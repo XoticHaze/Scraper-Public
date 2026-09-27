@@ -59,6 +59,7 @@ def test_runtime_merge_keeps_previous_observation_but_manual_policy_wins():
         "schema": "macbid-market-values-v1",
         "version": 2,
         "defaults": {"default_allocation_ratio": 0.9},
+        "enrichment_attempts": {"upc:B0MISS0001": {"attempted_epoch": 123, "successful": False}},
         "valuations": [{
             "identity": "upc:B0TEST0001",
             "allocation_ratio": 0.9,
@@ -89,3 +90,4 @@ def test_runtime_merge_keeps_previous_observation_but_manual_policy_wins():
     assert row["risk_note"] == "manual"
     assert len(row["observations"]) == 2
     assert row["price_confidence"] == "high"
+    assert merged["enrichment_attempts"]["upc:B0MISS0001"]["successful"] is False
