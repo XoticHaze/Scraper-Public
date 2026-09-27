@@ -57,7 +57,7 @@ jobs:
       - name: Run scoring and hunt tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_market_valuation.py tests/test_market_enrichment.py
 
       - name: Run configured inventory deal engine
         run: |
@@ -68,6 +68,12 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/macbid_postprocess.py
+
+      - name: Refresh exact-ID external market values
+        run: |
+          set -euo pipefail
+          python scripts/macbid_market_enrich.py
+          test -s results/market-values.runtime.json
 
       - name: Build static hunt UI
         run: |
@@ -99,6 +105,8 @@ jobs:
           assert Path('site/action-center.js').exists()
           assert Path('site/enhancements.css').exists()
           assert Path('site/hunt-profiles.json').exists()
+          assert Path('site/market-values.json').exists()
+          assert Path('results/market-values.runtime.json').exists()
           assert actions['schema'] == 'repo-app-actions-v1'
           assert {a['id'] for a in actions['actions']} >= {'refresh', 'visual-review', 'actions', 'source'}
           assert all(
@@ -176,6 +184,12 @@ jobs:
           from pathlib import Path
           data = json.loads(Path('results/macbid-deal-engine.json').read_text())
           print(json.dumps(data.get('scan', {}), indent=2, sort_keys=True))
+          market_path = Path('results/market-values.runtime.json')
+          if market_path.exists():
+              market = json.loads(market_path.read_text())
+              print('===== market_enrichment =====')
+              print(json.dumps(market.get('runtime_enrichment', {}), indent=2, sort_keys=True))
+              print(f"MARKET_RUNTIME_VALUATIONS={len(market.get('valuations') or [])}")
           for view, rows in data.get('views', {}).items():
               print(f'===== {view} =====')
               for row in rows[:25]:
@@ -203,7 +217,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: macbid-deal-engine
-          path: results/macbid-deal-engine.json
+          path: |
+            results/macbid-deal-engine.json
+            results/market-values.runtime.json
           if-no-files-found: warn
           retention-days: 2
 

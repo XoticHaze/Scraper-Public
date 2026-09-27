@@ -1,0 +1,47 @@
+{
+  "schema": "macbid-market-enrichment-v1",
+  "version": 1,
+  "enabled": true,
+  "live_previous_url": "https://xotichaze.github.io/Scraper-Public/market-values.json",
+  "max_candidates_per_run": 12,
+  "max_existing_sources_per_run": 16,
+  "request_timeout_seconds": 6,
+  "max_response_bytes": 3000000,
+  "providers": [
+    {
+      "id": "bigbangprice",
+      "label": "BigBangPrice",
+      "identity_kinds": [
+        "asin"
+      ],
+      "url_template": "https://bigbangprice.com/product/{id}/",
+      "identity_in_url": true,
+      "price_labels": [
+        "current price",
+        "amazon price",
+        "today's price"
+      ]
+    },
+    {
+      "id": "amazon",
+      "label": "Amazon",
+      "identity_kinds": [
+        "asin"
+      ],
+      "url_template": "https://www.amazon.com/dp/{id}",
+      "identity_in_url": true,
+      "price_labels": []
+    },
+    {
+      "id": "upcitemdb",
+      "label": "UPCitemdb",
+      "identity_kinds": [
+        "gtin"
+      ],
+      "url_template": "https://www.upcitemdb.com/upc/{id}",
+      "identity_in_url": true,
+      "price_labels": []
+    }
+  ],
+  "retry_after_hours": 24
+}

@@ -17,6 +17,7 @@ APP_ACTIONS = Path("app/actions.json")
 APP_HUNTS = Path("app/hunts.json")
 APP_FINDINGS = Path("app/research_findings.json")
 APP_MARKET_VALUES = Path("app/market_values.json")
+RUNTIME_MARKET_VALUES = Path("results/market-values.runtime.json")
 SITE = Path("site")
 
 LOT_FIELDS = (
@@ -123,7 +124,8 @@ def main() -> int:
         for row in (finding_doc.get("findings") or [])
         if isinstance(row, dict) and row.get("identity")
     }
-    market_doc = json.loads(APP_MARKET_VALUES.read_text(encoding="utf-8")) if APP_MARKET_VALUES.exists() else {"valuations": []}
+    market_source = RUNTIME_MARKET_VALUES if RUNTIME_MARKET_VALUES.exists() else APP_MARKET_VALUES
+    market_doc = json.loads(market_source.read_text(encoding="utf-8")) if market_source.exists() else {"valuations": []}
     market_defaults = market_doc.get("defaults") or {}
     market_map = {
         str(row["identity"]): row
@@ -276,7 +278,7 @@ def main() -> int:
             json.dumps(hunt_doc, separators=(",", ":"), ensure_ascii=False),
             encoding="utf-8",
         )
-    if APP_MARKET_VALUES.exists():
+    if market_source.exists():
         compact_market = json.dumps(market_doc, separators=(",", ":"), ensure_ascii=False)
         (SITE / "market-values.json").write_text(compact_market, encoding="utf-8")
     if APP_FINDINGS.exists():
@@ -300,6 +302,9 @@ def main() -> int:
     print(f"UI_MARKET_VALUES={catalog['market_value_count']}")
     print(f"UI_STALE_MARKET_VALUES={catalog['stale_market_value_count']}")
     print(f"UI_MARKET_VALUES_UPDATED_AT={catalog['market_values_updated_at']}")
+    print(f"UI_MARKET_VALUES_SOURCE={market_source}")
+    runtime_enrichment = market_doc.get("runtime_enrichment") or {}
+    print(f"UI_MARKET_ENRICH promoted={runtime_enrichment.get('promoted', 0)} refreshed={runtime_enrichment.get('refreshed', 0)} searches={runtime_enrichment.get('provider_searches', 0)}")
     print(f"UI_OUTPUT={SITE}")
     return 0
 
