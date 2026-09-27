@@ -131,7 +131,7 @@ Current UI capabilities:
 
 - real MAC.BID product images loaded lazily from the public catalog
 - free-text product/brand/category/UPC/model search
-- semantic hunt profiles for projectors, curved/large gaming monitors, speakers, all solar panels plus a dedicated 500W+ high-power panel lane, solar batteries/storage, charge controllers, solar/hybrid inverters, HAOS cameras/locks, rugs, tools, Samsung tablets, Apple devices, tech, and preliminary resale
+- semantic hunt profiles for projectors, curved/large gaming monitors, speakers, all solar panels plus a dedicated 500W+ high-power panel lane, solar charge controllers/MPPT gear, solar/hybrid inverters, opportunistic battery/storage sightings, HAOS cameras/locks, rugs, tools, Samsung tablets, Apple devices, tech, and preliminary resale
 - category and condition filters
 - close-within and max-estimated-all-in filters
 - zero-bidder hunting
@@ -149,6 +149,7 @@ Current UI capabilities:
 - capability-based compatibility authority for Matter/Thread, Z-Wave, Zigbee, ONVIF, HomeKit Device, MQTT, ESPHome, Modbus, RTSP, Bluetooth, plus exact-model overrides and vendor-specific solar integration candidates
 - compatibility prerequisites remain separate from external market-price verification so a cheap exact product cannot be mistaken for a proven HAOS fit
 - parsed rated wattage is carried into the catalog for solar panels/inverters; the high-power lane has no upper wattage ceiling and explicitly admits rare 500W+ / 800W-class panels
+- energy enrichment spends its limited provider budget on panels, charge controllers, and inverters first; battery/storage listings remain visible but are opportunistic rather than assumed inventory
 
 The workflow also uploads a `macbid-hunt-ui` artifact containing a self-contained fallback site. Download it, unzip it, and open `index.html`; `catalog.js` is embedded specifically so the UI works directly from disk without a local server.
 

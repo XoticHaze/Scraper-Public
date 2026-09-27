@@ -1,6 +1,6 @@
 {
   "schema": "macbid-market-enrichment-v1",
-  "version": 2,
+  "version": 3,
   "enabled": true,
   "live_previous_url": "https://xotichaze.github.io/Scraper-Public/market-values.json",
   "max_candidates_per_run": 12,
@@ -52,7 +52,6 @@
       "quality-speakers",
       "solar-panels",
       "high-power-solar-panels",
-      "solar-batteries",
       "solar-charge-controllers",
       "solar-inverters",
       "ptz-cameras-haos",
@@ -66,10 +65,23 @@
       "apple-devices"
     ],
     "secondary": [
+      "solar-batteries",
       "best-tech-deals"
     ],
     "fallback": [
       "resale-watch"
     ]
+  },
+  "energy_priority": {
+    "primary": [
+      "solar-panels",
+      "high-power-solar-panels",
+      "solar-charge-controllers",
+      "solar-inverters"
+    ],
+    "opportunistic": [
+      "solar-batteries"
+    ],
+    "note": "MAC.BID energy discovery is panel/controller/inverter-first. Battery storage remains opportunistic because local inventory is expected to be sparse."
   }
 }
