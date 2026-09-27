@@ -117,7 +117,7 @@ The UI keeps the pre-tax subtotal visible for auditability but treats **estimate
 
 The tax basis remains explicitly labeled an estimate until it is reconciled against an actual MAC.BID invoice/receipt. The configured assumption currently applies the 8.25% estimate to hammer + buyer premium + lot fee.
 
-Provisional max bids remain intentionally conservative and are based only on MAC.BID's stated retail until exact product/model and external market-price verification are available.
+MAC.BID stated retail is discovery-only. When an exact external identity match is available, market observations become the acquisition-value authority: current-new median/average/range, realistic condition value, max all-in allocation, and fee/tax-reversed max hammer bid. External pricing is freshness-gated: 0–7 days is fresh, 8–30 days is aging, and values older than 30 days remain visible for context but cannot emit an authoritative automatic bid ceiling.
 
 Configuration lives in `config/macbid_deal_engine.json`.
 
@@ -137,12 +137,13 @@ Current UI capabilities:
 - zero-bidder hunting
 - `Ending Soon`, `Best Value`, `Low Competition`, and `Lowest Cost` ordering
 - exact live countdowns from `expected_closing_utc`
-- current bid, 15% premium, $3 lot fee, estimated pre-tax subtotal, estimated sales tax, estimated all-in total, stated retail, discount, savings, and provisional max bid
+- current bid, 15% premium, $3 lot fee, estimated pre-tax subtotal, estimated sales tax, estimated all-in total, stated retail, and provisional legacy ceiling
+- exact-identity external market median/average/range, price freshness, realistic condition value, max all-in allocation, and max hammer bid when verified
 - duplicate-lot alternatives with direct MAC.BID links
-- browser-local watchlist
+- browser-local watchlist with per-item max bid, max all-in, status, tags, notes, and live headroom versus the current auction
 - separate Finds & Watchlists follow-along page with current research notes/source links
 - direct repo and fresh-scan controls
-- a reserved market-verification panel for verified new price, realistic open-box value, verdict, verified discount, and final max bid
+- live external market-verification panel with source links, confidence/freshness, realistic open-box value, verified discount, max all-in allocation, and max hammer bid
 
 The workflow also uploads a `macbid-hunt-ui` artifact containing a self-contained fallback site. Download it, unzip it, and open `index.html`; `catalog.js` is embedded specifically so the UI works directly from disk without a local server.
 
