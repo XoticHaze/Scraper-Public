@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 import time
 import urllib.request
 from pathlib import Path
@@ -198,13 +197,6 @@ def _refresh_existing(
     max_bytes: int,
     limit: int,
 ) -> tuple[int, int]:
-    provider_by_domain = {}
-    for provider in providers:
-        sample = _provider_url(provider, "B000000000")
-        host = re.sub(r"^www\.", "", urllib.request.urlparse(sample).hostname or "") if sample else ""
-        if host:
-            provider_by_domain[host] = provider
-
     attempted = 0
     refreshed = 0
     for record in market.get("valuations") or []:
