@@ -25,6 +25,7 @@ function money(value) {
 }
 
 function number(value) {
+  if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -53,6 +54,26 @@ function pct(value) {
 
 function lotAllIn(lot) {
   return number(lot.estimated_post_tax_total ?? lot.estimated_all_in_total ?? lot.estimated_pre_tax_total);
+}
+
+function itemMetadata(identity) {
+  return window.MacbidBrowserState?.getItemMetadata?.(identity) || {};
+}
+
+function effectiveCeilings(product, lot) {
+  const meta = itemMetadata(product.identity);
+  return {
+    maxBid: number(meta.max_bid) ?? number(lot.verified_max_bid ?? lot.max_bid),
+    maxAllIn: number(meta.max_all_in) ?? number(lot.max_all_in),
+    personalMaxBid: number(meta.max_bid),
+    personalMaxAllIn: number(meta.max_all_in),
+  };
+}
+
+function headroomAmount(current, ceiling) {
+  const now = number(current);
+  const max = number(ceiling);
+  return now !== null && max !== null ? max - now : null;
 }
 
 function saveWatchlist() {
@@ -171,6 +192,10 @@ function renderCard(row) {
 
   chips.append(chip(lot.condition === 'LIKE NEW' ? 'Like New' : 'Open Box', lot.condition === 'LIKE NEW' ? 'good' : 'warn'));
   if (lot.market_price_status === 'verified_external') chips.append(chip('Market verified', 'good'));
+  if (lot.market_value_freshness === 'aging') chips.append(chip('Price aging', 'warn'));
+  if (lot.market_price_status === 'stale_external') chips.append(chip('Price stale', 'warn'));
+  const cardCeilings = effectiveCeilings(product, lot);
+  if (cardCeilings.personalMaxBid !== null || cardCeilings.personalMaxAllIn !== null) chips.append(chip('Your max', 'good'));
   if (lots.length > 1) chips.append(chip(`${lots.length} lots`));
   title.textContent = product.name;
   brand.textContent = [product.brand, product.category].filter(Boolean).join(' · ');
@@ -187,9 +212,12 @@ function renderCard(row) {
   const left = document.createElement('span');
   left.textContent = `${Number(lot.unique_bidders || 0)} bidders · ${Number(lot.total_bids || 0)} bids`;
   const right = document.createElement('span');
-  right.textContent = lot.market_price_status === 'verified_external'
-    ? `${pct(lot.verified_discount_pct)} vs market`
-    : `${pct(lot.stated_retail_discount_pct)} off`;
+  const allInHeadroom = headroomAmount(lotAllIn(lot), cardCeilings.maxAllIn);
+  right.textContent = allInHeadroom !== null
+    ? (allInHeadroom >= 0 ? `${money(allInHeadroom)} headroom` : `${money(Math.abs(allInHeadroom))} over max`)
+    : lot.market_price_status === 'verified_external'
+      ? `${pct(lot.verified_discount_pct)} vs market`
+      : `${pct(lot.stated_retail_discount_pct)} off`;
   foot.append(left, right);
 
   if (state.watchlist.has(product.identity)) {
@@ -225,11 +253,15 @@ function verifiedMarkup(product, lot) {
     .slice(0, 8)
     .map((source) => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.label || 'Source')} · ${money(source.price)} ↗</a>`)
     .join(' · ');
-  if (status !== 'verified_external' || verifiedNew == null) {
+  if (!['verified_external', 'stale_external'].includes(status) || verifiedNew == null) {
     return `<div class="verify-box"><strong>External market verification</strong><p class="muted">Not verified yet. MAC.BID retail is discovery-only until exact identity is matched to external current-market observations.</p></div>`;
   }
+  const freshness = product.market_value_freshness || lot.market_value_freshness || 'unknown';
+  const ageDays = product.market_value_age_days ?? lot.market_value_age_days;
+  const authoritative = product.market_value_authoritative ?? lot.market_value_authoritative;
   return `<div class="verify-box">
     <strong>External market valuation</strong>
+    <div class="cost-row"><span>Price freshness</span><strong class="${freshness === 'fresh' ? 'good' : ''}">${escapeHtml(freshness)}${ageDays != null ? ` · ${ageDays}d old` : ''}</strong></div>
     <div class="cost-row"><span>Current-new median</span><strong>${money(verifiedNew)}</strong></div>
     <div class="cost-row"><span>Current-new average</span><strong>${money(average)}</strong></div>
     <div class="cost-row"><span>Observed range</span><strong>${money(low)} – ${money(high)}</strong></div>
@@ -237,9 +269,9 @@ function verifiedMarkup(product, lot) {
     ${history.average != null ? `<div class="cost-row"><span>Tracked historical avg.</span><strong>${money(history.average)}</strong></div>` : ''}
     <div class="cost-row"><span>Realistic open-box value</span><strong>${money(openBoxValue)}</strong></div>
     <div class="cost-row"><span>Current discount vs market</span><strong class="good">${pct(lot.verified_discount_pct)}</strong></div>
-    <div class="cost-row total"><span>Max all-in allocation</span><strong>${money(maxAllIn)}</strong></div>
-    <div class="cost-row total"><span>Max hammer bid</span><strong>${money(maxBid)}</strong></div>
-    <p class="muted">External valuation observed ${escapeHtml(observed || 'unknown date')}. MAC.BID stated retail is reference-only for this item.</p>
+    <div class="cost-row total"><span>Max all-in allocation</span><strong>${authoritative ? money(maxAllIn) : 'Refresh required'}</strong></div>
+    <div class="cost-row total"><span>Max hammer bid</span><strong>${authoritative ? money(maxBid) : 'Refresh required'}</strong></div>
+    <p class="muted">${authoritative ? 'External pricing is within the active freshness window.' : 'External pricing is stale or undated, so it is shown for context but cannot drive an automatic bid ceiling.'} Observed ${escapeHtml(observed || 'unknown date')}. MAC.BID stated retail is reference-only for this item.</p>
     ${sourceLinks ? `<div class="research-sources">${sourceLinks}</div>` : ''}
   </div>`;
 }
@@ -301,6 +333,10 @@ function openDetails(row) {
   const subtotal = number(lot.estimated_pre_tax_total) ?? (bid + premium + fee);
   const estimatedTax = number(lot.estimated_sales_tax) ?? subtotal * taxRate;
   const allIn = lotAllIn(lot) ?? subtotal + estimatedTax;
+  const meta = itemMetadata(product.identity);
+  const ceilings = effectiveCeilings(product, lot);
+  const bidHeadroom = headroomAmount(bid, ceilings.maxBid);
+  const allInHeadroom = headroomAmount(allIn, ceilings.maxAllIn);
   const image = lot.image_url || product.image_url || '';
   const altRows = [...product.lots]
     .filter((entry) => Number(entry.expected_closing_utc || 0) > Date.now() / 1000)
@@ -329,6 +365,27 @@ function openDetails(row) {
       </div>
       <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. When external market verification is present, its allocation ceiling supersedes the legacy MAC.BID-retail ceiling.</p>
       ${verifiedMarkup(product, lot)}
+      <div class="plan-box">
+        <strong>Your plan · browser-local</strong>
+        <div class="cost-row"><span>Effective max bid</span><strong>${money(ceilings.maxBid)}</strong></div>
+        <div class="cost-row"><span>Bid headroom</span><strong class="${bidHeadroom != null && bidHeadroom >= 0 ? 'good' : ''}">${bidHeadroom == null ? '—' : bidHeadroom >= 0 ? money(bidHeadroom) : `${money(Math.abs(bidHeadroom))} over`}</strong></div>
+        <div class="cost-row"><span>Effective max all-in</span><strong>${money(ceilings.maxAllIn)}</strong></div>
+        <div class="cost-row"><span>All-in headroom</span><strong class="${allInHeadroom != null && allInHeadroom >= 0 ? 'good' : ''}">${allInHeadroom == null ? '—' : allInHeadroom >= 0 ? money(allInHeadroom) : `${money(Math.abs(allInHeadroom))} over`}</strong></div>
+        <div class="plan-grid">
+          <label>Your max bid<input id="plan-max-bid" type="number" min="0" step="1" value="${escapeHtml(meta.max_bid ?? '')}" placeholder="${escapeHtml(lot.verified_max_bid ?? '')}"></label>
+          <label>Your max all-in<input id="plan-max-all-in" type="number" min="0" step="1" value="${escapeHtml(meta.max_all_in ?? '')}" placeholder="${escapeHtml(lot.max_all_in ?? '')}"></label>
+          <label>Status<select id="plan-status">
+            <option value="" ${!meta.status ? 'selected' : ''}>Unspecified</option>
+            <option value="watch" ${meta.status === 'watch' ? 'selected' : ''}>Watch</option>
+            <option value="buy-zone" ${meta.status === 'buy-zone' ? 'selected' : ''}>Buy zone</option>
+            <option value="pass" ${meta.status === 'pass' ? 'selected' : ''}>Pass</option>
+            <option value="won" ${meta.status === 'won' ? 'selected' : ''}>Won</option>
+          </select></label>
+          <label>Tags<input id="plan-tags" type="text" value="${escapeHtml((meta.tags || []).join(', '))}" placeholder="home, haos, tool"></label>
+        </div>
+        <label class="plan-note">Notes<textarea id="plan-note" rows="3" placeholder="Condition, fit, missing parts, why we want it…">${escapeHtml(meta.note || '')}</textarea></label>
+        <div class="detail-actions"><button id="save-plan" type="button">Save plan</button></div>
+      </div>
       <div class="lot-box">
         <strong>Lot state</strong>
         <div class="cost-row"><span>Closes</span><strong data-close="${escapeHtml(lot.expected_closing_utc || '')}">${closeText(lot.expected_closing_utc)}</strong></div>
@@ -356,6 +413,24 @@ function openDetails(row) {
   });
   detailContent.querySelector('#copy-lot-ref')?.addEventListener('click', (event) => {
     copyText(lotRef(lot), event.currentTarget);
+  });
+  detailContent.querySelector('#save-plan')?.addEventListener('click', (event) => {
+    if (!window.MacbidBrowserState?.updateItemMetadata) return;
+    const parseOptional = (selector) => {
+      const raw = detailContent.querySelector(selector)?.value?.trim() || '';
+      return raw === '' ? null : Number(raw);
+    };
+    window.MacbidBrowserState.updateItemMetadata(product.identity, {
+      max_bid: parseOptional('#plan-max-bid'),
+      max_all_in: parseOptional('#plan-max-all-in'),
+      status: detailContent.querySelector('#plan-status')?.value || '',
+      tags: (detailContent.querySelector('#plan-tags')?.value || '').split(',').map((v) => v.trim()).filter(Boolean),
+      note: detailContent.querySelector('#plan-note')?.value?.trim() || '',
+    });
+    const button = event.currentTarget;
+    button.textContent = 'Saved ✓';
+    setTimeout(() => openDetails(row), 450);
+    render();
   });
   detailContent.querySelector('#detail-watch')?.addEventListener('click', () => {
     toggleWatch(product.identity);
@@ -403,7 +478,8 @@ async function loadCatalog() {
   const generated = new Date(state.catalog.generated_epoch_utc * 1000).toLocaleString();
   const tax = Number(state.catalog.sales_tax_rate || 0) * 100;
   const verified = Number(state.catalog.market_value_count || 0);
-  $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · ${verified} market-verified · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
+  const stale = Number(state.catalog.stale_market_value_count || 0);
+  $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · ${verified} market-verified${stale ? ` · ${stale} stale` : ''} · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
   render();
 }
 

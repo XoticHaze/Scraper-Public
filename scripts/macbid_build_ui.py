@@ -69,6 +69,9 @@ OPTIONAL_VERIFICATION_FIELDS = (
     "market_value_source_count",
     "allocation_ratio",
     "max_all_in",
+    "market_value_age_days",
+    "market_value_freshness",
+    "market_value_authoritative",
 )
 
 
@@ -157,11 +160,18 @@ def main() -> int:
                     default_allocation_ratio=float(market_defaults.get("default_allocation_ratio", 0.65)),
                     like_new_fallback_ratio=float(market_defaults.get("like_new_fallback_ratio", 0.80)),
                     open_box_fallback_ratio=float(market_defaults.get("open_box_fallback_ratio", 0.75)),
+                    as_of=time.strftime("%Y-%m-%d", time.gmtime(final_epoch)),
+                    fresh_days=int(market_defaults.get("fresh_days", 7)),
+                    stale_after_days=int(market_defaults.get("stale_after_days", 30)),
                 )
                 lot.update({key: value for key, value in derived.items() if value is not None})
 
             current_new = market_summary.get("current_new") or {}
-            product["market_price_status"] = "verified_external"
+            representative = lots[0] if lots else {}
+            product["market_price_status"] = representative.get("market_price_status", "stale_external")
+            product["market_value_age_days"] = representative.get("market_value_age_days")
+            product["market_value_freshness"] = representative.get("market_value_freshness")
+            product["market_value_authoritative"] = representative.get("market_value_authoritative", False)
             product["verified_new_price"] = current_new.get("median")
             product["current_new_average"] = current_new.get("average")
             product["current_new_low"] = current_new.get("low")
@@ -240,6 +250,7 @@ def main() -> int:
         "lot_count": len(inventory),
         "hunt_profiles": public_profiles,
         "market_value_count": sum(1 for product in products if product.get("market_price_status") == "verified_external"),
+        "stale_market_value_count": sum(1 for product in products if product.get("market_price_status") == "stale_external"),
         "market_values_updated_at": market_doc.get("updated_at"),
         "market_value_authority": market_defaults.get("authority"),
         "products": products,
@@ -287,6 +298,7 @@ def main() -> int:
     print(f"UI_ACTION_MANIFEST={'yes' if APP_ACTIONS.exists() else 'no'}")
     print(f"UI_RESEARCH_FINDINGS={'yes' if APP_FINDINGS.exists() else 'no'}")
     print(f"UI_MARKET_VALUES={catalog['market_value_count']}")
+    print(f"UI_STALE_MARKET_VALUES={catalog['stale_market_value_count']}")
     print(f"UI_MARKET_VALUES_UPDATED_AT={catalog['market_values_updated_at']}")
     print(f"UI_OUTPUT={SITE}")
     return 0
