@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from deal_engine.compatibility import compatibility_allows_hunt, evaluate_compatibility
 
 
@@ -90,3 +92,25 @@ def test_ruled_out_compatibility_blocks_gated_hunt():
     assert compatibility_allows_hunt({"status": "ruled_out"}, "haos") is False
     assert compatibility_allows_hunt({"status": "candidate"}, "haos") is True
     assert compatibility_allows_hunt({"status": "ruled_out"}, None) is True
+
+
+def test_current_matrix_corrects_kwikset_exact_upcs():
+    matrix = json.loads(Path("app/compatibility_matrix.json").read_text())
+    halo = evaluate_compatibility(
+        matrix,
+        {"identity": "upc:883351908870", "name": "Kwikset Wi-Fi Smart Lock"},
+    )
+    assert halo["status"] == "verified_with_requirements"
+    assert halo["integration"] == "Matter"
+
+    mislabeled = evaluate_compatibility(
+        matrix,
+        {"identity": "upc:883351859561", "name": "Kwikset Halo Smart Lock"},
+    )
+    assert mislabeled["status"] == "ruled_out"
+
+    smartcode = evaluate_compatibility(
+        matrix,
+        {"identity": "upc:883351982863", "name": "Kwikset Smart Lock"},
+    )
+    assert smartcode["status"] == "ruled_out"
