@@ -4,12 +4,14 @@ import copy
 import json
 import re
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 from playwright.sync_api import Request, sync_playwright
 
+from deal_engine.catalog_fallback import fallback_catalog_is_usable, inventory_from_ui_catalog
 from deal_engine.scoring import score_lot
 
 CONFIG_PATH = Path("config/macbid_deal_engine.json")
@@ -99,6 +101,56 @@ def local_contract(payload: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def generic_catalog_contract(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Select a public lot-search contract when a location page does not emit one."""
+    searches = payload.get("searches", []) if isinstance(payload, dict) else []
+    candidates: list[tuple[int, dict[str, Any]]] = []
+    for search in searches:
+        if not isinstance(search, dict):
+            continue
+        filter_by = str(search.get("filter_by", ""))
+        sort_by = str(search.get("sort_by", ""))
+        query_by = str(search.get("query_by", ""))
+        score = 0
+        if "is_open:=1" in filter_by:
+            score += 4
+        if "expected_closing_utc" in filter_by or "expected_closing_utc" in sort_by:
+            score += 3
+        if "auction_location" in filter_by:
+            score += 3
+        if any(term in query_by.lower() for term in ("product", "title", "name", "brand", "upc")):
+            score += 2
+        if search.get("collection"):
+            score += 1
+        if score >= 6:
+            candidates.append((score, search))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda pair: pair[0], reverse=True)
+    return copy.deepcopy(candidates[0][1])
+
+
+def fetch_public_json(url: str, *, timeout: int = 15) -> dict[str, Any] | None:
+    if not url:
+        return None
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Scraper-Public/1.0",
+            "Accept": "application/json",
+            "Accept-Encoding": "identity",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read(12_000_000)
+        data = json.loads(raw.decode("utf-8"))
+        return data if isinstance(data, dict) else None
+    except Exception as exc:
+        print(f"DEAL_FALLBACK_FETCH=MISS reason={type(exc).__name__}")
+        return None
+
+
 def list_filter(field: str, values: list[str]) -> str:
     escaped = [str(value).replace("`", "") for value in values]
     rendered = ",".join(f"`{value}`" for value in escaped)
@@ -144,6 +196,13 @@ def main() -> int:
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     locations = [str(v) for v in config["locations"]]
     bootstrap_location_url = str(config.get("bootstrap_location_url") or "https://www.mac.bid/")
+    bootstrap_fallback_urls = [
+        str(value)
+        for value in (config.get("bootstrap_fallback_urls") or [])
+        if str(value).startswith("https://www.mac.bid/")
+    ]
+    live_catalog_fallback_url = str(config.get("live_catalog_fallback_url") or "")
+    live_catalog_fallback_max_age_seconds = int(config.get("live_catalog_fallback_max_age_seconds") or 10_800)
     preferred_condition_list = [str(v).upper() for v in config["preferred_conditions"]]
     preferred_conditions = set(preferred_condition_list)
     excluded_conditions = {str(v).upper() for v in config["excluded_conditions"]}
@@ -171,11 +230,18 @@ def main() -> int:
         "views": {},
     }
 
+    all_docs: list[dict[str, Any]] = []
+    total_found = None
+    page_num = 0
+    selected_url = None
+    selected_search = None
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(locale="en-US", viewport={"width": 1440, "height": 1300})
         page = context.new_page()
         candidates: list[tuple[str, dict[str, Any]]] = []
+        bootstrap_attempts: list[dict[str, Any]] = []
 
         def on_request(request: Request):
             if "typesense.net/multi_search" not in request.url:
@@ -188,69 +254,133 @@ def main() -> int:
                 candidates.append((request.url, payload))
 
         page.on("request", on_request)
-        nav = page.goto(bootstrap_location_url, wait_until="domcontentloaded", timeout=60_000)
-        report["scan"]["bootstrap_status"] = nav.status if nav else None
-        page.wait_for_timeout(4_000)
-        if not candidates:
-            raise RuntimeError("No public Typesense search contract observed")
+        bootstrap_urls = [bootstrap_location_url, *bootstrap_fallback_urls]
+        for bootstrap_url in bootstrap_urls:
+            before = len(candidates)
+            try:
+                nav = page.goto(bootstrap_url, wait_until="domcontentloaded", timeout=60_000)
+                status = nav.status if nav else None
+                page.wait_for_timeout(4_500)
+                bootstrap_attempts.append({
+                    "url": bootstrap_url,
+                    "status": status,
+                    "contracts_observed": len(candidates) - before,
+                })
+            except Exception as exc:
+                bootstrap_attempts.append({
+                    "url": bootstrap_url,
+                    "status": None,
+                    "error": type(exc).__name__,
+                    "contracts_observed": len(candidates) - before,
+                })
 
-        selected_url = None
-        selected_search = None
-        for raw_url, payload in candidates:
-            search = local_contract(payload)
-            if search is not None:
-                selected_url, selected_search = raw_url, search
+            # Prefer the strongest local contract as soon as one appears.
+            for raw_url, payload in candidates:
+                search = local_contract(payload)
+                if search is not None:
+                    selected_url, selected_search = raw_url, search
+                    break
+            if selected_search is not None:
                 break
-        if selected_url is None or selected_search is None:
-            raise RuntimeError("No local MAC.BID search contract observed")
 
-        selected_search["q"] = "*"
-        selected_search["filter_by"] = catalog_filter(
-            locations,
-            preferred_condition_list,
-            min_retail,
-            include_pallets,
-            now_epoch,
+        if selected_search is None:
+            for raw_url, payload in candidates:
+                search = generic_catalog_contract(payload)
+                if search is not None:
+                    selected_url, selected_search = raw_url, search
+                    break
+
+        report["scan"]["bootstrap_attempts"] = bootstrap_attempts
+        report["scan"]["bootstrap_status"] = next(
+            (row.get("status") for row in bootstrap_attempts if row.get("status") is not None),
+            None,
         )
-        # Exact contract observed from MAC.BID's own "Ending Soonest" control.
-        selected_search["sort_by"] = "expected_closing_utc:asc,ranking_weight:desc"
-        selected_search["per_page"] = 250
-        selected_search["page"] = 1
 
-        report["scan"]["typesense_host"] = urlsplit(selected_url).hostname or ""
-        report["scan"]["filter_by"] = selected_search["filter_by"]
-        report["scan"]["sort_by"] = selected_search["sort_by"]
-        report["scan"]["scan_epoch_utc"] = now_epoch
-
-        all_docs: list[dict[str, Any]] = []
-        page_num = 1
-        total_found = None
-        max_pages = 200
-        while page_num <= max_pages:
-            search = copy.deepcopy(selected_search)
-            search["page"] = page_num
-            payload = {"searches": [search]}
-            response = context.request.post(
-                selected_url,
-                data=json.dumps(payload),
-                headers={"content-type": "application/json"},
-                timeout=30_000,
+        if selected_url is not None and selected_search is not None:
+            selected_search["q"] = "*"
+            selected_search["filter_by"] = catalog_filter(
+                locations,
+                preferred_condition_list,
+                min_retail,
+                include_pallets,
+                now_epoch,
             )
-            if response.status != 200:
-                raise RuntimeError(f"Typesense search failed with HTTP {response.status}: {response.text()[:500]}")
-            docs, found = extract_docs(response.json())
-            if total_found is None:
-                total_found = found
-            all_docs.extend(docs)
-            print(f"DEAL_SCAN_PAGE page={page_num} docs={len(docs)} found={found}")
-            if len(docs) < int(search["per_page"]):
-                break
-            page_num += 1
-        if page_num > max_pages:
-            raise RuntimeError(f"Catalog exceeded safety cap of {max_pages * 250} preferred lots")
+            selected_search["sort_by"] = "expected_closing_utc:asc,ranking_weight:desc"
+            selected_search["per_page"] = 250
+            selected_search["page"] = 1
+
+            report["scan"]["typesense_host"] = urlsplit(selected_url).hostname or ""
+            report["scan"]["filter_by"] = selected_search["filter_by"]
+            report["scan"]["sort_by"] = selected_search["sort_by"]
+            report["scan"]["scan_epoch_utc"] = now_epoch
+            report["scan"]["inventory_source_epoch_utc"] = now_epoch
+            report["scan"]["degraded_inventory_source"] = False
+            report["scan"]["contract_source"] = (
+                "location_bootstrap"
+                if local_contract({"searches": [selected_search]}) is not None
+                else "generic_public_search"
+            )
+
+            page_num = 1
+            max_pages = 200
+            while page_num <= max_pages:
+                search = copy.deepcopy(selected_search)
+                search["page"] = page_num
+                payload = {"searches": [search]}
+                response = context.request.post(
+                    selected_url,
+                    data=json.dumps(payload),
+                    headers={"content-type": "application/json"},
+                    timeout=30_000,
+                )
+                if response.status != 200:
+                    raise RuntimeError(
+                        f"Typesense search failed with HTTP {response.status}: {response.text()[:500]}"
+                    )
+                docs, found = extract_docs(response.json())
+                if total_found is None:
+                    total_found = found
+                all_docs.extend(docs)
+                print(f"DEAL_SCAN_PAGE page={page_num} docs={len(docs)} found={found}")
+                if len(docs) < int(search["per_page"]):
+                    break
+                page_num += 1
+            if page_num > max_pages:
+                raise RuntimeError(f"Catalog exceeded safety cap of {max_pages * 250} preferred lots")
 
         context.close()
         browser.close()
+
+    if selected_url is None or selected_search is None:
+        fallback_catalog = fetch_public_json(live_catalog_fallback_url)
+        usable, fallback_age = fallback_catalog_is_usable(
+            fallback_catalog or {},
+            now_epoch=now_epoch,
+            max_age_seconds=live_catalog_fallback_max_age_seconds,
+        )
+        if not usable:
+            raise RuntimeError(
+                "No public Typesense search contract observed and no recent public catalog fallback is usable"
+            )
+        all_docs = inventory_from_ui_catalog(fallback_catalog or {}, now_epoch=now_epoch)
+        total_found = len(all_docs)
+        page_num = 0
+        source_epoch = int(
+            (fallback_catalog or {}).get("inventory_source_epoch_utc")
+            or (fallback_catalog or {}).get("source_scan_epoch_utc")
+            or (fallback_catalog or {}).get("generated_epoch_utc")
+            or now_epoch
+        )
+        report["scan"]["scan_epoch_utc"] = source_epoch
+        report["scan"]["inventory_source_epoch_utc"] = source_epoch
+        report["scan"]["fallback_catalog_age_seconds"] = fallback_age
+        report["scan"]["degraded_inventory_source"] = True
+        report["scan"]["contract_source"] = "recent_public_catalog_fallback"
+        report["scan"]["complete"] = False
+        print(
+            f"DEAL_BOOTSTRAP_FALLBACK=PASS age_seconds={fallback_age} "
+            f"active_lots={len(all_docs)} source_epoch={source_epoch}"
+        )
 
     inventory = dedupe(all_docs)
     report["scan"]["reported_found"] = total_found
