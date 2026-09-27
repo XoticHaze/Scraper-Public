@@ -142,7 +142,10 @@ jobs:
           capability_ids = {row['id'] for row in compatibility['capability_rules']}
           assert {'matter_thread', 'z_wave', 'zigbee', 'onvif', 'mqtt', 'modbus', 'wifi_only'} <= capability_ids
           override_ids = {row['identity'] for row in compatibility['exact_overrides']}
-          assert {'upc:B0FXWGYDQW', 'upc:B0BZSD2L1W', 'upc:B09Y8C185M', 'upc:B07KQY3MWL'} <= override_ids
+          assert {
+              'upc:B0FXWGYDQW', 'upc:B0BZSD2L1W', 'upc:B09Y8C185M', 'upc:B07KQY3MWL',
+              'upc:883351908870', 'upc:883351859561', 'upc:883351982863'
+          } <= override_ids
 
           hunts = json.loads(Path('app/hunts.json').read_text())
           assert hunts['schema'] == 'macbid-hunt-profiles-v1'
