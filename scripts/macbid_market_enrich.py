@@ -218,6 +218,9 @@ def _refresh_existing(
             url = str(old.get("url") or "")
             if not url:
                 continue
+            today = time.strftime("%Y-%m-%d", time.gmtime())
+            if str(old.get("observed_at") or "") == today:
+                continue
             attempted += 1
             fetched = _fetch_bytes(url, timeout=timeout, max_bytes=max_bytes)
             if not fetched:
@@ -255,6 +258,19 @@ def _refresh_existing(
     return attempted, refreshed
 
 
+def _recent_attempts(market: dict[str, Any], retry_after_hours: int) -> set[str]:
+    now = time.time()
+    skip: set[str] = set()
+    for identity, row in (market.get("enrichment_attempts") or {}).items():
+        try:
+            attempted_epoch = float(row.get("attempted_epoch") or 0)
+        except (AttributeError, TypeError, ValueError):
+            continue
+        if attempted_epoch > 0 and now - attempted_epoch < retry_after_hours * 3600:
+            skip.add(str(identity))
+    return skip
+
+
 def main() -> int:
     report = _read_json(REPORT, {})
     canonical = _read_json(CANONICAL, {"schema": "macbid-market-values-v1", "valuations": []})
@@ -288,12 +304,15 @@ def main() -> int:
         for row in (market.get("valuations") or [])
         if isinstance(row, dict) and row.get("identity")
     }
+    retry_after_hours = int(config.get("retry_after_hours") or 24)
+    cooldown = _recent_attempts(market, retry_after_hours)
     candidates = _candidate_rows(
         report,
         list(hunt_doc.get("profiles") or []),
-        set(records),
+        set(records) | cooldown,
         int(config.get("max_candidates_per_run") or 16),
     )
+    attempts = dict(market.get("enrichment_attempts") or {})
 
     searched = 0
     promoted = 0
@@ -316,6 +335,17 @@ def main() -> int:
                 observations.append(observation)
                 observations_added += 1
 
+        attempts[identity] = {
+            "token": token,
+            "attempted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "attempted_epoch": int(time.time()),
+            "successful": bool(observations),
+            "providers": [
+                str(provider.get("id"))
+                for provider in providers
+                if _provider_supports(provider, token)
+            ],
+        }
         if not observations:
             continue
         record = {
@@ -339,12 +369,14 @@ def main() -> int:
         promoted += 1
 
     market["valuations"] = sorted(records.values(), key=lambda row: str(row.get("identity") or ""))
+    market["enrichment_attempts"] = attempts
     market["updated_at"] = time.strftime("%Y-%m-%d", time.gmtime())
     market["runtime_enrichment"] = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "refresh_attempted": refresh_attempted,
         "refreshed": refreshed,
         "candidates": len(candidates),
+        "cooldown_skipped": len(cooldown),
         "provider_searches": searched,
         "promoted": promoted,
         "observations_added": observations_added,
