@@ -66,6 +66,7 @@ def test_secondary_market_median_overrides_new_price_haircut():
     record = {
         "identity": "upc:example",
         "allocation_ratio": 0.50,
+        "observed_at": "2026-09-26",
         "observations": [
             {"condition": "new", "price": 1000, "source_label": "New", "url": "https://example.com/new"},
             {"condition": "open_box", "price": 700, "source_label": "Open", "url": "https://example.com/open"},
@@ -75,7 +76,12 @@ def test_secondary_market_median_overrides_new_price_haircut():
     summary = summarize_market_value(record)
     assert summary["open_box_used"]["median"] == 650.0
 
-    derived = derive_market_valuation(record, condition="LIKE NEW", current_all_in=100)
+    derived = derive_market_valuation(
+        record,
+        condition="LIKE NEW",
+        current_all_in=100,
+        as_of="2026-09-27",
+    )
     assert derived["market_reference_basis"] == "open_box_used_median"
     assert derived["market_reference_value"] == 650.0
     assert derived["max_all_in"] == 325.0
