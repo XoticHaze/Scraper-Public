@@ -27,10 +27,18 @@ def lot(**kwargs):
     return base
 
 
-def test_large_gaming_monitor_accepts_semantic_signals_and_rejects_accessories():
-    assert match_profile(
+def test_large_gaming_monitor_enforces_34_inch_diagonal():
+    match = match_profile(
         PROFILES["large-gaming-monitors"],
         product('Samsung Odyssey G9 49" Curved Gaming Monitor'),
+        lot(),
+    )
+    assert match
+    assert match["diagonal_inches"] == 49
+
+    assert not match_profile(
+        PROFILES["large-gaming-monitors"],
+        product('Alienware 25" Gaming Monitor 240Hz'),
         lot(),
     )
     assert not match_profile(
@@ -38,6 +46,15 @@ def test_large_gaming_monitor_accepts_semantic_signals_and_rejects_accessories()
         product("Heavy Duty Dual Monitor Arm Stand"),
         lot(),
     )
+    assert not match_profile(
+        PROFILES["large-gaming-monitors"],
+        product("Unknown Size Curved Gaming Monitor 240Hz"),
+        lot(),
+    )
+
+    structured = product("Westinghouse Gaming Monitor", brand="Westinghouse")
+    structured["display_diagonal_inches"] = 49
+    assert match_profile(PROFILES["large-gaming-monitors"], structured, lot())
 
 
 def test_curved_monitor_requires_real_curved_signal():
