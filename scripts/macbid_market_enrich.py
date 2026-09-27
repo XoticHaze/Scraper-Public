@@ -9,6 +9,7 @@ from typing import Any
 from deal_engine.grouping import product_identity
 from deal_engine.hunts import match_profiles
 from deal_engine.market_enrichment import (
+    candidate_priority_score,
     identity_kind,
     merge_current_observation,
     merged_market_records,
@@ -108,6 +109,7 @@ def _candidate_rows(
     profiles: list[dict[str, Any]],
     existing: set[str],
     limit: int,
+    profile_priority: dict[str, list[str]] | None = None,
 ) -> list[dict[str, Any]]:
     ranked: list[tuple[float, dict[str, Any]]] = []
     seen: set[str] = set()
@@ -129,9 +131,12 @@ def _candidate_rows(
             matches = match_profiles(profiles, product, lot)
             if pool_index == 0 and not matches:
                 continue
-            hunt_score = max((float(row.get("score") or 0) for row in matches.values()), default=0.0)
-            score = hunt_score * 1000.0 + float(lot.get("deal_score") or 0)
-            if pool_index == 1:
+            score = candidate_priority_score(
+                matches,
+                lot.get("deal_score"),
+                profile_priority=profile_priority,
+            )
+            if pool_index == 1 and not matches:
                 score += 10.0
             ranked.append((score, {**lot, "_candidate_identity": identity, "_candidate_token": token}))
             seen.add(identity)
@@ -303,6 +308,7 @@ def main() -> int:
         list(hunt_doc.get("profiles") or []),
         set(records) | cooldown,
         int(config.get("max_candidates_per_run") or 16),
+        profile_priority=dict(config.get("profile_priority") or {}),
     )
     attempts = dict(market.get("enrichment_attempts") or {})
 
