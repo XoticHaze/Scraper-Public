@@ -57,7 +57,7 @@ jobs:
       - name: Run scoring and hunt tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_market_valuation.py tests/test_market_enrichment.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py
 
       - name: Run configured inventory deal engine
         run: |
@@ -97,7 +97,11 @@ jobs:
           assert data['lot_count'] > 0
           assert len(data.get('hunt_profiles', [])) >= 16
           hunt_ids = {profile['id'] for profile in data.get('hunt_profiles', [])}
-          assert {'premium-dishwashers', 'compact-sinks', 'medicine-cabinet-mirrors'} <= hunt_ids
+          assert {
+              'premium-dishwashers', 'compact-sinks', 'medicine-cabinet-mirrors',
+              'solar-panels', 'high-power-solar-panels', 'solar-batteries',
+              'solar-charge-controllers', 'solar-inverters'
+          } <= hunt_ids
           assert Path('site/catalog.js').exists()
           assert Path('site/browser-state.js').exists()
           assert Path('site/browser-profile.js').exists()
@@ -106,7 +110,10 @@ jobs:
           assert Path('site/enhancements.css').exists()
           assert Path('site/hunt-profiles.json').exists()
           assert Path('site/market-values.json').exists()
+          assert Path('site/compatibility-matrix.json').exists()
           assert Path('results/market-values.runtime.json').exists()
+          assert data.get('compatibility_matrix_version') is not None
+          assert sum((data.get('compatibility_counts') or {}).values()) == data['product_count']
           assert actions['schema'] == 'repo-app-actions-v1'
           assert {a['id'] for a in actions['actions']} >= {'refresh', 'visual-review', 'actions', 'source'}
           assert all(
