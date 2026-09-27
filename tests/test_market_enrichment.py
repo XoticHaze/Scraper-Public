@@ -1,4 +1,5 @@
 from deal_engine.market_enrichment import (
+    candidate_priority_score,
     extract_structured_prices,
     identity_kind,
     merged_market_records,
@@ -91,3 +92,46 @@ def test_runtime_merge_keeps_previous_observation_but_manual_policy_wins():
     assert len(row["observations"]) == 2
     assert row["price_confidence"] == "high"
     assert merged["enrichment_attempts"]["upc:B0MISS0001"]["successful"] is False
+
+
+def test_specific_hunt_tier_beats_large_resale_score():
+    priority = {
+        "primary": ["smart-door-locks-haos", "tools"],
+        "secondary": ["best-tech-deals"],
+        "fallback": ["resale-watch"],
+    }
+    specific = candidate_priority_score(
+        {"smart-door-locks-haos": {"score": 4}},
+        60,
+        profile_priority=priority,
+    )
+    resale = candidate_priority_score(
+        {"resale-watch": {"score": 99}},
+        99,
+        profile_priority=priority,
+    )
+    assert specific > resale
+
+
+def test_best_tech_tier_beats_resale_but_not_specific():
+    priority = {
+        "primary": ["tools"],
+        "secondary": ["best-tech-deals"],
+        "fallback": ["resale-watch"],
+    }
+    specific = candidate_priority_score(
+        {"tools": {"score": 2}},
+        40,
+        profile_priority=priority,
+    )
+    tech = candidate_priority_score(
+        {"best-tech-deals": {"score": 95}},
+        95,
+        profile_priority=priority,
+    )
+    resale = candidate_priority_score(
+        {"resale-watch": {"score": 100}},
+        100,
+        profile_priority=priority,
+    )
+    assert specific > tech > resale

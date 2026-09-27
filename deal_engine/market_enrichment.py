@@ -304,6 +304,45 @@ def update_confidence(record: dict[str, Any]) -> None:
         record["status"] = "verified_external"
 
 
+def candidate_priority_score(
+    matches: dict[str, dict[str, Any]],
+    deal_score: Any,
+    profile_priority: dict[str, list[str]] | None = None,
+) -> float:
+    """Rank exact-ID enrichment work by product intent before generic resale.
+
+    Tier authority is explicit so large numeric scores from broad ranked profiles
+    cannot starve smaller semantic-hunt scores.
+    """
+    priority = profile_priority or {}
+    tiers = [
+        ("primary", 3_000_000.0),
+        ("secondary", 2_000_000.0),
+        ("fallback", 1_000_000.0),
+    ]
+    best = 0.0
+    for tier_name, base in tiers:
+        ids = set(priority.get(tier_name) or [])
+        tier_scores = [
+            float((matches.get(profile_id) or {}).get("score") or 0)
+            for profile_id in ids
+            if profile_id in matches
+        ]
+        if tier_scores:
+            best = max(best, base + max(tier_scores) * 1000.0)
+
+    if best == 0.0 and matches:
+        best = 500_000.0 + max(
+            float(row.get("score") or 0) for row in matches.values()
+        ) * 1000.0
+
+    try:
+        deal = float(deal_score or 0)
+    except (TypeError, ValueError):
+        deal = 0.0
+    return best + deal
+
+
 def merged_market_records(
     canonical: dict[str, Any],
     previous: dict[str, Any] | None,
