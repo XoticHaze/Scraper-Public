@@ -77,7 +77,7 @@ jobs:
       - name: Tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_vehicle_hunt.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_catalog_fallback.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_vehicle_hunt.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
 
       - name: Validate engine, app, hunt, locality, privacy, and private-compute policy
         run: |
@@ -93,6 +93,9 @@ jobs:
           assert 'OPEN BOX' in cfg['preferred_conditions']
           assert abs(float(cfg['sales_tax_rate']) - 0.0825) < 1e-12
           assert 'San Antonio' in cfg['sales_tax_scope']
+          assert len(cfg.get('bootstrap_fallback_urls') or []) >= 2
+          assert cfg['live_catalog_fallback_url'].endswith('/catalog.json')
+          assert 1800 <= int(cfg['live_catalog_fallback_max_age_seconds']) <= 21600
 
           vehicle = json.loads(Path('config/vehicle_hunt.json').read_text())
           assert vehicle['market']['label'].startswith('San Antonio, TX')

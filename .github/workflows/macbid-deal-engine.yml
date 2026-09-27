@@ -57,7 +57,7 @@ jobs:
       - name: Run scoring and hunt tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_catalog_fallback.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py
 
       - name: Run configured inventory deal engine
         run: |
@@ -95,6 +95,10 @@ jobs:
           assert set(data['locations']) == allowed_locations, data['locations']
           assert data['product_count'] > 0
           assert data['lot_count'] > 0
+          assert data.get('inventory_source_epoch_utc')
+          if data.get('degraded_inventory_source'):
+              assert data.get('inventory_contract_source') == 'recent_public_catalog_fallback'
+              assert int(data.get('fallback_catalog_age_seconds') or 0) <= int(policy['live_catalog_fallback_max_age_seconds'])
           assert len(data.get('hunt_profiles', [])) >= 16
           hunt_ids = {profile['id'] for profile in data.get('hunt_profiles', [])}
           assert {

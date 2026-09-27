@@ -82,7 +82,7 @@ Default condition policy:
 - exclude pallets unless explicitly enabled
 - suppress listings below a configurable stated-retail floor
 
-The engine bootstraps MAC.BID's public Typesense search contract from the San Antonio location page, keeps only the local open-inventory query, scans the complete eligible San Antonio catalog, scores lots, collapses duplicate products, and builds a bounded market-verification queue.
+The engine bootstraps MAC.BID's public Typesense search contract from the configured location page, with public search-page recovery surfaces if that page temporarily stops emitting the contract. If no live contract can be reacquired, the workflow may use the last successfully published public catalog only while it remains within the configured freshness bound; the UI labels that state as a degraded fallback and preserves the original inventory-source age rather than pretending the fallback was a fresh scan. The engine then scores lots, collapses duplicate products, and builds a bounded market-verification queue.
 
 ### Exact ending-soonest authority
 
