@@ -155,14 +155,11 @@ def extract_structured_prices(
             if not identity_in_url and not structured_identity_match(product, identity):
                 continue
             for offer in _offer_rows(product.get("offers")):
-                price = _number(
-                    offer.get("price")
-                    or offer.get("lowPrice")
-                    or offer.get("highPrice")
-                    or offer.get("priceSpecification", {}).get("price")
-                    if isinstance(offer.get("priceSpecification"), dict)
-                    else None
-                )
+                raw_price = offer.get("price") or offer.get("lowPrice") or offer.get("highPrice")
+                price_spec = offer.get("priceSpecification")
+                if raw_price is None and isinstance(price_spec, dict):
+                    raw_price = price_spec.get("price")
+                price = _number(raw_price)
                 if price is None:
                     continue
                 currency = str(
