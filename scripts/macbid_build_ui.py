@@ -9,12 +9,14 @@ from typing import Any
 
 from deal_engine.grouping import product_identity
 from deal_engine.hunts import match_profiles
+from deal_engine.valuation import derive_market_valuation, summarize_market_value
 
 REPORT = Path("results/macbid-deal-engine.json")
 UI_SOURCE = Path("ui")
 APP_ACTIONS = Path("app/actions.json")
 APP_HUNTS = Path("app/hunts.json")
 APP_FINDINGS = Path("app/research_findings.json")
+APP_MARKET_VALUES = Path("app/market_values.json")
 SITE = Path("site")
 
 LOT_FIELDS = (
@@ -55,6 +57,18 @@ OPTIONAL_VERIFICATION_FIELDS = (
     "verdict",
     "verified_max_bid",
     "max_bid",
+    "current_new_average",
+    "current_new_low",
+    "current_new_high",
+    "current_new_samples",
+    "market_reference_value",
+    "market_reference_basis",
+    "market_value_confidence",
+    "market_identity_confidence",
+    "market_value_observed_at",
+    "market_value_source_count",
+    "allocation_ratio",
+    "max_all_in",
 )
 
 
@@ -106,6 +120,13 @@ def main() -> int:
         for row in (finding_doc.get("findings") or [])
         if isinstance(row, dict) and row.get("identity")
     }
+    market_doc = json.loads(APP_MARKET_VALUES.read_text(encoding="utf-8")) if APP_MARKET_VALUES.exists() else {"valuations": []}
+    market_defaults = market_doc.get("defaults") or {}
+    market_map = {
+        str(row["identity"]): row
+        for row in (market_doc.get("valuations") or [])
+        if isinstance(row, dict) and row.get("identity")
+    }
 
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for lot in inventory:
@@ -115,7 +136,58 @@ def main() -> int:
     for lots in grouped.values():
         lots.sort(key=lambda row: float(row.get("expected_closing_utc") or float("inf")))
         product = product_metadata(lots)
-        best_value_lot = max(lots, key=lambda row: float(row.get("deal_score") or -10_000))
+
+        valuation = market_map.get(str(product["identity"]))
+        if valuation and str(valuation.get("status") or "").lower() == "verified_external":
+            market_summary = summarize_market_value(valuation)
+            product["market_value"] = market_summary
+            specs = market_summary.get("specs") or {}
+            for key, value in specs.items():
+                if value is not None:
+                    product[key] = value
+
+            for lot in lots:
+                derived = derive_market_valuation(
+                    valuation,
+                    condition=str(lot.get("condition") or ""),
+                    current_all_in=lot.get("estimated_post_tax_total") or lot.get("estimated_all_in_total"),
+                    premium_rate=float(policy.get("buyer_premium_rate", 0.15)),
+                    lot_fee=float(policy.get("lot_fee", 3.0)),
+                    sales_tax_rate=float(policy.get("sales_tax_rate", 0.0)),
+                    default_allocation_ratio=float(market_defaults.get("default_allocation_ratio", 0.65)),
+                    like_new_fallback_ratio=float(market_defaults.get("like_new_fallback_ratio", 0.80)),
+                    open_box_fallback_ratio=float(market_defaults.get("open_box_fallback_ratio", 0.75)),
+                )
+                lot.update({key: value for key, value in derived.items() if value is not None})
+
+            current_new = market_summary.get("current_new") or {}
+            product["market_price_status"] = "verified_external"
+            product["verified_new_price"] = current_new.get("median")
+            product["current_new_average"] = current_new.get("average")
+            product["current_new_low"] = current_new.get("low")
+            product["current_new_high"] = current_new.get("high")
+            product["current_new_samples"] = current_new.get("samples")
+            product["market_value_confidence"] = market_summary.get("price_confidence")
+            product["market_identity_confidence"] = market_summary.get("identity_confidence")
+            product["market_value_observed_at"] = market_summary.get("observed_at")
+            product["market_value_source_count"] = market_summary.get("source_count")
+            secondary = market_summary.get("open_box_used") or {}
+            if secondary.get("median") is not None:
+                product["realistic_open_box_value"] = secondary.get("median")
+            elif current_new.get("median") is not None:
+                product["realistic_open_box_value"] = round(
+                    float(current_new["median"]) * float(market_defaults.get("open_box_fallback_ratio", 0.75)),
+                    2,
+                )
+
+        best_value_lot = max(
+            lots,
+            key=lambda row: (
+                1 if row.get("market_price_status") == "verified_external" else 0,
+                float(row.get("verified_discount_pct") or -10_000),
+                float(row.get("deal_score") or -10_000),
+            ),
+        )
         matches = match_profiles(profiles, product, best_value_lot)
 
         # Model/market research is allowed to narrow semantic discovery. This is
@@ -167,6 +239,9 @@ def main() -> int:
         "product_count": len(products),
         "lot_count": len(inventory),
         "hunt_profiles": public_profiles,
+        "market_value_count": sum(1 for product in products if product.get("market_price_status") == "verified_external"),
+        "market_values_updated_at": market_doc.get("updated_at"),
+        "market_value_authority": market_defaults.get("authority"),
         "products": products,
     }
 
@@ -190,6 +265,9 @@ def main() -> int:
             json.dumps(hunt_doc, separators=(",", ":"), ensure_ascii=False),
             encoding="utf-8",
         )
+    if APP_MARKET_VALUES.exists():
+        compact_market = json.dumps(market_doc, separators=(",", ":"), ensure_ascii=False)
+        (SITE / "market-values.json").write_text(compact_market, encoding="utf-8")
     if APP_FINDINGS.exists():
         compact_findings = json.dumps(finding_doc, separators=(",", ":"), ensure_ascii=False)
         (SITE / "research-findings.json").write_text(compact_findings, encoding="utf-8")
@@ -208,6 +286,8 @@ def main() -> int:
         print(f"UI_HUNT {profile['id']}={profile['count']}")
     print(f"UI_ACTION_MANIFEST={'yes' if APP_ACTIONS.exists() else 'no'}")
     print(f"UI_RESEARCH_FINDINGS={'yes' if APP_FINDINGS.exists() else 'no'}")
+    print(f"UI_MARKET_VALUES={catalog['market_value_count']}")
+    print(f"UI_MARKET_VALUES_UPDATED_AT={catalog['market_values_updated_at']}")
     print(f"UI_OUTPUT={SITE}")
     return 0
 
