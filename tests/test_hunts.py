@@ -132,6 +132,69 @@ def test_solar_panel_profile_rejects_accessories_and_camera_bundles():
     )
 
 
+def test_high_power_solar_panel_preserves_rare_800w_candidates():
+    general = match_profile(
+        PROFILES["solar-panels"],
+        product("Bifacial 800W Monocrystalline Solar Panel"),
+        lot(retail_price=650),
+    )
+    assert general
+    assert general["rated_wattage"] == 800
+
+    high = match_profile(
+        PROFILES["high-power-solar-panels"],
+        product("Bifacial 800W Monocrystalline Solar Panel"),
+        lot(retail_price=650),
+    )
+    assert high
+    assert high["rated_wattage"] == 800
+
+    assert not match_profile(
+        PROFILES["high-power-solar-panels"],
+        product("Renogy 400W Portable Solar Panel"),
+        lot(retail_price=500),
+    )
+    assert not match_profile(
+        PROFILES["high-power-solar-panels"],
+        product("800W Solar Inverter"),
+        lot(retail_price=500),
+    )
+
+
+def test_solar_energy_gear_profiles_cover_storage_controllers_and_inverters():
+    battery = match_profile(
+        PROFILES["solar-batteries"],
+        product("48V 100Ah LiFePO4 Solar Battery Bank 5kWh"),
+        lot(retail_price=1200),
+    )
+    assert battery
+    assert not match_profile(
+        PROFILES["solar-batteries"],
+        product("12V Automotive Car Battery"),
+        lot(retail_price=180),
+    )
+
+    controller = match_profile(
+        PROFILES["solar-charge-controllers"],
+        product("Victron MPPT Solar Charge Controller 150V 100A Bluetooth"),
+        lot(retail_price=600),
+    )
+    assert controller
+
+    inverter = match_profile(
+        PROFILES["solar-inverters"],
+        product("GoodWe 8kW Hybrid Solar Inverter 48V Modbus"),
+        lot(retail_price=1800),
+    )
+    assert inverter
+    assert inverter["rated_wattage"] == 8000
+    assert not match_profile(
+        PROFILES["solar-inverters"],
+        product("8000W Gas Inverter Generator"),
+        lot(retail_price=1200),
+    )
+
+
 def test_smart_lock_profile_requires_connected_smart_signal_and_haos_verification():
     match = match_profile(
         PROFILES["smart-door-locks-haos"],
