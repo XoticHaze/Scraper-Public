@@ -77,7 +77,7 @@ jobs:
       - name: Tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_vehicle_hunt.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_vehicle_hunt.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
 
       - name: Validate engine, app, hunt, locality, privacy, and private-compute policy
         run: |
@@ -125,14 +125,25 @@ jobs:
           assert 'resale-watch' in priority['fallback']
           assert 'best-tech-deals' in priority['secondary']
           assert {'smart-door-locks-haos', 'premium-dishwashers', 'tools'} <= set(priority['primary'])
+          assert {'high-power-solar-panels', 'solar-batteries', 'solar-charge-controllers', 'solar-inverters'} <= set(priority['primary'])
           assert not (set(priority['primary']) & set(priority['fallback']))
+
+          compatibility = json.loads(Path('app/compatibility_matrix.json').read_text())
+          assert compatibility['schema'] == 'macbid-compatibility-matrix-v1'
+          assert compatibility['targets']['haos']['label'] == 'Home Assistant OS'
+          capability_ids = {row['id'] for row in compatibility['capability_rules']}
+          assert {'matter_thread', 'z_wave', 'zigbee', 'onvif', 'mqtt', 'modbus', 'wifi_only'} <= capability_ids
+          override_ids = {row['identity'] for row in compatibility['exact_overrides']}
+          assert {'upc:B0FXWGYDQW', 'upc:B0BZSD2L1W', 'upc:B09Y8C185M', 'upc:B07KQY3MWL'} <= override_ids
 
           hunts = json.loads(Path('app/hunts.json').read_text())
           assert hunts['schema'] == 'macbid-hunt-profiles-v1'
           hunt_ids = {profile['id'] for profile in hunts['profiles']}
           assert {
               '4k-projectors', 'large-gaming-monitors', 'quality-speakers',
-              'solar-panels', 'ptz-cameras-haos', 'smart-door-locks-haos',
+              'solar-panels', 'high-power-solar-panels', 'solar-batteries',
+              'solar-charge-controllers', 'solar-inverters',
+              'ptz-cameras-haos', 'smart-door-locks-haos',
               'large-area-rugs', 'tools', 'samsung-tablets', 'apple-devices',
               'best-tech-deals', 'resale-watch'
           } <= hunt_ids
