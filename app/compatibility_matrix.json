@@ -1,6 +1,6 @@
 {
   "schema": "macbid-compatibility-matrix-v1",
-  "version": 1,
+  "version": 2,
   "updated_at": "2026-09-27",
   "targets": {
     "haos": {
@@ -421,6 +421,59 @@
       "note": "Schlage Connect exists in multiple radio variants; exact unit must be identified before compatibility is proven.",
       "sources": [
         "https://www.schlage.com/en/home/support/faqs/schlage-connect.html"
+      ]
+    },
+    {
+      "identity": "upc:883351908870",
+      "target": "haos",
+      "model": "Kwikset Halo Select 998000-002 / 9800WIFITHRDTSCR",
+      "status": "verified_with_requirements",
+      "integration": "Matter",
+      "transports": [
+        "Matter",
+        "Thread",
+        "Wi-Fi",
+        "Bluetooth"
+      ],
+      "local_control": true,
+      "requirements": [
+        "Home Assistant Matter Server",
+        "Thread border router",
+        "factory-reset/commissionable lock",
+        "enable Matter integration from Kwikset app if currently in Wi-Fi mode"
+      ],
+      "note": "Exact UPC resolves to Halo Select with built-in Matter; Matter pairing uses Thread and is the preferred HAOS path.",
+      "sources": [
+        "https://www.kwikset.com/products/detail/halo-select-touchscreen-wi-fi-and-matter-enabled-smart-lock",
+        "https://www.kwikset.com/support/answers/how-can-i-troubleshoot-matter-connectivity-on-my-halo-select-smart-lock"
+      ]
+    },
+    {
+      "identity": "upc:883351859561",
+      "target": "haos",
+      "model": "Kwikset SmartCode 270",
+      "status": "ruled_out",
+      "integration": null,
+      "transports": [],
+      "local_control": false,
+      "requirements": [],
+      "note": "Exact UPC resolves to SmartCode 270 electronic touchpad deadbolt, not a connected Halo smart lock. No HAOS connectivity path is established.",
+      "sources": [
+        "https://www.bestbuy.com/product/kwikset-270-smartcode-matte-black-metal-electronic-touch-pad-deadbolt/J3KW33K7GS/sku/12213688"
+      ]
+    },
+    {
+      "identity": "upc:883351982863",
+      "target": "haos",
+      "model": "Kwikset SmartCode 955",
+      "status": "ruled_out",
+      "integration": null,
+      "transports": [],
+      "local_control": false,
+      "requirements": [],
+      "note": "Exact UPC resolves to SmartCode 955 commercial-grade electronic lever/keypad lock. It is an electronic keypad product, not a connected smart-home radio variant.",
+      "sources": [
+        "https://www.kwikset.com/smartcodes"
       ]
     }
   ]
