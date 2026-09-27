@@ -130,6 +130,21 @@ def test_solar_panel_profile_rejects_accessories_and_camera_bundles():
         product("Security Camera with Solar Panel"),
         lot(),
     )
+    assert not match_profile(
+        PROFILES["solar-panels"],
+        product("Ring Solar Panel"),
+        lot(),
+    )
+    assert not match_profile(
+        PROFILES["solar-panels"],
+        product("Tactacam Solar Panel"),
+        lot(),
+    )
+    assert not match_profile(
+        PROFILES["solar-panels"],
+        product("VEVOR Water Fed Pole Cleaning Kit Solar Panel Brush"),
+        lot(),
+    )
 
 
 def test_high_power_solar_panel_preserves_rare_800w_candidates():
