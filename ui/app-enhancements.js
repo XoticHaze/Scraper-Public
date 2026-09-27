@@ -146,16 +146,23 @@
 
   function updateStatus() {
     if (!state.catalog) return;
-    const generated = Number(state.catalog.generated_epoch_utc || 0);
-    if (!generated) return;
-    const ageMinutes = Math.max(0, Math.floor((Date.now() / 1000 - generated) / 60));
-    const [healthClass, healthLabel] = freshness(ageMinutes);
+    const sourceEpoch = Number(state.catalog.inventory_source_epoch_utc || state.catalog.source_scan_epoch_utc || state.catalog.generated_epoch_utc || 0);
+    if (!sourceEpoch) return;
+    const ageMinutes = Math.max(0, Math.floor((Date.now() / 1000 - sourceEpoch) / 60));
+    let [healthClass, healthLabel] = freshness(ageMinutes);
+    const degraded = Boolean(state.catalog.degraded_inventory_source);
+    if (degraded) {
+      healthClass = ageMinutes < 90 ? 'warn' : 'stale';
+      healthLabel = 'Fallback snapshot';
+    }
     const strip = document.querySelector('.app-status');
     if (!strip) return;
     strip.classList.remove('fresh', 'warn', 'stale');
     strip.classList.add(healthClass);
     document.querySelector('#snapshot-health').textContent = healthLabel;
-    document.querySelector('#snapshot-age').textContent = ageMinutes < 1 ? 'Updated just now' : `Updated ${ageMinutes}m ago`;
+    document.querySelector('#snapshot-age').textContent = degraded
+      ? `Source data ${ageMinutes}m old`
+      : ageMinutes < 1 ? 'Updated just now' : `Updated ${ageMinutes}m ago`;
     document.querySelector('#next-refresh').textContent = nextScheduleText();
     const profile = window.MacbidBrowserState?.getProfile?.() || {};
     const localLocation = window.MacbidBrowserState?.locationLabel?.() || '';
