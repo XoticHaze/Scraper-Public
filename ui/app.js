@@ -202,6 +202,10 @@ function renderCard(row) {
   };
   const compatibilityChip = compatibilityLabels[compatibility.status];
   if (compatibilityChip) chips.append(chip(compatibilityChip[0], compatibilityChip[1]));
+  if (Number.isFinite(Number(product.rated_wattage))) {
+    const watts = Number(product.rated_wattage);
+    chips.append(chip(watts >= 1000 ? `${(watts / 1000).toFixed(watts % 1000 ? 1 : 0)} kW` : `${watts.toFixed(0)}W`, watts >= 500 ? 'good' : ''));
+  }
   if (lot.market_value_freshness === 'aging') chips.append(chip('Price aging', 'warn'));
   if (lot.market_price_status === 'stale_external') chips.append(chip('Price stale', 'warn'));
   const cardCeilings = effectiveCeilings(product, lot);
