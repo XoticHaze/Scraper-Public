@@ -101,6 +101,11 @@
     const haos = match.compatibility_gate === 'haos';
     const verify = (match.verification || []).map((v) => String(v).replaceAll('_',' ')).join(' · ');
     const productUrl = macProductUrl(product, lot);
+    const itemMeta = window.MacbidBrowserState?.getItemMetadata?.(product.identity) || {};
+    const personalMaxAllIn = Number.isFinite(Number(itemMeta.max_all_in)) ? Number(itemMeta.max_all_in) : null;
+    const autoMaxAllIn = Number.isFinite(Number(lot.max_all_in)) ? Number(lot.max_all_in) : null;
+    const effectiveMaxAllIn = personalMaxAllIn ?? autoMaxAllIn;
+    const headroom = effectiveMaxAllIn == null ? null : effectiveMaxAllIn - lotAllIn(lot);
     article.innerHTML = `
       <div class="image-wrap">${imageUrl ? `<img loading="lazy" src="${esc(imageUrl)}" alt="">` : ''}</div>
       <div class="find-body">
@@ -109,6 +114,9 @@
           ${haos ? '<span class="find-badge haos">HAOS VERIFY</span>' : ''}
           ${researchMap.has(product.identity) ? '<span class="find-badge research">RESEARCHED</span>' : ''}
           ${lot.market_price_status === 'verified_external' ? '<span class="find-badge research">MARKET VERIFIED</span>' : ''}
+          ${lot.market_value_freshness === 'aging' ? '<span class="find-badge">PRICE AGING</span>' : ''}
+          ${lot.market_price_status === 'stale_external' ? '<span class="find-badge">PRICE STALE</span>' : ''}
+          ${itemMeta.status ? `<span class="find-badge">${esc(String(itemMeta.status).replaceAll('-', ' ').toUpperCase())}</span>` : ''}
           ${watched.has(product.identity) ? '<span class="find-badge">★ WATCHED</span>' : ''}
           ${Number(lot.unique_bidders || 0) === 0 ? '<span class="find-badge">0 bidders</span>' : ''}
         </div>
@@ -117,10 +125,12 @@
           <div class="find-metric"><span>Current bid</span><strong>${money(lot.current_bid)}</strong></div>
           <div class="find-metric"><span>Est. all-in</span><strong>${money(lotAllIn(lot))}</strong></div>
           <div class="find-metric"><span>${lot.market_price_status === 'verified_external' ? 'Ext. median' : 'MAC retail'}</span><strong>${money(lot.verified_new_price ?? lot.retail_price)}</strong></div>
-          <div class="find-metric"><span>${lot.market_price_status === 'verified_external' ? 'Max all-in' : 'Closes'}</span><strong>${lot.market_price_status === 'verified_external' ? money(lot.max_all_in) : esc(closeText(lot.expected_closing_utc))}</strong></div>
+          <div class="find-metric"><span>${effectiveMaxAllIn != null ? (personalMaxAllIn != null ? 'Your max all-in' : 'Max all-in') : 'Closes'}</span><strong>${effectiveMaxAllIn != null ? money(effectiveMaxAllIn) : esc(closeText(lot.expected_closing_utc))}</strong></div>
         </div>
         ${researchMarkup(product)}
-        ${lot.market_price_status === 'verified_external' ? `<div class="verify-line">External avg ${money(lot.current_new_average)} · range ${money(lot.current_new_low)}–${money(lot.current_new_high)} · max bid ${money(lot.verified_max_bid)}</div>` : ''}
+        ${['verified_external','stale_external'].includes(lot.market_price_status) ? `<div class="verify-line">External avg ${money(lot.current_new_average)} · range ${money(lot.current_new_low)}–${money(lot.current_new_high)} · ${esc(lot.market_value_freshness || 'unknown')} ${lot.market_value_age_days != null ? `(${Number(lot.market_value_age_days)}d)` : ''}${lot.verified_max_bid != null ? ` · max bid ${money(lot.verified_max_bid)}` : ' · refresh before bidding'}</div>` : ''}
+        ${headroom != null ? `<div class="verify-line">${headroom >= 0 ? `${money(headroom)} all-in headroom remaining` : `${money(Math.abs(headroom))} over effective max`}</div>` : ''}
+        ${itemMeta.note ? `<div class="verify-line">Note: ${esc(itemMeta.note)}</div>` : ''}
         ${verify ? `<div class="verify-line">Verify: ${esc(verify)}</div>` : ''}
         ${lotRef(lot) ? `<div class="verify-line">Target: ${esc(lotRef(lot))}</div>` : ''}
         <div class="find-links">
@@ -165,7 +175,8 @@
   const age = generated ? Math.max(0, Math.round(Date.now()/1000 - generated)) : null;
   const taxPct = Number(catalog.sales_tax_rate || 0) * 100;
   const browserLocation = window.MacbidBrowserState?.locationLabel?.() || '';
-  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${Number(catalog.market_value_count || 0)} market-verified · ${researchMap.size} researched · est. tax ${taxPct.toFixed(2)}%${browserLocation ? ` · ${browserLocation}` : ''}`;
+  const staleMarket = Number(catalog.stale_market_value_count || 0);
+  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${Number(catalog.market_value_count || 0)} market-verified${staleMarket ? ` · ${staleMarket} stale` : ''} · ${researchMap.size} researched · est. tax ${taxPct.toFixed(2)}%${browserLocation ? ` · ${browserLocation}` : ''}`;
   status.textContent = age == null ? 'Snapshot age unknown' : age < 60 ? 'Updated just now' : `Updated ${Math.round(age/60)}m ago`;
 
   const watchedProducts = (catalog.products || []).filter((p) => watched.has(p.identity));
