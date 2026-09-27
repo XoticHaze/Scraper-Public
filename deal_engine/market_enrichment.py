@@ -315,6 +315,7 @@ def merged_market_records(
         "version": max(int(canonical.get("version") or 1), int(previous.get("version") or 1)),
         "updated_at": canonical.get("updated_at") or previous.get("updated_at"),
         "defaults": {**(previous.get("defaults") or {}), **(canonical.get("defaults") or {})},
+        "enrichment_attempts": dict(previous.get("enrichment_attempts") or {}),
         "valuations": [],
     }
     prev_map = {
