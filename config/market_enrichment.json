@@ -1,6 +1,6 @@
 {
   "schema": "macbid-market-enrichment-v1",
-  "version": 1,
+  "version": 2,
   "enabled": true,
   "live_previous_url": "https://xotichaze.github.io/Scraper-Public/market-values.json",
   "max_candidates_per_run": 12,
@@ -43,5 +43,29 @@
       "price_labels": []
     }
   ],
-  "retry_after_hours": 24
+  "retry_after_hours": 24,
+  "profile_priority": {
+    "primary": [
+      "4k-projectors",
+      "curved-monitors",
+      "large-gaming-monitors",
+      "quality-speakers",
+      "solar-panels",
+      "ptz-cameras-haos",
+      "smart-door-locks-haos",
+      "large-area-rugs",
+      "premium-dishwashers",
+      "compact-sinks",
+      "medicine-cabinet-mirrors",
+      "tools",
+      "samsung-tablets",
+      "apple-devices"
+    ],
+    "secondary": [
+      "best-tech-deals"
+    ],
+    "fallback": [
+      "resale-watch"
+    ]
+  }
 }
