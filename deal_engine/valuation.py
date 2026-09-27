@@ -1,9 +1,51 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 from statistics import mean, median
 from typing import Any
 
 SECONDARY_CONDITIONS = {"open_box", "used", "refurbished", "certified_refurbished"}
+
+
+def market_freshness(
+    observed_at: Any,
+    *,
+    as_of: Any = None,
+    fresh_days: int = 7,
+    stale_after_days: int = 30,
+) -> dict[str, Any]:
+    """Classify external pricing age so old observations cannot silently drive bids."""
+
+    def _date(value: Any) -> date | None:
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            raw = value.strip()
+            try:
+                return date.fromisoformat(raw[:10])
+            except ValueError:
+                return None
+        return None
+
+    observed = _date(observed_at)
+    current = _date(as_of) if as_of is not None else date.today()
+    if observed is None or current is None:
+        return {"age_days": None, "freshness": "unknown", "authoritative": False}
+
+    age_days = max(0, (current - observed).days)
+    if age_days <= int(fresh_days):
+        freshness = "fresh"
+    elif age_days <= int(stale_after_days):
+        freshness = "aging"
+    else:
+        freshness = "stale"
+    return {
+        "age_days": age_days,
+        "freshness": freshness,
+        "authoritative": freshness in {"fresh", "aging"},
+    }
 
 
 def _number(value: Any) -> float | None:
@@ -97,6 +139,9 @@ def derive_market_valuation(
     default_allocation_ratio: float = 0.65,
     like_new_fallback_ratio: float = 0.80,
     open_box_fallback_ratio: float = 0.75,
+    as_of: Any = None,
+    fresh_days: int = 7,
+    stale_after_days: int = 30,
 ) -> dict[str, Any]:
     """Derive market-backed acquisition ceilings from public external observations.
 
@@ -104,6 +149,12 @@ def derive_market_valuation(
     price observations become authoritative when this record is present.
     """
     summary = summarize_market_value(record)
+    freshness = market_freshness(
+        summary.get("observed_at"),
+        as_of=as_of,
+        fresh_days=fresh_days,
+        stale_after_days=stale_after_days,
+    )
     current_new = summary.get("current_new")
     secondary = summary.get("open_box_used")
     c = (condition or "").strip().upper()
@@ -126,7 +177,11 @@ def derive_market_valuation(
         allocation_ratio = default_allocation_ratio
     allocation_ratio = max(0.0, min(1.0, allocation_ratio))
 
-    max_all_in = reference_value * allocation_ratio if reference_value is not None else None
+    max_all_in = (
+        reference_value * allocation_ratio
+        if reference_value is not None and freshness["authoritative"]
+        else None
+    )
     max_bid = reverse_max_bid(
         max_all_in,
         premium_rate=premium_rate,
@@ -142,7 +197,10 @@ def derive_market_valuation(
         savings = reference_value - all_in
 
     return {
-        "market_price_status": "verified_external",
+        "market_price_status": "verified_external" if freshness["authoritative"] else "stale_external",
+        "market_value_age_days": freshness["age_days"],
+        "market_value_freshness": freshness["freshness"],
+        "market_value_authoritative": freshness["authoritative"],
         "market_value_confidence": summary.get("price_confidence"),
         "market_identity_confidence": summary.get("identity_confidence"),
         "market_value_observed_at": summary.get("observed_at"),
