@@ -62,15 +62,21 @@
     return `${(s / 3600).toFixed(s < 10800 ? 1 : 0)}h`;
   };
   const bestLot = (product) => [...(product.lots || [])].sort((a,b) => {
-    const av = Number(a.deal_score || 0) - Number(a.unique_bidders || 0) * 2;
-    const bv = Number(b.deal_score || 0) - Number(b.unique_bidders || 0) * 2;
+    const av = a.market_price_status === 'verified_external'
+      ? 1000 + Number(a.verified_discount_pct || 0) - Number(a.unique_bidders || 0) * 2
+      : Number(a.deal_score || 0) - Number(a.unique_bidders || 0) * 2;
+    const bv = b.market_price_status === 'verified_external'
+      ? 1000 + Number(b.verified_discount_pct || 0) - Number(b.unique_bidders || 0) * 2
+      : Number(b.deal_score || 0) - Number(b.unique_bidders || 0) * 2;
     return bv - av;
   })[0];
   const scoreFor = (product, profileId) => {
     const lot = bestLot(product) || {};
     const semantic = Number(product.hunt_matches?.[profileId]?.score || 0);
     const researched = researchMap.has(product.identity) ? 12 : 0;
-    return researched + semantic * 10 + Number(lot.deal_score || 0) - Number(lot.unique_bidders || 0) * 2;
+    const marketVerified = lot.market_price_status === 'verified_external' ? 100 : 0;
+    const marketDiscount = Number(lot.verified_discount_pct || 0);
+    return researched + semantic * 10 + marketVerified + marketDiscount + Number(lot.deal_score || 0) - Number(lot.unique_bidders || 0) * 2;
   };
   const researchMarkup = (product) => {
     const finding = researchMap.get(product.identity);
@@ -102,6 +108,7 @@
           <span class="find-badge">${esc(lot.condition || 'Unknown')}</span>
           ${haos ? '<span class="find-badge haos">HAOS VERIFY</span>' : ''}
           ${researchMap.has(product.identity) ? '<span class="find-badge research">RESEARCHED</span>' : ''}
+          ${lot.market_price_status === 'verified_external' ? '<span class="find-badge research">MARKET VERIFIED</span>' : ''}
           ${watched.has(product.identity) ? '<span class="find-badge">★ WATCHED</span>' : ''}
           ${Number(lot.unique_bidders || 0) === 0 ? '<span class="find-badge">0 bidders</span>' : ''}
         </div>
@@ -109,10 +116,11 @@
         <div class="find-metrics">
           <div class="find-metric"><span>Current bid</span><strong>${money(lot.current_bid)}</strong></div>
           <div class="find-metric"><span>Est. all-in</span><strong>${money(lotAllIn(lot))}</strong></div>
-          <div class="find-metric"><span>MAC retail</span><strong>${money(lot.retail_price)}</strong></div>
-          <div class="find-metric"><span>Closes</span><strong>${esc(closeText(lot.expected_closing_utc))}</strong></div>
+          <div class="find-metric"><span>${lot.market_price_status === 'verified_external' ? 'Ext. median' : 'MAC retail'}</span><strong>${money(lot.verified_new_price ?? lot.retail_price)}</strong></div>
+          <div class="find-metric"><span>${lot.market_price_status === 'verified_external' ? 'Max all-in' : 'Closes'}</span><strong>${lot.market_price_status === 'verified_external' ? money(lot.max_all_in) : esc(closeText(lot.expected_closing_utc))}</strong></div>
         </div>
         ${researchMarkup(product)}
+        ${lot.market_price_status === 'verified_external' ? `<div class="verify-line">External avg ${money(lot.current_new_average)} · range ${money(lot.current_new_low)}–${money(lot.current_new_high)} · max bid ${money(lot.verified_max_bid)}</div>` : ''}
         ${verify ? `<div class="verify-line">Verify: ${esc(verify)}</div>` : ''}
         ${lotRef(lot) ? `<div class="verify-line">Target: ${esc(lotRef(lot))}</div>` : ''}
         <div class="find-links">
@@ -157,7 +165,7 @@
   const age = generated ? Math.max(0, Math.round(Date.now()/1000 - generated)) : null;
   const taxPct = Number(catalog.sales_tax_rate || 0) * 100;
   const browserLocation = window.MacbidBrowserState?.locationLabel?.() || '';
-  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${researchMap.size} researched · est. tax ${taxPct.toFixed(2)}%${browserLocation ? ` · ${browserLocation}` : ''}`;
+  meta.textContent = `${Number(catalog.product_count || 0).toLocaleString()} products · ${Number(catalog.lot_count || 0).toLocaleString()} lots · ${Number(catalog.market_value_count || 0)} market-verified · ${researchMap.size} researched · est. tax ${taxPct.toFixed(2)}%${browserLocation ? ` · ${browserLocation}` : ''}`;
   status.textContent = age == null ? 'Snapshot age unknown' : age < 60 ? 'Updated just now' : `Updated ${Math.round(age/60)}m ago`;
 
   const watchedProducts = (catalog.products || []).filter((p) => watched.has(p.identity));
