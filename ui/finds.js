@@ -102,8 +102,8 @@
     const verify = (match.verification || []).map((v) => String(v).replaceAll('_',' ')).join(' · ');
     const productUrl = macProductUrl(product, lot);
     const itemMeta = window.MacbidBrowserState?.getItemMetadata?.(product.identity) || {};
-    const personalMaxAllIn = Number.isFinite(Number(itemMeta.max_all_in)) ? Number(itemMeta.max_all_in) : null;
-    const autoMaxAllIn = Number.isFinite(Number(lot.max_all_in)) ? Number(lot.max_all_in) : null;
+    const personalMaxAllIn = itemMeta.max_all_in !== null && itemMeta.max_all_in !== undefined && itemMeta.max_all_in !== '' && Number.isFinite(Number(itemMeta.max_all_in)) ? Number(itemMeta.max_all_in) : null;
+    const autoMaxAllIn = lot.max_all_in !== null && lot.max_all_in !== undefined && Number.isFinite(Number(lot.max_all_in)) ? Number(lot.max_all_in) : null;
     const effectiveMaxAllIn = personalMaxAllIn ?? autoMaxAllIn;
     const headroom = effectiveMaxAllIn == null ? null : effectiveMaxAllIn - lotAllIn(lot);
     article.innerHTML = `
