@@ -1,5 +1,6 @@
 from deal_engine.valuation import (
     derive_market_valuation,
+    market_freshness,
     price_stats,
     reverse_max_bid,
     summarize_market_value,
@@ -78,3 +79,37 @@ def test_secondary_market_median_overrides_new_price_haircut():
     assert derived["market_reference_basis"] == "open_box_used_median"
     assert derived["market_reference_value"] == 650.0
     assert derived["max_all_in"] == 325.0
+
+
+def test_market_freshness_classifies_fresh_aging_and_stale():
+    assert market_freshness("2026-09-26", as_of="2026-09-27") == {
+        "age_days": 1,
+        "freshness": "fresh",
+        "authoritative": True,
+    }
+    assert market_freshness("2026-09-10", as_of="2026-09-27")["freshness"] == "aging"
+    stale = market_freshness("2026-08-01", as_of="2026-09-27")
+    assert stale["freshness"] == "stale"
+    assert stale["authoritative"] is False
+
+
+def test_stale_external_value_does_not_issue_max_bid():
+    record = {
+        "identity": "upc:stale",
+        "observed_at": "2026-08-01",
+        "allocation_ratio": 0.50,
+        "observations": [
+            {"condition": "new", "price": 100, "source_label": "Old", "url": "https://example.com/old"},
+        ],
+    }
+    derived = derive_market_valuation(
+        record,
+        condition="LIKE NEW",
+        current_all_in=10,
+        as_of="2026-09-27",
+    )
+    assert derived["market_price_status"] == "stale_external"
+    assert derived["market_value_freshness"] == "stale"
+    assert derived["market_value_authoritative"] is False
+    assert derived["max_all_in"] is None
+    assert derived["verified_max_bid"] is None
