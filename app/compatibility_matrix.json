@@ -1,0 +1,427 @@
+{
+  "schema": "macbid-compatibility-matrix-v1",
+  "version": 1,
+  "updated_at": "2026-09-27",
+  "targets": {
+    "haos": {
+      "label": "Home Assistant OS",
+      "source": "https://www.home-assistant.io/integrations/",
+      "status_order": [
+        "verified",
+        "verified_with_requirements",
+        "variant_required",
+        "candidate",
+        "unknown",
+        "ruled_out"
+      ]
+    }
+  },
+  "capability_rules": [
+    {
+      "id": "matter_thread",
+      "target": "haos",
+      "match_all": [
+        "matter",
+        "thread"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "Matter",
+      "local_control": true,
+      "requirements": [
+        "Home Assistant Matter Server",
+        "Thread border router",
+        "factory-reset/commissionable device"
+      ],
+      "note": "Matter-over-Thread is a native HAOS path when Matter Server and Thread infrastructure are available.",
+      "source": "https://www.home-assistant.io/integrations/matter/"
+    },
+    {
+      "id": "matter_wifi",
+      "target": "haos",
+      "match_all": [
+        "matter"
+      ],
+      "match_any": [
+        "wifi",
+        "wi-fi",
+        "wireless lan"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "Matter",
+      "local_control": true,
+      "requirements": [
+        "Home Assistant Matter Server",
+        "factory-reset/commissionable device"
+      ],
+      "note": "Matter over Wi-Fi/LAN is locally controlled through the Matter integration.",
+      "source": "https://www.home-assistant.io/integrations/matter/"
+    },
+    {
+      "id": "z_wave",
+      "target": "haos",
+      "match_any": [
+        "z-wave",
+        "z wave",
+        "zwave"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "Z-Wave",
+      "local_control": true,
+      "requirements": [
+        "supported Z-Wave adapter",
+        "Z-Wave JS server/app",
+        "factory reset or exclusion if previously paired"
+      ],
+      "note": "Z-Wave has a native HAOS integration through Z-Wave JS.",
+      "source": "https://www.home-assistant.io/integrations/zwave_js/"
+    },
+    {
+      "id": "zigbee",
+      "target": "haos",
+      "match_any": [
+        "zigbee"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "ZHA",
+      "local_control": true,
+      "requirements": [
+        "compatible Zigbee coordinator",
+        "factory-reset/pairable device"
+      ],
+      "note": "ZHA can directly pair many Zigbee devices without the vendor hub.",
+      "source": "https://www.home-assistant.io/integrations/zha/"
+    },
+    {
+      "id": "onvif",
+      "target": "haos",
+      "match_any": [
+        "onvif"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "ONVIF",
+      "local_control": true,
+      "requirements": [
+        "ONVIF Profile S compatible device",
+        "ffmpeg integration",
+        "local device credentials"
+      ],
+      "note": "ONVIF is a strong local-camera path.",
+      "source": "https://www.home-assistant.io/integrations/onvif/"
+    },
+    {
+      "id": "homekit_device",
+      "target": "haos",
+      "match_any": [
+        "works with homekit",
+        "homekit"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "HomeKit Device",
+      "local_control": true,
+      "requirements": [
+        "HomeKit pairing code",
+        "device reset/unpaired from prior controller when necessary"
+      ],
+      "note": "HomeKit-enabled accessories can be paired directly into Home Assistant.",
+      "source": "https://www.home-assistant.io/integrations/homekit_controller/"
+    },
+    {
+      "id": "mqtt",
+      "target": "haos",
+      "match_any": [
+        "mqtt"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "MQTT",
+      "local_control": true,
+      "requirements": [
+        "MQTT broker",
+        "device MQTT access/credentials"
+      ],
+      "note": "MQTT is a native local integration path when the device exposes MQTT.",
+      "source": "https://www.home-assistant.io/integrations/mqtt/"
+    },
+    {
+      "id": "esphome",
+      "target": "haos",
+      "match_any": [
+        "esphome"
+      ],
+      "status": "verified",
+      "integration": "ESPHome",
+      "local_control": true,
+      "requirements": [
+        "device reachable on local network"
+      ],
+      "note": "ESPHome devices connect directly through the native ESPHome API.",
+      "source": "https://www.home-assistant.io/integrations/esphome/"
+    },
+    {
+      "id": "modbus",
+      "target": "haos",
+      "match_any": [
+        "modbus",
+        "rs485",
+        "rs-485"
+      ],
+      "status": "candidate",
+      "integration": "Modbus",
+      "local_control": true,
+      "requirements": [
+        "supported register map or vendor-specific integration",
+        "RS-485/TCP/UDP connectivity as applicable"
+      ],
+      "note": "Modbus is compatible at the protocol layer, but exact registers/model support must be verified.",
+      "source": "https://www.home-assistant.io/integrations/modbus/"
+    },
+    {
+      "id": "rtsp",
+      "target": "haos",
+      "match_any": [
+        "rtsp"
+      ],
+      "status": "candidate",
+      "integration": "Generic/local camera path",
+      "local_control": true,
+      "requirements": [
+        "working local RTSP stream",
+        "camera integration appropriate to model"
+      ],
+      "note": "RTSP is useful local video capability but does not by itself prove full device control.",
+      "source": "https://www.home-assistant.io/integrations/"
+    },
+    {
+      "id": "bluetooth_le",
+      "target": "haos",
+      "match_any": [
+        "bluetooth",
+        "ble",
+        "bluetooth low energy"
+      ],
+      "status": "candidate",
+      "integration": "Bluetooth",
+      "local_control": true,
+      "requirements": [
+        "BLE support on exact device/integration",
+        "Bluetooth adapter or proxy"
+      ],
+      "note": "BLE transport is supported, but Bluetooth alone does not prove that a specific device has a Home Assistant integration.",
+      "source": "https://www.home-assistant.io/integrations/bluetooth/"
+    },
+    {
+      "id": "wifi_only",
+      "target": "haos",
+      "match_any": [
+        "wifi",
+        "wi-fi",
+        "2.4ghz wifi",
+        "5ghz wifi"
+      ],
+      "status": "unknown",
+      "integration": null,
+      "local_control": null,
+      "requirements": [
+        "exact integration/protocol must be identified"
+      ],
+      "note": "Wi-Fi is only a transport and is not compatibility proof by itself.",
+      "source": "https://www.home-assistant.io/integrations/"
+    }
+  ],
+  "vendor_rules": [
+    {
+      "id": "goodwe_inverter",
+      "target": "haos",
+      "match_any": [
+        "goodwe"
+      ],
+      "product_any": [
+        "inverter",
+        "hybrid inverter",
+        "solar inverter"
+      ],
+      "status": "candidate",
+      "integration": "GoodWe",
+      "local_control": true,
+      "requirements": [
+        "exact supported GoodWe family/model",
+        "local network communication enabled"
+      ],
+      "note": "Home Assistant has a local GoodWe inverter integration; exact family/model still must match supported devices.",
+      "source": "https://www.home-assistant.io/integrations/goodwe/"
+    },
+    {
+      "id": "sma_solar",
+      "target": "haos",
+      "match_any": [
+        "sma"
+      ],
+      "product_any": [
+        "inverter",
+        "solar",
+        "energy meter",
+        "battery inverter"
+      ],
+      "status": "candidate",
+      "integration": "SMA Solar",
+      "local_control": true,
+      "requirements": [
+        "exact supported SMA device/model",
+        "local network access"
+      ],
+      "note": "Home Assistant provides an SMA Solar integration for supported inverters/meters.",
+      "source": "https://www.home-assistant.io/integrations/sma/"
+    },
+    {
+      "id": "sofar_solar",
+      "target": "haos",
+      "match_any": [
+        "sofar",
+        "sofar solar"
+      ],
+      "product_any": [
+        "inverter",
+        "hybrid inverter",
+        "solar inverter"
+      ],
+      "status": "candidate",
+      "integration": "Sofar",
+      "local_control": true,
+      "requirements": [
+        "supported current-generation model/register map",
+        "Modbus TCP or RS485-to-TCP bridge"
+      ],
+      "note": "Home Assistant has a Sofar integration over Modbus for supported inverter families.",
+      "source": "https://www.home-assistant.io/integrations/sofar/"
+    },
+    {
+      "id": "solax_power",
+      "target": "haos",
+      "match_any": [
+        "solax"
+      ],
+      "product_any": [
+        "inverter",
+        "solar inverter",
+        "hybrid inverter"
+      ],
+      "status": "candidate",
+      "integration": "SolaX Power",
+      "local_control": true,
+      "requirements": [
+        "supported SolaX model",
+        "local network/API access"
+      ],
+      "note": "Home Assistant has a SolaX Power integration; exact model and local API availability must be checked.",
+      "source": "https://www.home-assistant.io/integrations/solax/"
+    },
+    {
+      "id": "saj_solar",
+      "target": "haos",
+      "match_any": [
+        "saj"
+      ],
+      "product_any": [
+        "inverter",
+        "solar inverter"
+      ],
+      "status": "candidate",
+      "integration": "SAJ Solar Inverter",
+      "local_control": true,
+      "requirements": [
+        "supported local web interface/model",
+        "local network access"
+      ],
+      "note": "Home Assistant has an SAJ integration, but not every inverter exposes the required local interface.",
+      "source": "https://www.home-assistant.io/integrations/saj/"
+    }
+  ],
+  "exact_overrides": [
+    {
+      "identity": "upc:B0FXWGYDQW",
+      "target": "haos",
+      "model": "Aqara Smart Lock U300",
+      "status": "verified_with_requirements",
+      "integration": "Matter",
+      "transports": [
+        "Matter",
+        "Thread"
+      ],
+      "local_control": true,
+      "requirements": [
+        "Matter Server",
+        "Thread border router",
+        "factory reset/commissionable state"
+      ],
+      "note": "Verified Matter-over-Thread path.",
+      "sources": [
+        "https://us.aqara.com/products/smart-lock-u300",
+        "https://www.home-assistant.io/integrations/matter/"
+      ]
+    },
+    {
+      "identity": "upc:B0BZSD2L1W",
+      "target": "haos",
+      "model": "Aqara Smart Lock U100",
+      "status": "verified_with_requirements",
+      "integration": "Matter bridge path",
+      "transports": [
+        "Bluetooth",
+        "Zigbee via Aqara hub"
+      ],
+      "local_control": "bridge_dependent",
+      "requirements": [
+        "compatible Aqara hub for Matter bridge",
+        "factory reset",
+        "hub/integration availability"
+      ],
+      "note": "Usable with Home Assistant through an Aqara hub/Matter bridge; not equivalent to a direct Z-Wave or Matter-over-Thread lock.",
+      "sources": [
+        "https://us.aqara.com/products/smart-lock-u100",
+        "https://www.home-assistant.io/integrations/matter/"
+      ]
+    },
+    {
+      "identity": "upc:B09Y8C185M",
+      "target": "haos",
+      "model": "TP-Link Tapo C210 family",
+      "status": "verified_with_requirements",
+      "integration": "ONVIF",
+      "transports": [
+        "ONVIF",
+        "RTSP",
+        "Wi-Fi"
+      ],
+      "local_control": true,
+      "requirements": [
+        "local stream/ONVIF enabled",
+        "camera credentials",
+        "ffmpeg"
+      ],
+      "note": "Strong local camera path through ONVIF/RTSP.",
+      "sources": [
+        "https://www.tapo.com/us/product/smart-camera/tapo-c210/",
+        "https://www.home-assistant.io/integrations/onvif/"
+      ]
+    },
+    {
+      "identity": "upc:B07KQY3MWL",
+      "target": "haos",
+      "model": "Schlage Connect Smart Deadbolt",
+      "status": "variant_required",
+      "integration": "Z-Wave or Zigbee depending exact radio variant",
+      "transports": [
+        "Z-Wave",
+        "Zigbee"
+      ],
+      "local_control": true,
+      "requirements": [
+        "read exact model/radio label before purchase",
+        "matching coordinator"
+      ],
+      "note": "Schlage Connect exists in multiple radio variants; exact unit must be identified before compatibility is proven.",
+      "sources": [
+        "https://www.schlage.com/en/home/support/faqs/schlage-connect.html"
+      ]
+    }
+  ]
+}
