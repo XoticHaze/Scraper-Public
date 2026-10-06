@@ -243,9 +243,30 @@ def main() -> int:
         page = context.new_page()
         candidates: list[tuple[str, dict[str, Any]]] = []
         bootstrap_attempts: list[dict[str, Any]] = []
+        request_trace: list[dict[str, Any]] = []
+        request_trace_seen: set[tuple[str, str, str, str]] = set()
 
         def on_request(request: Request):
-            if "typesense.net/multi_search" not in request.url:
+            parsed = urlsplit(request.url)
+            trace_key = (
+                request.method,
+                parsed.hostname or "",
+                parsed.path,
+                request.resource_type,
+            )
+            if trace_key not in request_trace_seen and len(request_trace) < 200:
+                request_trace_seen.add(trace_key)
+                request_trace.append({
+                    "method": request.method,
+                    "host": parsed.hostname or "",
+                    "path": parsed.path,
+                    "resource_type": request.resource_type,
+                })
+
+            # MAC.BID historically called Typesense directly. Accept any public
+            # multi-search endpoint so a same-origin/proxied route does not break
+            # contract discovery merely because the transport host changes.
+            if "multi_search" not in parsed.path:
                 return
             try:
                 payload = request.post_data_json
@@ -294,6 +315,11 @@ def main() -> int:
                     break
 
         report["scan"]["bootstrap_attempts"] = bootstrap_attempts
+        if selected_search is None:
+            # Public, credential-free browser context only. Log host/path/method
+            # metadata without query strings, headers, cookies, or request bodies
+            # so producer contract changes can be diagnosed from the failed run.
+            print("DEAL_BOOTSTRAP_REQUEST_TRACE=" + json.dumps(request_trace, sort_keys=True))
         report["scan"]["bootstrap_status"] = next(
             (row.get("status") for row in bootstrap_attempts if row.get("status") is not None),
             None,
