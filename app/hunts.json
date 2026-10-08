@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 6,
+  "version": 7,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -471,6 +471,58 @@
         "account_lock_risk"
       ],
       "compatibility_gate": "haos"
+    },
+    {
+      "id": "video-doorbells-haos",
+      "label": "Video Doorbells · HAOS",
+      "kind": "semantic",
+      "required_any": [
+        "video doorbell",
+        "doorbell camera",
+        "smart doorbell",
+        "video door bell"
+      ],
+      "boost_any": [
+        "reolink",
+        "unifi",
+        "ubiquiti",
+        "amcrest",
+        "aqara",
+        "tapo",
+        "poe",
+        "onvif",
+        "rtsp",
+        "local storage",
+        "package detection",
+        "person detection",
+        "wired doorbell",
+        "doorbell poe"
+      ],
+      "exclude_any": [
+        "doorbell chime only",
+        "chime only",
+        "doorbell transformer",
+        "mount only",
+        "wedge mount",
+        "angle mount",
+        "doorbell cover",
+        "replacement battery",
+        "doorbell bracket",
+        "doorbell wire"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "haos_compatibility",
+        "local_live_stream",
+        "doorbell_press_event",
+        "local_stream_protocol",
+        "power_method",
+        "subscription_requirement",
+        "factory_reset",
+        "completeness"
+      ]
     },
     {
       "id": "smart-door-locks-haos",
