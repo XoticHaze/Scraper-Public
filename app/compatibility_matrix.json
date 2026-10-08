@@ -1,7 +1,7 @@
 {
   "schema": "macbid-compatibility-matrix-v1",
-  "version": 2,
-  "updated_at": "2026-09-27",
+  "version": 3,
+  "updated_at": "2026-10-08",
   "targets": {
     "haos": {
       "label": "Home Assistant OS",
@@ -228,6 +228,51 @@
     }
   ],
   "vendor_rules": [
+    {
+      "id": "reolink_video_doorbell",
+      "target": "haos",
+      "match_any": [
+        "reolink"
+      ],
+      "product_any": [
+        "video doorbell",
+        "doorbell"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "Reolink",
+      "local_control": true,
+      "requirements": [
+        "exact Reolink doorbell model identified",
+        "PoE/Wi-Fi wired models may connect directly to Home Assistant",
+        "battery doorbell requires a compatible Reolink Home Hub/NVR for Home Assistant",
+        "local device credentials"
+      ],
+      "note": "Home Assistant's official Reolink integration provides local camera streams and a visitor binary sensor for doorbell presses. Wired Reolink Video Doorbell PoE/Wi-Fi models are directly tested; the battery doorbell is supported through a Home Hub/NVR.",
+      "source": "https://www.home-assistant.io/integrations/reolink/"
+    },
+    {
+      "id": "unifi_protect_doorbell",
+      "target": "haos",
+      "match_any": [
+        "unifi",
+        "ubiquiti"
+      ],
+      "product_any": [
+        "doorbell",
+        "g4 doorbell"
+      ],
+      "status": "verified_with_requirements",
+      "integration": "UniFi Protect",
+      "local_control": true,
+      "requirements": [
+        "supported UniFi Protect doorbell",
+        "UniFi OS Console running Protect",
+        "local Protect integration credentials/API key",
+        "full-access mode if doorbell ring events are required"
+      ],
+      "note": "Home Assistant's official UniFi Protect integration exposes local RTSPS camera streams; G4 Doorbell models also expose doorbell events with full-access integration.",
+      "source": "https://www.home-assistant.io/integrations/unifiprotect/"
+    },
     {
       "id": "goodwe_inverter",
       "target": "haos",
