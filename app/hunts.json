@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 7,
+  "version": 8,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -963,6 +963,57 @@
         "activation_lock",
         "battery_health_if_available",
         "verified_market_price"
+      ]
+    },
+    {
+      "id": "compact-network-racks",
+      "label": "Compact Network Racks · 4U–9U",
+      "kind": "semantic",
+      "required_any": [
+        "network rack",
+        "server rack",
+        "network cabinet",
+        "server cabinet",
+        "wall mount rack",
+        "wall mount cabinet"
+      ],
+      "boost_any": [
+        "4u",
+        "5u",
+        "6u",
+        "7u",
+        "8u",
+        "9u",
+        "wall mount",
+        "compact",
+        "shallow depth",
+        "19 inch",
+        "19-inch"
+      ],
+      "exclude_any": [
+        "10u",
+        "11u",
+        "12u",
+        "15u",
+        "18u",
+        "22u",
+        "24u",
+        "27u",
+        "32u",
+        "36u",
+        "42u",
+        "floor standing",
+        "full height"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "rack_units",
+        "external_dimensions",
+        "usable_depth",
+        "wall_or_floor_mount",
+        "completeness"
       ]
     },
     {
