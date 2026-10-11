@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 8,
+  "version": 9,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -149,7 +149,15 @@
         "speaker wire",
         "speaker stand",
         "speaker mount",
-        "replacement speaker"
+        "replacement speaker",
+        "bookcase",
+        "bookshelf furniture",
+        "storage bookshelf",
+        "kids bookshelf",
+        "montessori bookshelf",
+        "corner bookshelf",
+        "arch bookshelf",
+        "toy storage bookshelf"
       ],
       "minimum_signal_score": 2,
       "verification": [
