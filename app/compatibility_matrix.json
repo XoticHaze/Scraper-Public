@@ -1,7 +1,7 @@
 {
   "schema": "macbid-compatibility-matrix-v1",
-  "version": 3,
-  "updated_at": "2026-10-08",
+  "version": 4,
+  "updated_at": "2026-10-11",
   "targets": {
     "haos": {
       "label": "Home Assistant OS",
@@ -451,21 +451,22 @@
     {
       "identity": "upc:B07KQY3MWL",
       "target": "haos",
-      "model": "Schlage Connect Smart Deadbolt",
-      "status": "variant_required",
-      "integration": "Z-Wave or Zigbee depending exact radio variant",
+      "model": "Schlage Connect BE469ZP CAM 716",
+      "status": "verified_with_requirements",
+      "integration": "Z-Wave JS",
       "transports": [
-        "Z-Wave",
-        "Zigbee"
+        "Z-Wave Plus"
       ],
       "local_control": true,
       "requirements": [
-        "read exact model/radio label before purchase",
-        "matching coordinator"
+        "supported Z-Wave adapter",
+        "Z-Wave JS server/app",
+        "factory reset/exclusion if previously paired"
       ],
-      "note": "Schlage Connect exists in multiple radio variants; exact unit must be identified before compatibility is proven.",
+      "note": "Exact ASIN resolves to BE469ZP CAM 716, a Z-Wave Plus Schlage Connect variant; no radio ambiguity remains for this identity.",
       "sources": [
-        "https://www.schlage.com/en/home/support/faqs/schlage-connect.html"
+        "https://www.home-assistant.io/integrations/zwave_js/",
+        "https://www.schlage.com/en/home/products/BE469ZPCAMFFF.html"
       ]
     },
     {
