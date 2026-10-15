@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 9,
+  "version": 10,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -680,90 +680,6 @@
         "verified_market_price",
         "dimensions",
         "installation_type",
-        "completeness"
-      ]
-    },
-    {
-      "id": "compact-sinks",
-      "label": "Bathroom Vanities · ~36 in",
-      "kind": "semantic",
-      "required_any": [
-        "bathroom vanity",
-        "vanity sink",
-        "vanity top",
-        "sink vanity"
-      ],
-      "must_match_any": [
-        "vanity"
-      ],
-      "boost_any": [
-        "36 inch",
-        "36 in",
-        "36-in",
-        "37 inch",
-        "37 in",
-        "37-in",
-        "with sink",
-        "sink included",
-        "cultured marble",
-        "ceramic",
-        "porcelain"
-      ],
-      "exclude_any": [
-        "faucet only",
-        "replacement sink",
-        "replacement vanity top",
-        "backsplash only",
-        "side splash only",
-        "cabinet hardware",
-        "mounting hardware only"
-      ],
-      "minimum_signal_score": 4,
-      "minimum_width_inches": 34,
-      "maximum_width_inches": 38,
-      "verification": [
-        "exact_model",
-        "verified_market_price",
-        "dimensions",
-        "sink_included",
-        "countertop_material",
-        "mounting_type",
-        "completeness"
-      ]
-    },
-    {
-      "id": "medicine-cabinet-mirrors",
-      "label": "Medicine Cabinet Mirrors",
-      "kind": "semantic",
-      "required_any": [
-        "medicine cabinet",
-        "mirror cabinet",
-        "mirrored cabinet"
-      ],
-      "boost_any": [
-        "bathroom",
-        "led",
-        "lighted",
-        "recessed",
-        "surface mount",
-        "frameless",
-        "mirror",
-        "anti-fog",
-        "defogger"
-      ],
-      "exclude_any": [
-        "replacement mirror",
-        "replacement door",
-        "cabinet hinge",
-        "mounting hardware only"
-      ],
-      "minimum_signal_score": 2,
-      "verification": [
-        "exact_model",
-        "verified_market_price",
-        "dimensions",
-        "mounting_type",
-        "electrical_requirements",
         "completeness"
       ]
     },
