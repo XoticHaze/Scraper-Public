@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 12,
+  "version": 13,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -28,7 +28,11 @@
         "exact_model",
         "verified_market_price",
         "native_resolution",
-        "lamp_or_laser_health"
+        "lamp_or_laser_health",
+        "consumer_rating",
+        "review_count",
+        "review_recency",
+        "rating_source_quality"
       ]
     },
     {
@@ -163,7 +167,11 @@
       "verification": [
         "exact_model",
         "verified_market_price",
-        "completeness"
+        "completeness",
+        "consumer_rating",
+        "review_count",
+        "review_recency",
+        "rating_source_quality"
       ]
     },
     {
@@ -690,7 +698,11 @@
         "installation_type",
         "completeness",
         "tub_material",
-        "noise_dba"
+        "noise_dba",
+        "consumer_rating",
+        "review_count",
+        "review_recency",
+        "rating_source_quality"
       ]
     },
     {
@@ -951,6 +963,60 @@
       ]
     },
     {
+      "id": "three-tier-storage-racks",
+      "label": "3-Tier Utility / Storage Racks",
+      "kind": "semantic",
+      "required_any": [
+        "3 tier rack",
+        "3-tier rack",
+        "3 tier shelving",
+        "3-tier shelving",
+        "3 shelf rack",
+        "3-shelf rack",
+        "utility shelving",
+        "storage rack"
+      ],
+      "boost_any": [
+        "heavy duty",
+        "steel",
+        "wire shelving",
+        "garage",
+        "utility",
+        "adjustable",
+        "rolling",
+        "casters",
+        "nsf",
+        "commercial",
+        "industrial"
+      ],
+      "exclude_any": [
+        "shoe rack",
+        "spice rack",
+        "dish rack",
+        "plant stand",
+        "bathroom organizer",
+        "countertop rack",
+        "desktop rack",
+        "printer stand",
+        "network rack",
+        "server rack",
+        "wine rack",
+        "clothes rack"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "overall_dimensions",
+        "shelf_dimensions",
+        "weight_capacity_per_shelf",
+        "total_weight_capacity",
+        "material",
+        "casters_or_fixed_feet",
+        "completeness"
+      ]
+    },
+    {
       "id": "fixed-security-cameras-haos",
       "label": "Security Cameras · Local HAOS",
       "kind": "semantic",
@@ -1194,7 +1260,11 @@
         "battery_health",
         "account_lock_risk",
         "consumables_available",
-        "haos_compatibility"
+        "haos_compatibility",
+        "consumer_rating",
+        "review_count",
+        "review_recency",
+        "rating_source_quality"
       ]
     },
     {
