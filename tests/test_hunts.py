@@ -266,17 +266,22 @@ def test_ranked_resale_profile_is_value_and_competition_gated():
     )
 
 
-def test_premium_dishwasher_enforces_stated_retail_floor():
+def test_dishwasher_hunt_uses_value_floor_not_premium_msrp_gate():
     profile = PROFILES["premium-dishwashers"]
     assert match_profile(
         profile,
         product("Bosch 800 Series Built-In Dishwasher with Third Rack"),
         lot(retail_price=1199),
     )
-    assert not match_profile(
+    assert match_profile(
         profile,
         product("Whirlpool Built-In Dishwasher"),
         lot(retail_price=799.99),
+    )
+    assert not match_profile(
+        profile,
+        product("Budget Built-In Dishwasher"),
+        lot(retail_price=399.99),
     )
     assert not match_profile(
         profile,
