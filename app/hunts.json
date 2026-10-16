@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 13,
+  "version": 14,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -1265,6 +1265,183 @@
         "review_count",
         "review_recency",
         "rating_source_quality"
+      ]
+    },
+    {
+      "id": "ups-rack-power",
+      "label": "UPS / Rack Power",
+      "kind": "semantic",
+      "required_any": [
+        "ups",
+        "uninterruptible power supply",
+        "battery backup",
+        "rack pdu",
+        "power distribution unit"
+      ],
+      "boost_any": [
+        "apc",
+        "eaton",
+        "cyberpower",
+        "tripp lite",
+        "vertiv",
+        "liebert",
+        "smart-ups",
+        "sine wave",
+        "rackmount",
+        "1500va",
+        "2200va",
+        "3000va",
+        "network management card",
+        "switched pdu"
+      ],
+      "exclude_any": [
+        "ups battery only",
+        "replacement battery",
+        "battery cartridge only",
+        "power strip",
+        "surge protector only",
+        "usb power bank",
+        "laptop battery"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "va_and_watt_rating",
+        "battery_age_or_health",
+        "pure_sine_or_simulated",
+        "rack_units",
+        "network_management",
+        "replacement_battery_cost",
+        "completeness"
+      ]
+    },
+    {
+      "id": "pro-music-production",
+      "label": "Synths / Keys / Drum Machines · Pro",
+      "kind": "semantic",
+      "required_any": [
+        "synthesizer",
+        "synth",
+        "keyboard workstation",
+        "stage piano",
+        "midi keyboard",
+        "midi controller",
+        "drum machine",
+        "groovebox",
+        "sampler"
+      ],
+      "boost_any": [
+        "roland",
+        "nord",
+        "korg",
+        "yamaha",
+        "novation",
+        "arturia",
+        "akai",
+        "elektron",
+        "sequential",
+        "moog",
+        "hydrasynth",
+        "juno",
+        "fantom",
+        "fa-06",
+        "fa-07",
+        "fa-08",
+        "nord lead",
+        "nord electro",
+        "nord stage",
+        "minilogue",
+        "opsix",
+        "wavestate",
+        "mpc",
+        "maschine",
+        "tr-8s",
+        "mc-707",
+        "digitakt",
+        "digitone",
+        "49 key",
+        "61 key",
+        "73 key",
+        "72 key"
+      ],
+      "exclude_any": [
+        "toy keyboard",
+        "kids keyboard",
+        "roll up piano",
+        "piano mat",
+        "keyboard stand only",
+        "sustain pedal only",
+        "sheet music",
+        "replacement key",
+        "case only"
+      ],
+      "minimum_signal_score": 3,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "key_count",
+        "keybed_type",
+        "velocity_sensitive",
+        "aftertouch",
+        "power_supply_included",
+        "screen_and_encoder_condition",
+        "audio_outputs",
+        "midi_usb",
+        "factory_reset",
+        "cosmetic_condition"
+      ]
+    },
+    {
+      "id": "beginner-piano-gift",
+      "label": "Beginner Piano / Keyboard Gift",
+      "kind": "semantic",
+      "required_any": [
+        "digital piano",
+        "portable keyboard",
+        "electronic keyboard",
+        "piano keyboard"
+      ],
+      "boost_any": [
+        "yamaha",
+        "casio",
+        "roland",
+        "korg",
+        "61 key",
+        "76 key",
+        "88 key",
+        "touch sensitive",
+        "velocity sensitive",
+        "weighted keys",
+        "semi weighted",
+        "stand included",
+        "pedal included"
+      ],
+      "exclude_any": [
+        "toy keyboard",
+        "roll up piano",
+        "piano mat",
+        "mini keyboard",
+        "25 key",
+        "32 key",
+        "37 key",
+        "replacement key",
+        "stand only",
+        "bench only",
+        "case only"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "key_count",
+        "velocity_sensitive",
+        "weighted_or_unweighted",
+        "speaker_output",
+        "headphone_output",
+        "power_supply_included",
+        "stand_or_pedal_included",
+        "age_appropriateness"
       ]
     },
     {
