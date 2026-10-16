@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 15,
+  "version": 16,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -1651,33 +1651,6 @@
       "verification": [
         "exact_model",
         "verified_market_price"
-      ]
-    },
-    {
-      "id": "resale-watch",
-      "label": "Resale Watch · Needs Verification",
-      "kind": "ranked",
-      "minimum_stated_retail": 80,
-      "maximum_bidders": 3,
-      "minimum_deal_score": 45,
-      "preferred_conditions": [
-        "LIKE NEW",
-        "OPEN BOX"
-      ],
-      "exclude_signals": [
-        "mattress",
-        "food",
-        "consumable",
-        "replacement part",
-        "damaged",
-        "pallet"
-      ],
-      "verification": [
-        "exact_model",
-        "verified_market_price",
-        "resale_liquidity",
-        "estimated_net_resale_margin",
-        "shipping_or_local_sale_risk"
       ]
     }
   ]
