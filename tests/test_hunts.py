@@ -252,18 +252,8 @@ def test_ranked_tech_terms_use_word_boundaries_not_substrings():
     assert not match_profile(tech, product("Klipsch Tabletop Decor Stand"), lot())
 
 
-def test_ranked_resale_profile_is_value_and_competition_gated():
-    assert match_profile(PROFILES["resale-watch"], product("Brand Name Tool"), lot())
-    assert not match_profile(
-        PROFILES["resale-watch"],
-        product("Brand Name Tool"),
-        lot(unique_bidders=8),
-    )
-    assert not match_profile(
-        PROFILES["resale-watch"],
-        product("Replacement Part"),
-        lot(),
-    )
+def test_resale_only_profile_stays_retired():
+    assert "resale-watch" not in PROFILES
 
 
 def test_dishwasher_hunt_uses_value_floor_not_premium_msrp_gate():
