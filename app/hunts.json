@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 10,
+  "version": 11,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -646,24 +646,27 @@
     },
     {
       "id": "premium-dishwashers",
-      "label": "Dishwashers · $800+ Retail",
+      "label": "Dishwashers · Reliability / Value",
       "kind": "semantic",
       "required_any": [
         "dishwasher",
         "dish washer"
       ],
       "boost_any": [
-        "built-in dishwasher",
-        "top control",
-        "third rack",
-        "stainless steel",
         "bosch",
+        "miele",
         "kitchenaid",
-        "ge profile",
-        "cafe",
-        "lg",
-        "samsung",
-        "whirlpool"
+        "thermador",
+        "stainless steel tub",
+        "third rack",
+        "top control",
+        "44 dba",
+        "45 dba",
+        "46 dba",
+        "47 dba",
+        "48 dba",
+        "49 dba",
+        "50 dba"
       ],
       "exclude_any": [
         "dishwasher rack",
@@ -674,13 +677,20 @@
         "mounting bracket"
       ],
       "minimum_signal_score": 2,
-      "minimum_stated_retail": 800,
+      "minimum_stated_retail": 450,
       "verification": [
         "exact_model",
         "verified_market_price",
+        "model_specific_reliability",
+        "known_failure_modes",
+        "pump_and_control_board_failure_history",
+        "parts_availability",
+        "serviceability_without_warranty",
         "dimensions",
         "installation_type",
-        "completeness"
+        "completeness",
+        "tub_material",
+        "noise_dba"
       ]
     },
     {
