@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 11,
+  "version": 12,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -948,6 +948,253 @@
         "usable_depth",
         "wall_or_floor_mount",
         "completeness"
+      ]
+    },
+    {
+      "id": "fixed-security-cameras-haos",
+      "label": "Security Cameras · Local HAOS",
+      "kind": "semantic",
+      "required_any": [
+        "security camera",
+        "ip camera",
+        "poe camera",
+        "outdoor camera",
+        "turret camera",
+        "bullet camera"
+      ],
+      "boost_any": [
+        "reolink",
+        "amcrest",
+        "unifi",
+        "ubiquiti",
+        "tapo",
+        "onvif",
+        "rtsp",
+        "poe",
+        "local storage",
+        "4k",
+        "person detection",
+        "vehicle detection"
+      ],
+      "exclude_any": [
+        "camera mount",
+        "camera battery",
+        "dummy camera",
+        "dash cam",
+        "webcam",
+        "digital camera",
+        "trail camera",
+        "baby monitor",
+        "solar panel charger"
+      ],
+      "minimum_signal_score": 3,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "haos_compatibility",
+        "local_stream_protocol",
+        "poe_or_power_method",
+        "subscription_requirement",
+        "account_lock_risk",
+        "factory_reset"
+      ],
+      "compatibility_gate": "haos"
+    },
+    {
+      "id": "poe-network-infrastructure",
+      "label": "PoE / Network Infrastructure",
+      "kind": "semantic",
+      "required_any": [
+        "poe switch",
+        "ethernet switch",
+        "network switch",
+        "wireless access point",
+        "wifi access point",
+        "wi-fi access point"
+      ],
+      "boost_any": [
+        "managed",
+        "2.5gbe",
+        "2.5g",
+        "10gbe",
+        "10g",
+        "poe+",
+        "poe++",
+        "802.3at",
+        "802.3bt",
+        "sfp+",
+        "unifi",
+        "ubiquiti",
+        "omada",
+        "tp-link",
+        "aruba",
+        "netgear",
+        "cisco",
+        "mikrotik"
+      ],
+      "exclude_any": [
+        "power supply only",
+        "rack ears only",
+        "mount only",
+        "network cable",
+        "ethernet cable",
+        "hdmi switch",
+        "usb switch",
+        "kvm switch"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "port_count",
+        "port_speed",
+        "managed_or_unmanaged",
+        "poe_budget",
+        "sfp_or_sfp_plus",
+        "vlan_support",
+        "completeness"
+      ]
+    },
+    {
+      "id": "nas-nvr-storage",
+      "label": "NAS / NVR / Surveillance Storage",
+      "kind": "semantic",
+      "required_any": [
+        "network attached storage",
+        "nas server",
+        "nvr",
+        "network video recorder",
+        "surveillance hard drive",
+        "surveillance hdd",
+        "wd purple",
+        "seagate skyhawk"
+      ],
+      "boost_any": [
+        "synology",
+        "qnap",
+        "asustor",
+        "reolink nvr",
+        "unifi protect",
+        "ubiquiti",
+        "wd purple",
+        "seagate skyhawk",
+        "6tb",
+        "8tb",
+        "10tb",
+        "12tb",
+        "14tb",
+        "16tb"
+      ],
+      "exclude_any": [
+        "drive tray only",
+        "mount only",
+        "replacement fan",
+        "empty hard drive box"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "drive_capacity",
+        "drive_count",
+        "included_drives",
+        "smart_health_if_used",
+        "bay_count",
+        "network_speed",
+        "haos_or_nvr_use"
+      ]
+    },
+    {
+      "id": "mini-pcs-homelab",
+      "label": "Mini PCs / Home Lab",
+      "kind": "semantic",
+      "required_any": [
+        "mini pc",
+        "micro pc",
+        "tiny pc",
+        "intel nuc",
+        "desktop mini",
+        "mini computer"
+      ],
+      "boost_any": [
+        "lenovo tiny",
+        "thinkcentre tiny",
+        "dell micro",
+        "optiplex micro",
+        "hp mini",
+        "elitedesk mini",
+        "prodesk mini",
+        "beelink",
+        "minisforum",
+        "intel nuc",
+        "ryzen",
+        "core i5",
+        "core i7",
+        "2.5gbe"
+      ],
+      "exclude_any": [
+        "mini pc stand",
+        "vesa mount only",
+        "power adapter only",
+        "bare case",
+        "replacement fan"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "cpu",
+        "ram",
+        "storage",
+        "network_ports",
+        "upgradeability",
+        "power_adapter_included"
+      ]
+    },
+    {
+      "id": "robot-vacuums",
+      "label": "Robot Vacuums · Quality Models",
+      "kind": "semantic",
+      "required_any": [
+        "robot vacuum",
+        "robotic vacuum",
+        "vacuum and mop",
+        "robot vacuum mop"
+      ],
+      "boost_any": [
+        "roborock",
+        "dreame",
+        "ecovacs",
+        "eufy",
+        "narwal",
+        "irobot",
+        "self empty",
+        "self-empty",
+        "auto mop wash",
+        "lidar",
+        "dock",
+        "mapping"
+      ],
+      "exclude_any": [
+        "replacement brush",
+        "replacement mop",
+        "vacuum bags only",
+        "dust bag only",
+        "filter kit",
+        "replacement battery",
+        "side brush only",
+        "dock only"
+      ],
+      "minimum_signal_score": 2,
+      "minimum_stated_retail": 250,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "dock_included",
+        "battery_health",
+        "account_lock_risk",
+        "consumables_available",
+        "haos_compatibility"
       ]
     },
     {
