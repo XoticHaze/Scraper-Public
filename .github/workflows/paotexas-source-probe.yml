@@ -1,0 +1,66 @@
+name: Auctioneer Store Source Truth Probe
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/paotexas_source_probe.py'
+      - '.github/workflows/paotexas-source-probe.yml'
+  push:
+    branches:
+      - probe/paotexas-first-party-20261018
+    paths:
+      - 'tools/paotexas_source_probe.py'
+      - '.github/workflows/paotexas-source-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  first-party-source-readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: .
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11.16'
+      - name: Probe only auctioneer-owned public storefront
+        run: python tools/paotexas_source_probe.py
+      - name: Materialize own-store fixed-price catalog
+        run: python scripts/paotexas_store_scan.py
+      - name: Validate source separation and freshness
+        run: |
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          r = json.loads(Path('results/paotexas-store.json').read_text())
+          assert r['source_type'] == 'buy_it_now_not_hibid_auction'
+          assert r['product_count'] > 0
+          assert r['source_raw_product_count'] >= r['product_count']
+          assert all(p['fee_model'] == 'fixed_price_no_auction_premium' for p in r['products'])
+          age = (datetime.now(timezone.utc) - datetime.fromisoformat(r['observed_at'])).total_seconds()
+          assert 0 <= age <= 120
+          print('PAOTEXAS_ACCEPTANCE=PASS')
+          PY
+      - name: Build offline local-filter personal view
+        run: python scripts/paotexas_export_ui.py
+      - name: Upload independently sortable offline view
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: paotexas-personal-view
+          path: paotexas-preview/
+          if-no-files-found: error
+          retention-days: 2
+      - name: Publish read-only source proof
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: paotexas-storefront-proof
+          path: results/paotexas-store.json
+          if-no-files-found: error
+          retention-days: 2

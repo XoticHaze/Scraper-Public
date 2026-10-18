@@ -75,6 +75,12 @@ jobs:
           python scripts/macbid_market_enrich.py
           test -s results/market-values.runtime.json
 
+      - name: Refresh independent auctioneer-owned fixed-price source
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python scripts/paotexas_store_scan.py
+
       - name: Build static hunt UI
         run: |
           set -euo pipefail
@@ -84,6 +90,7 @@ jobs:
           node --check ui/app-enhancements.js
           node --check ui/action-center.js
           node --check ui/catalog-loader.js
+          node --check ui/paotexas.js
           python scripts/macbid_build_ui.py
           python - <<'PY'
           import json
@@ -114,6 +121,13 @@ jobs:
           assert Path('site/enhancements.css').exists()
           assert Path('site/hunt-profiles.json').exists()
           assert Path('site/market-values.json').exists()
+          assert Path('site/paotexas.html').exists()
+          assert Path('site/paotexas.js').exists()
+          if Path('site/paotexas-catalog.json').exists():
+              store = json.loads(Path('site/paotexas-catalog.json').read_text())
+              assert store['source_type'] == 'buy_it_now_not_hibid_auction'
+              assert store['product_count'] > 0
+              assert all(p['fee_model'] == 'fixed_price_no_auction_premium' for p in store['products'])
           assert Path('site/compatibility-matrix.json').exists()
           assert Path('results/market-values.runtime.json').exists()
           assert data.get('compatibility_matrix_version') is not None
@@ -231,6 +245,7 @@ jobs:
           path: |
             results/macbid-deal-engine.json
             results/market-values.runtime.json
+            results/paotexas-store.json
           if-no-files-found: warn
           retention-days: 2
 

@@ -341,6 +341,23 @@ def main() -> int:
             "window.MACBID_RESEARCH_FINDINGS=" + compact_findings + ";\n",
             encoding="utf-8",
         )
+    # Optional first-party storefront source. Never treat it as HiBid auction
+    # inventory or block MAC.BID publication if the independent source is down.
+    store_path = Path("results/paotexas-store.json")
+    if store_path.exists():
+        store_doc = json.loads(store_path.read_text(encoding="utf-8"))
+        if (store_doc.get("schema") == "scraper-storefront-catalog-v1"
+                and store_doc.get("source_type") == "buy_it_now_not_hibid_auction"
+                and store_doc.get("product_count", 0) > 0):
+            (SITE / "paotexas-catalog.json").write_text(
+                json.dumps(store_doc, separators=(",", ":"), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            print(f"UI_PAOTEXAS_FIXED_PRICE_ITEMS={store_doc['product_count']}")
+        else:
+            print("UI_PAOTEXAS=INVALID_SOURCE_SNAPSHOT_NOT_PUBLISHED")
+    else:
+        print("UI_PAOTEXAS=NO_SOURCE_SNAPSHOT")
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
 
     print(f"UI_PRODUCTS={len(products)}")
