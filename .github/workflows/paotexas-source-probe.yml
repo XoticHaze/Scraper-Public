@@ -2,6 +2,10 @@ name: Auctioneer Store Source Truth Probe
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/paotexas_source_probe.py'
+      - '.github/workflows/paotexas-source-probe.yml'
   push:
     branches:
       - probe/paotexas-first-party-20261018
