@@ -61,3 +61,13 @@ def test_computer_keyboard_does_not_enter_music_hunt():
     row = normalize_product(sample(title="Gaming Mechanical Keyboard", handle="gaming-keyboard"))
     assert row is not None
     assert "music" not in row["focus"]
+
+
+def test_retired_sinks_and_mirrors_do_not_trigger_home_focus():
+    for title, handle in (
+        ("Premium Kitchen Sink", "premium-sink"),
+        ("Bathroom Vanity Mirror", "bathroom-vanity"),
+    ):
+        item = normalize_product(sample(title=title, handle=handle))
+        assert item is not None
+        assert "home" not in item["focus"]
