@@ -77,7 +77,7 @@ jobs:
       - name: Tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_catalog_fallback.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_vehicle_hunt.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_catalog_fallback.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_vehicle_hunt.py tests/test_vehicle_link_verification.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
 
       - name: Validate engine, app, hunt, locality, privacy, and private-compute policy
         run: |
@@ -156,7 +156,8 @@ jobs:
               'solar-charge-controllers', 'solar-inverters',
               'ptz-cameras-haos', 'smart-door-locks-haos',
               'large-area-rugs', 'tools', 'samsung-tablets', 'apple-devices',
-              'best-tech-deals', 'resale-watch'
+              'best-tech-deals', 'ups-rack-power', 'pro-music-production',
+              'beginner-piano-gift'
           } <= hunt_ids
           for profile in hunts['profiles']:
               assert profile.get('verification'), profile['id']

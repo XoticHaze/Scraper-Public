@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 from vehicle_engine.identity import dedupe_rows
+from vehicle_engine.link_verification import verify_vehicle_detail
 from vehicle_engine.normalize import parse_autotrader_card, parse_dealer_detail
 from vehicle_engine.scoring import rank_vehicles
 
@@ -135,8 +136,22 @@ def fetch_local_dealers(cfg: dict) -> tuple[list[dict], dict[str, str]]:
                             {"text": detail_text, "url": detail_page.url, "image_url": image_url}, dealer
                         )
                         if row:
-                            rows.append(row)
-                            parsed_count += 1
+                            verified, reason = verify_vehicle_detail(
+                                status=detail_status,
+                                requested_url=url,
+                                final_url=detail_page.url,
+                                title=detail_title,
+                                body=detail_text,
+                                vin=row.get("vin"),
+                            )
+                            if verified:
+                                row["listing_link_status"] = "verified"
+                                row["listing_link_verified_utc"] = datetime.now(timezone.utc).isoformat()
+                                rows.append(row)
+                                parsed_count += 1
+                            else:
+                                failed_count += 1
+                                print(f"VEHICLE_DETAIL_REJECTED source={source_id} reason={reason}")
                         else:
                             failed_count += 1
                     except Exception:
@@ -289,9 +304,17 @@ def main() -> int:
     aggregator_rows, aggregator_errors = fetch_aggregators(cfg)
     raw_rows = [*dealer_rows, *aggregator_rows]
     source_observations = dict(sorted(Counter(str(row.get("source") or "unknown") for row in raw_rows).items()))
-    rows = dedupe_rows(raw_rows)
+    # A search result card is not a working vehicle detail page. It may still
+    # inform discovery routes but can never enter the ranked purchase catalog.
+    verified_rows = [row for row in raw_rows if row.get("listing_link_status") == "verified"]
+    discovery_only_count = len(raw_rows) - len(verified_rows)
+    rows = dedupe_rows(verified_rows)
     if not rows:
-        raise RuntimeError("all configured vehicle sources returned zero parseable RAV4 listings")
+        raise RuntimeError(
+            f"no VIN-confirmed vehicle detail listings; "
+            f"discovery_only={discovery_only_count} "
+            f"dealer_errors={len(dealer_errors)} aggregator_errors={len(aggregator_errors)}"
+        )
 
     add_history(rows, Path(args.previous))
     ranked = rank_vehicles(rows, policy)
@@ -311,6 +334,8 @@ def main() -> int:
         "source_counts": source_counts,
         "source_errors": source_errors,
         "raw_listing_count": len(raw_rows),
+        "discovery_only_count": discovery_only_count,
+        "verified_detail_count": len(rows),
         "deduped_listing_count": len(rows),
         "eligible_count": len(ranked),
         "vehicles": ranked,
@@ -325,7 +350,7 @@ def main() -> int:
     print(f"VEHICLE_SOURCES={json.dumps(source_counts, sort_keys=True)}")
     print(f"VEHICLE_SOURCE_ERRORS={json.dumps(source_errors, sort_keys=True)}")
     print(f"VEHICLE_DISCOVERY_ROUTES={len(payload['discovery_routes'])}")
-    print(f"VEHICLE_RAW={len(raw_rows)} deduped={len(rows)} eligible={len(ranked)}")
+    print(f"VEHICLE_RAW={len(raw_rows)} discovery_only={discovery_only_count} verified={len(rows)} eligible={len(ranked)}")
     for row in ranked[:15]:
         print(json.dumps({key: row.get(key) for key in (
             "rank", "title", "dealer", "price", "mileage", "locality", "area_priority",
