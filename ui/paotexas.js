@@ -85,9 +85,12 @@
 
   async function load() {
     try {
-      const response = await fetch('paotexas-catalog.json?t=' + Date.now(), { cache: 'no-store' });
-      if (!response.ok) throw new Error('No published source snapshot (HTTP ' + response.status + ')');
-      const data = await response.json();
+      let data = window.PAOTEXAS_STORE_CATALOG || null;
+      if (!data) {
+        const response = await fetch('paotexas-catalog.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error('No published source snapshot (HTTP ' + response.status + ')');
+        data = await response.json();
+      }
       if (data.schema !== 'scraper-storefront-catalog-v1' ||
           data.source_type !== 'buy_it_now_not_hibid_auction' ||
           !Array.isArray(data.products) || !data.product_count) {
