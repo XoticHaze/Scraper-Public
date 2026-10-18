@@ -69,6 +69,7 @@ jobs:
           node --check ui/app-enhancements.js
           node --check ui/action-center.js
           node --check ui/catalog-loader.js
+          node --check ui/paotexas.js
           node --check ui/finds.js
           node --check ui/vehicles.js
           node --check producer_worker/index.mjs
@@ -168,7 +169,12 @@ jobs:
           assert Path('ui/vehicles.html').exists()
           assert Path('ui/vehicles.js').exists()
           assert Path('ui/vehicles.css').exists()
+          assert Path('ui/paotexas.html').exists()
+          assert Path('ui/paotexas.js').exists()
+          assert Path('ui/paotexas.css').exists()
           assert 'href="vehicles.html"' in Path('ui/index.html').read_text()
+          assert 'href="paotexas.html"' in Path('ui/index.html').read_text()
+          assert 'buy_it_now_not_hibid_auction' in Path('deal_engine/storefront.py').read_text()
           assert Path('producer_worker/index.mjs').exists()
           assert Path('docs/PRIVACY_BOUNDARY.md').exists()
           assert Path('.github/workflows/encrypted-private-compute-runtime.yml').exists()
