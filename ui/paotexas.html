@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fixed-Price Opportunities · Scraper</title>
+  <link rel="stylesheet" href="paotexas.css" />
+</head>
+<body>
+  <header class="top">
+    <p class="eyebrow">SCRAPER · INDEPENDENT RESEARCH VIEW</p>
+    <h1>Public Auctions of Texas · Buy It Now</h1>
+    <p class="subhead">Auctioneer-owned fixed-price store. These are not HiBid auction lots.</p>
+    <nav aria-label="Scraper sections">
+      <a href="index.html">MAC.BID Hunt</a>
+      <a href="vehicles.html">Vehicle Hunt</a>
+      <a href="finds.html">Finds &amp; Watchlists</a>
+      <a href="https://paotexas.com/collections/all" target="_blank" rel="noreferrer">Merchant store ↗</a>
+      <a href="https://hibid.com/catalog/785417/public-auctions-of-texas-sunday-auction-10-18-2026" target="_blank" rel="noreferrer">HiBid auction ↗</a>
+    </nav>
+  </header>
+  <main>
+    <section class="notice">
+      <strong id="health">Checking latest verified source snapshot…</strong>
+      <p>All-in estimates apply 8.25% San Antonio sales tax. Shipping, pickup fees and merchant inventory must be confirmed at checkout. Merchant compare-at prices are <strong>not externally verified market values</strong>. No auto-purchasing or bidding.</p>
+    </section>
+    <section class="filters">
+      <label>Search<input id="search" type="search" placeholder="UPS, Roland, Nord, solar, rack…" /></label>
+      <label>Focus<select id="focus">
+        <option value="">All focuses</option>
+        <option value="power">UPS / power</option>
+        <option value="music">Music production</option>
+        <option value="solar">Solar</option>
+        <option value="homelab">Homelab / networking</option>
+        <option value="home">Home equipment</option>
+      </select></label>
+      <label>Sort<select id="sort">
+        <option value="fit">Our relevance</option>
+        <option value="price">Lowest estimated cost</option>
+        <option value="discount">Merchant stated discount</option>
+      </select></label>
+      <label>Max estimated all-in<input id="max-cost" type="number" min="0" step="5" placeholder="No limit"/></label>
+      <label class="check"><input id="focused" type="checkbox" checked /> Focused gear only</label>
+    </section>
+    <p><strong id="count">0</strong> matching products · Read-only. Prices may change.</p>
+    <section class="grid" id="grid" aria-live="polite"></section>
+    <p id="empty" hidden>No qualifying products in this snapshot. Try unchecking Focused gear only.</p>
+  </main>
+  <script src="paotexas.js" defer></script>
+</body>
+</html>
