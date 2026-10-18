@@ -55,3 +55,9 @@ def test_unverified_seller_reference_never_becomes_market_authority():
     report = build_catalog([sample()], observed_at="2026-10-18T08:00:00Z")
     assert report["products"][0]["market_verified"] is False
     assert "unverified seller claims" in report["market_value_authority"]
+
+
+def test_computer_keyboard_does_not_enter_music_hunt():
+    row = normalize_product(sample(title="Gaming Mechanical Keyboard", handle="gaming-keyboard"))
+    assert row is not None
+    assert "music" not in row["focus"]
