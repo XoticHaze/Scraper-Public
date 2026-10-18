@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 from deal_engine.storefront import build_catalog
 
@@ -33,10 +35,22 @@ def fetch_pages() -> tuple[list[dict], int]:
                 "Accept-Encoding": "identity",
             },
         )
-        with urlopen(req, timeout=20) as response:
-            if response.status != 200:
-                raise RuntimeError(f"storefront HTTP {response.status} page={page}")
-            body = response.read(2_000_001)
+        body = None
+        for attempt in range(3):
+            try:
+                with urlopen(req, timeout=20) as response:
+                    if response.status != 200:
+                        raise RuntimeError(f"storefront HTTP {response.status} page={page}")
+                    body = response.read(2_000_001)
+                break
+            except HTTPError as exc:
+                if exc.code not in (500, 502, 503, 504) or attempt == 2:
+                    raise RuntimeError(f"storefront unavailable HTTP={exc.code} page={page}") from exc
+                delay = 2 ** attempt
+                print(f"PAOTEXAS_RETRY=HTTP_{exc.code} page={page} delay_seconds={delay}")
+                time.sleep(delay)
+        if body is None:
+            raise RuntimeError(f"storefront no response page={page}")
         if len(body) > 2_000_000:
             raise RuntimeError(f"storefront response oversized page={page}")
         payload = json.loads(body)
