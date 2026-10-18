@@ -23,6 +23,11 @@ def export(source: Path, output: Path) -> None:
         raise RuntimeError("unverified storefront source; offline bundle not built")
     output.mkdir(parents=True, exist_ok=True)
     html = (UI / "paotexas.html").read_text(encoding="utf-8")
+    # In an offline ZIP, local index.html is the store view, not MAC.BID Hunt.
+    # Point cross-app navigation at the existing published Scraper Pages.
+    origin = "https://xotichaze.github.io/Scraper-Public/"
+    for local in ("index.html", "vehicles.html", "finds.html"):
+        html = html.replace(f'href="{local}"', f'href="{origin}{local}"')
     script = '<script src="paotexas-catalog.js"></script>\n  <script src="paotexas.js"'
     if '<script src="paotexas.js"' not in html:
         raise RuntimeError("missing source browser script")
