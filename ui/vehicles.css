@@ -26,3 +26,11 @@ a { color: inherit; }
 .metric { background: #0d1116; padding: 8px; border-radius: 8px; }
 .metric span { display: block; color: #8f9aa8; font-size: 10px; text-transform: uppercase; }
 @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+
+/* Preserve the original photo/card footprint without fabricating thumbnails. */
+.vehicle-photo-missing { height: 190px; display: grid; place-items: center; padding: 20px; color: #abb9c8; background: #1a2430; text-align: center; font-size: 13px; }
+.vehicle-vin { overflow-wrap: anywhere; font-size: 12px !important; }
+.listing-pending { color: #eacb9a; font-size: 12px; }
+.badges .link-pending { background: #433322; color: #ffe0ae; }
+.badges .link-verified { background: #173729; color: #a9f0bf; }
+#empty-state[hidden] { display: none; }
