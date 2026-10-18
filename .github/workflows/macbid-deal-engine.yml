@@ -181,6 +181,23 @@ jobs:
               assert int(desktop.locator('#result-count').inner_text().replace(',', '')) >= 0
               desktop.close()
 
+              # The original /vehicles.html must remain the only Vehicle Hunt
+              # route, with useful canonical discovery links even before a
+              # production vehicle detail catalog is available.
+              vehicle = browser.new_page(viewport={"width": 1280, "height": 900})
+              vehicle.goto(Path('site/vehicles.html').resolve().as_uri(), wait_until='domcontentloaded', timeout=30000)
+              vehicle.wait_for_selector('#source-links a', timeout=30000)
+              assert vehicle.locator('#source-links a').count() >= 5
+              assert vehicle.locator('#discovery-links a').count() >= 5
+              vehicle_doc = json.loads(Path('site/vehicle_catalog.json').read_text())
+              assert vehicle_doc['discovery_links_are_live_listings'] is False
+              assert Path('site/vehicle_catalog.js').exists()
+              if not vehicle_doc.get('vehicles'):
+                  assert vehicle.locator('#empty-state').is_visible()
+                  assert 'NO VERIFIED INVENTORY' in vehicle.locator('#meta').inner_text()
+              print('VEHICLE_EXISTING_ROUTE_SMOKE=PASS offline-discovery+source-truth')
+              vehicle.close()
+
               mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True)
               mobile.goto(url, wait_until='domcontentloaded', timeout=30000)
               mobile.wait_for_selector('.card', timeout=30000)
