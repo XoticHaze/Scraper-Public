@@ -15,7 +15,7 @@ FOCUS_TERMS = {
     "music": ("roland", "nord ", "korg", "arturia", "akai", "synth", "midi", "digital piano", "electronic keyboard", "keyboard piano", "61-key", "49-key", "73-key", "88-key"),
     "solar": ("solar", "mppt", "inverter", "charge controller"),
     "homelab": ("server rack", "network rack", "rackmount", "nas ", "router", "poe ", "minipc", "mini pc"),
-    "home": ("dishwasher", "kitchen sink", "storage rack", "storage shelf", "shelving", "vanity"),
+    "home": ("dishwasher", "storage rack", "storage shelf", "shelving"),
 }
 CONDITION_MARKERS = (
     ("exclude", ("damaged", "broken", "not working", "parts only", "as is", "for parts")),
