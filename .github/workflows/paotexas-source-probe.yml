@@ -48,6 +48,15 @@ jobs:
           assert 0 <= age <= 120
           print('PAOTEXAS_ACCEPTANCE=PASS')
           PY
+      - name: Build offline local-filter personal view
+        run: python scripts/paotexas_export_ui.py
+      - name: Upload independently sortable offline view
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: paotexas-personal-view
+          path: paotexas-preview/
+          if-no-files-found: error
+          retention-days: 2
       - name: Publish read-only source proof
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
