@@ -98,9 +98,12 @@ function render() {
 
 async function load() {
   try {
-    const response = await fetch(`vehicle_catalog.json?t=${Date.now()}`, {cache:'no-store'});
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    catalog = await response.json();
+    catalog = window.VEHICLE_CATALOG || null;
+    if (!catalog) {
+      const response = await fetch(`vehicle_catalog.json?t=${Date.now()}`, {cache:'no-store'});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      catalog = await response.json();
+    }
     const market = catalog.market || {};
     const hasProductionScan = Number(catalog.generated_epoch_utc || 0) > 0;
     byId('meta').textContent = hasProductionScan
