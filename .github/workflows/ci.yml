@@ -156,7 +156,8 @@ jobs:
               'solar-charge-controllers', 'solar-inverters',
               'ptz-cameras-haos', 'smart-door-locks-haos',
               'large-area-rugs', 'tools', 'samsung-tablets', 'apple-devices',
-              'best-tech-deals', 'resale-watch'
+              'best-tech-deals', 'ups-rack-power', 'pro-music-production',
+              'beginner-piano-gift'
           } <= hunt_ids
           for profile in hunts['profiles']:
               assert profile.get('verification'), profile['id']
