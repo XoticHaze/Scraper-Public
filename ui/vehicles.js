@@ -66,6 +66,7 @@ function render() {
   const awdOnly = byId('awd').checked;
   const localOnly = byId('local').checked;
   const rows = (catalog.vehicles || []).filter((v) =>
+    v.listing_link_status === 'verified' &&
     Number(v.price) <= maxPrice && Number(v.mileage) <= maxMileage && localityPass(v, maxDistance, localOnly) &&
     (!awdOnly || /all-wheel|awd/i.test(v.drivetrain || ''))
   );
@@ -80,7 +81,8 @@ function render() {
     const image = v.image_url ? `<img src="${v.image_url}" alt="" loading="lazy" />` : '';
     const priceMove = v.price_delta == null ? 'new' : money(v.price_delta);
     const listingLabel = v.source_kind === 'aggregator' ? 'Open discovery listing' : 'Open dealer listing';
-    const listing = v.source_url ? `<a href="${v.source_url}" target="_blank" rel="noreferrer">${listingLabel}</a>` : '';
+    const listing = v.listing_link_status === 'verified' && v.source_url
+      ? `<a href="${v.source_url}" target="_blank" rel="noreferrer">Open VIN-verified dealer detail</a>` : '';
     const addon = v.dealer_addon_warning ? `<p class="warning">${v.dealer_addon_warning}</p>` : '';
     const sourceBadge = (v.sources || []).length > 1 ? `<span>${v.sources.length} sources</span>` : '';
     card.innerHTML = `${image}<div class="body"><div class="badges"><b>#${v.rank}</b><span>score ${v.deal_score}</span><span>${v.locality}${v.distance_miles == null ? '' : ` · ${v.distance_miles} mi`}</span>${sourceBadge}</div><h2>${v.title || `${v.year} ${v.make} ${v.model}`}</h2><p>${[v.dealer,v.location].filter(Boolean).join(' · ') || 'Dealer/location pending verification'}</p><div class="metrics">${metric('Price',money(v.price))}${metric('Est. OTD',money(v.estimated_otd))}${metric('Mileage',number(v.mileage))}${metric('Drivetrain',v.drivetrain || '—')}${metric('vs comps',v.market_delta_pct == null ? '—' : `${v.market_delta_pct}%`)}${metric('Price move',priceMove)}</div><div class="tags">${reasons}${risks}</div>${addon}<div class="listing-links">${listing}${alternateLinks(v)}</div></div>`;
@@ -94,9 +96,15 @@ async function load() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     catalog = await response.json();
     const market = catalog.market || {};
-    byId('meta').textContent = `${catalog.eligible_count || 0} eligible · ${market.label || 'San Antonio, TX'} · centered ${market.zip || '78237'} · preferred within ${market.preferred_radius_miles || 50} mi · updated ${new Date(catalog.generated_utc).toLocaleString()}`;
+    const hasProductionScan = Number(catalog.generated_epoch_utc || 0) > 0;
+    byId('meta').textContent = hasProductionScan
+      ? `${catalog.eligible_count || 0} verified eligible · ${market.label || 'San Antonio, TX'} · updated ${new Date(catalog.generated_utc).toLocaleString()}`
+      : 'NO VERIFIED INVENTORY · No successful production vehicle scan has been published. The date and listing links are not live.';
     ['max-price','max-mileage','max-distance','awd','local'].forEach((id) => byId(id).addEventListener('input', render));
     renderSourceCoverage();
+    if (!hasProductionScan) {
+      byId('source-status').textContent = catalog.source_errors?.vehicle_scan || 'No live source observations available';
+    }
     render();
   } catch (error) {
     byId('meta').textContent = 'No published vehicle catalog yet. The scheduled vehicle refresh has not produced a last-good catalog.';
