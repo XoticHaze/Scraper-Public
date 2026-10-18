@@ -109,9 +109,9 @@ jobs:
           assert len(data.get('hunt_profiles', [])) >= 16
           hunt_ids = {profile['id'] for profile in data.get('hunt_profiles', [])}
           assert {
-              'premium-dishwashers', 'compact-sinks', 'medicine-cabinet-mirrors',
-              'solar-panels', 'high-power-solar-panels', 'solar-batteries',
-              'solar-charge-controllers', 'solar-inverters'
+              'premium-dishwashers', 'ups-rack-power', 'pro-music-production',
+              'beginner-piano-gift', 'solar-panels', 'high-power-solar-panels',
+              'solar-batteries', 'solar-charge-controllers', 'solar-inverters'
           } <= hunt_ids
           assert Path('site/catalog.js').exists()
           assert Path('site/browser-state.js').exists()
