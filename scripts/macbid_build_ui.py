@@ -309,6 +309,41 @@ def main() -> int:
     if SITE.exists():
         shutil.rmtree(SITE)
     shutil.copytree(UI_SOURCE, SITE)
+    # The vehicle finder lives at the existing /vehicles.html route. Its
+    # committed fallback has no production inventory; preserve that truth but
+    # populate useful manual discovery/source links from the canonical config.
+    vehicle_cfg_path = Path("config/vehicle_hunt.json")
+    vehicle_page_catalog = SITE / "vehicle_catalog.json"
+    if vehicle_cfg_path.exists() and vehicle_page_catalog.exists():
+        vehicle_cfg = json.loads(vehicle_cfg_path.read_text(encoding="utf-8"))
+        vehicle_doc = json.loads(vehicle_page_catalog.read_text(encoding="utf-8"))
+        vehicle_sources = vehicle_cfg.get("source") or {}
+        safe_source_fields = ("id", "name", "location", "inventory_url")
+        if not vehicle_doc.get("source_registry"):
+            vehicle_doc["source_registry"] = [
+                {key: dealer[key] for key in safe_source_fields if key in dealer}
+                for dealer in [
+                    *(vehicle_sources.get("local_dealers") or []),
+                    *(vehicle_sources.get("nearby_dealers") or []),
+                ]
+                if str(dealer.get("inventory_url") or "").startswith("https://")
+            ]
+        if not vehicle_doc.get("discovery_routes"):
+            vehicle_doc["discovery_routes"] = [
+                {key: route[key] for key in ("id", "label", "url", "warning") if key in route}
+                for route in (vehicle_sources.get("discovery_routes") or [])
+                if str(route.get("url") or "").startswith("https://")
+            ]
+        vehicle_doc["discovery_links_are_live_listings"] = False
+        vehicle_page_catalog.write_text(
+            json.dumps(vehicle_doc, separators=(",", ":"), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        print(
+            f"UI_VEHICLE_COVERAGE inventory={len(vehicle_doc.get('vehicles') or [])} "
+            f"manual_routes={len(vehicle_doc['discovery_routes'])} "
+            f"dealers={len(vehicle_doc['source_registry'])}"
+        )
     compact_json = json.dumps(catalog, separators=(",", ":"), ensure_ascii=False)
     (SITE / "catalog.json").write_text(compact_json, encoding="utf-8")
     (SITE / "catalog.js").write_text(
