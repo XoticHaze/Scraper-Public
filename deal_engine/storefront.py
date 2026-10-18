@@ -12,7 +12,7 @@ from urllib.parse import quote, urlparse
 
 FOCUS_TERMS = {
     "power": ("ups", "uninterruptible", "cyberpower", "eaton", "apc ", "battery backup"),
-    "music": ("roland", "nord ", "korg", "arturia", "akai", "synth", "midi", "digital piano", "keyboard"),
+    "music": ("roland", "nord ", "korg", "arturia", "akai", "synth", "midi", "digital piano", "electronic keyboard", "keyboard piano", "61-key", "49-key", "73-key", "88-key"),
     "solar": ("solar", "mppt", "inverter", "charge controller"),
     "homelab": ("server rack", "network rack", "rackmount", "nas ", "router", "poe ", "minipc", "mini pc"),
     "home": ("dishwasher", "kitchen sink", "storage rack", "storage shelf", "shelving", "vanity"),
