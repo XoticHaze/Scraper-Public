@@ -335,8 +335,10 @@ def main() -> int:
                 if str(route.get("url") or "").startswith("https://")
             ]
         vehicle_doc["discovery_links_are_live_listings"] = False
-        vehicle_page_catalog.write_text(
-            json.dumps(vehicle_doc, separators=(",", ":"), ensure_ascii=False),
+        compact_vehicle = json.dumps(vehicle_doc, separators=(",", ":"), ensure_ascii=False)
+        vehicle_page_catalog.write_text(compact_vehicle, encoding="utf-8")
+        (SITE / "vehicle_catalog.js").write_text(
+            "window.VEHICLE_CATALOG=" + compact_vehicle + ";\n",
             encoding="utf-8",
         )
         print(
