@@ -359,6 +359,7 @@ def main() -> int:
         "raw_listing_count": len(raw_rows),
         "discovery_only_count": discovery_only_count,
         "verified_detail_count": len(rows),
+        "verified_vehicle_photo_count": sum(row.get("photo_status") == "vehicle_specific" for row in ranked),
         "deduped_listing_count": len(rows),
         "eligible_count": len(ranked),
         "vehicles": ranked,
@@ -374,6 +375,7 @@ def main() -> int:
     print(f"VEHICLE_SOURCE_ERRORS={json.dumps(source_errors, sort_keys=True)}")
     print(f"VEHICLE_DISCOVERY_ROUTES={len(payload['discovery_routes'])}")
     print(f"VEHICLE_RAW={len(raw_rows)} discovery_only={discovery_only_count} verified={len(rows)} eligible={len(ranked)}")
+    print(f"VEHICLE_PHOTO_PROOF source_owned={sum(row.get('photo_status') == 'vehicle_specific' for row in ranked)} missing={sum(row.get('photo_status') != 'vehicle_specific' for row in ranked)}")
     for row in ranked[:15]:
         print(json.dumps({key: row.get(key) for key in (
             "rank", "title", "dealer", "price", "mileage", "locality", "area_priority",
