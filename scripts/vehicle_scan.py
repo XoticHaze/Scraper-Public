@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin
 
+from vehicle_engine.images import select_gallery_photo
 from vehicle_engine.identity import dedupe_rows
 from vehicle_engine.link_verification import verify_vehicle_detail
 from vehicle_engine.normalize import parse_autotrader_card, parse_dealer_detail
@@ -130,11 +131,33 @@ def fetch_local_dealers(cfg: dict) -> tuple[list[dict], dict[str, str]]:
                         if _looks_like_challenge(detail_status, detail_title, detail_text):
                             failed_count += 1
                             continue
-                        image_url = detail_page.locator('meta[property="og:image"]').get_attribute("content") \
-                            if detail_page.locator('meta[property="og:image"]').count() else None
-                        row = parse_dealer_detail(
-                            {"text": detail_text, "url": detail_page.url, "image_url": image_url}, dealer
+                        # A page-level og:image is often the dealer logo or a
+                        # generic model shot. Capture actual vehicle-detail
+                        # gallery candidates with loaded dimensions instead.
+                        gallery_candidates = detail_page.evaluate(
+                            """
+                            () => Array.from(document.querySelectorAll('img')).map(img => ({
+                              url: img.currentSrc || img.getAttribute('data-src') || img.src || '',
+                              alt: (img.alt || '').slice(0, 250),
+                              width: img.naturalWidth || 0,
+                              height: img.naturalHeight || 0,
+                              gallery: !!img.closest(
+                                '[class*="gallery"], [class*="Gallery"], ' +
+                                '[id*="gallery"], [class*="photo"], [class*="Photo"], ' +
+                                '[class*="slideshow"], [class*="carousel"], ' +
+                                '[data-testid*="gallery"], [data-testid*="image"]'
+                              ),
+                            })).slice(0, 220)
+                            """
                         )
+                        row = parse_dealer_detail(
+                            {"text": detail_text, "url": detail_page.url, "image_url": None}, dealer
+                        )
+                        if row:
+                            photo = select_gallery_photo(gallery_candidates, vin=row.get("vin"))
+                            row["image_url"] = photo["url"] if photo else None
+                            row["image_source"] = photo["source"] if photo else None
+                            row["photo_status"] = "vehicle_specific" if photo else "missing"
                         if row:
                             verified, reason = verify_vehicle_detail(
                                 status=detail_status,
@@ -336,6 +359,7 @@ def main() -> int:
         "raw_listing_count": len(raw_rows),
         "discovery_only_count": discovery_only_count,
         "verified_detail_count": len(rows),
+        "verified_vehicle_photo_count": sum(row.get("photo_status") == "vehicle_specific" for row in ranked),
         "deduped_listing_count": len(rows),
         "eligible_count": len(ranked),
         "vehicles": ranked,
@@ -351,6 +375,7 @@ def main() -> int:
     print(f"VEHICLE_SOURCE_ERRORS={json.dumps(source_errors, sort_keys=True)}")
     print(f"VEHICLE_DISCOVERY_ROUTES={len(payload['discovery_routes'])}")
     print(f"VEHICLE_RAW={len(raw_rows)} discovery_only={discovery_only_count} verified={len(rows)} eligible={len(ranked)}")
+    print(f"VEHICLE_PHOTO_PROOF source_owned={sum(row.get('photo_status') == 'vehicle_specific' for row in ranked)} missing={sum(row.get('photo_status') != 'vehicle_specific' for row in ranked)}")
     for row in ranked[:15]:
         print(json.dumps({key: row.get(key) for key in (
             "rank", "title", "dealer", "price", "mileage", "locality", "area_priority",

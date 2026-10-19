@@ -105,6 +105,45 @@ def _dealer_price(lines: list[str], text: str) -> int | None:
     return None
 
 
+def _drivetrain(raw: str | None, title: str) -> str | None:
+    """Do not confuse navigation such as 'Location' or 'Tags' for a drivetrain."""
+    value = str(raw or "").strip()
+    if re.fullmatch(r"(?:awd|all[- ]wheel drive|4wd|4x4|four[- ]wheel drive)", value, re.I):
+        return "All-wheel Drive"
+    if re.fullmatch(r"(?:fwd|front[- ]wheel drive|2wd|4x2)", value, re.I):
+        return "Front-Wheel Drive"
+    if re.search(r"\b(?:AWD|4WD|4x4)\b", title, re.I):
+        return "All-wheel Drive"
+    if re.search(r"\b(?:FWD|2WD)\b", title, re.I):
+        return "Front-Wheel Drive"
+    return None
+
+
+def _detail_mileage(lines: list[str]) -> int | None:
+    """Require a vehicle mileage label; never take generic 100k-mile warranty text."""
+    for label in ("odometer", "mileage", "miles"):
+        raw = _label_value(lines, (label,))
+        if not raw or re.search(r"warranty|coverage|powertrain|certification", raw, re.I):
+            continue
+        value = _mileage_from_text(raw)
+        if value is not None and 1 <= value <= 300_000:
+            return value
+        numeric = re.fullmatch(r"[\d,]+", raw.strip())
+        if numeric:
+            value = _int_value(numeric.group())
+            if value is not None and 1 <= value <= 300_000:
+                return value
+    for line in lines:
+        if re.search(r"warranty|powertrain|coverage|certification", line, re.I):
+            continue
+        match = re.match(r"(?i)^(?:mileage|odometer|miles)\s*[:=-]\s*([\d,]+)\s*(?:mi|miles)?\b", line)
+        if match:
+            value = _int_value(match.group(1))
+            if value is not None and 1 <= value <= 300_000:
+                return value
+    return None
+
+
 def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[str, Any] | None:
     """Normalize a rendered local-dealer vehicle detail page."""
     text = str(page.get("text") or "").replace("\xa0", " ")
@@ -132,6 +171,14 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         title_line,
         flags=re.I,
     )
+    # Keep only the actual Toyota RAV4 identity, not dealer SEO headings.
+    canonical = re.search(
+        r"\b(20\d{2}\s+Toyota\s+RAV4(?:\s+(?:Prime|Hybrid|LE|XLE|XSE|Limited|Adventure|TRD|SE|Woodland|Sport|Premium|AWD|FWD|4WD|4x4|Plus)){0,4})\b",
+        title,
+        re.I,
+    )
+    if canonical:
+        title = canonical.group(1).strip()
     match = YEAR_TITLE_RE.search(title)
     if not match:
         return None
@@ -142,8 +189,7 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         return None
 
     price = _dealer_price(lines, text)
-    mileage_value = _label_value(lines, ("odometer", "mileage"))
-    mileage = _mileage_from_text(mileage_value or "") or _mileage_from_text(text)
+    mileage = _detail_mileage(lines)
     if price is None or mileage is None:
         return None
 
@@ -155,12 +201,7 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         vin_match = VIN_RE.search(text)
         vin = vin_match.group(1) if vin_match else None
 
-    drivetrain = _label_value(lines, ("drivetrain", "drive type"))
-    if not drivetrain:
-        if re.search(r"\b(?:4WD/AWD|All-Wheel Drive|AWD)\b", text, re.I):
-            drivetrain = "All-wheel Drive"
-        elif re.search(r"\bFront-Wheel Drive\b", text, re.I):
-            drivetrain = "Front-Wheel Drive"
+    drivetrain = _drivetrain(_label_value(lines, ("drivetrain", "drive type")), title_line)
 
     return {
         "source": str(dealer.get("id") or "local_dealer"),

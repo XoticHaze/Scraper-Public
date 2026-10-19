@@ -78,7 +78,7 @@ jobs:
       - name: Tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_catalog_fallback.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_storefront.py tests/test_vehicle_hunt.py tests/test_vehicle_link_verification.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_catalog_fallback.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_storefront.py tests/test_vehicle_hunt.py tests/test_vehicle_link_verification.py tests/test_vehicle_image_quality.py tests/test_encrypted_compute.py tests/test_private_producer_interop.py
 
       - name: Validate engine, app, hunt, locality, privacy, and private-compute policy
         run: |
