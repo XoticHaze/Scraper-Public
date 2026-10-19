@@ -189,6 +189,9 @@ jobs:
               # production vehicle detail catalog is available.
               vehicle = browser.new_page(viewport={"width": 1280, "height": 900})
               vehicle.goto(Path('site/vehicles.html').resolve().as_uri(), wait_until='domcontentloaded', timeout=30000)
+              # Dealer-source panel is intentionally collapsed below the
+              # photo-first buying cards; open it before visible-link probes.
+              vehicle.locator('.source-panel summary').click()
               vehicle.wait_for_selector('#source-links a', timeout=30000)
               assert vehicle.locator('#source-links a').count() >= 5
               assert vehicle.locator('#discovery-links a').count() >= 5
