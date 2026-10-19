@@ -84,3 +84,13 @@ VIN
 2T3A1RFV1SC123456""",
     }, DEALER)
     assert row is None
+
+
+def test_dealer_no_photo_placeholder_rejected_even_inside_gallery():
+    assert select_gallery_photo([
+        {
+            "url": "https://cdn.dealer.test/images/large/vehicle-001.jpg",
+            "alt": "Vehicle Photos Unavailable Please Check Back Soon",
+            "width": 1200, "height": 800, "gallery": True,
+        }
+    ]) is None
