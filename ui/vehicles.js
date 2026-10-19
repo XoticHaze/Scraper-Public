@@ -26,7 +26,7 @@
     const prefix = [v.year,v.make || 'Toyota',v.model || 'RAV4'].filter(Boolean).join(' ');
     const raw = String(v.trim || '').trim();
     if (raw && raw.length < 45 && !/for sale|used vehicles|location|tags|san antonio/i.test(raw)) return prefix + ' ' + raw;
-    const match = String(v.title || '').match(/20\d{2}\s+Toyota\s+RAV4(?:\s+(?:Hybrid|Prime|LE|XLE|XSE|Limited|SE|Adventure|TRD|Woodland|Premium|AWD|FWD)){0,4})/i);
+    const match = String(v.title || '').match(/20\d{2}\s+Toyota\s+RAV4(?:\s+(?:Hybrid|Prime|LE|XLE|XSE|Limited|SE|Adventure|TRD|Woodland|Premium|AWD|FWD)){0,4}/i);
     return match ? match[0] : prefix;
   };
   const isAWD = v => drive(v.drivetrain) === 'AWD';
