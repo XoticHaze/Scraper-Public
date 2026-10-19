@@ -57,7 +57,7 @@ jobs:
       - name: Run scoring and hunt tests
         run: |
           set -euo pipefail
-          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_catalog_fallback.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py
+          pytest -q tests/test_deal_scoring.py tests/test_hunts.py tests/test_catalog_fallback.py tests/test_compatibility.py tests/test_market_valuation.py tests/test_market_enrichment.py tests/test_vehicle_image_quality.py tests/test_vehicle_hunt.py tests/test_vehicle_link_verification.py tests/test_vehicle_price_parser_regression.py
 
       - name: Run configured inventory deal engine
         run: |
