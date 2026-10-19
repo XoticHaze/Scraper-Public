@@ -21,8 +21,11 @@ permissions:
   pages: write
   id-token: write
 
+# Branch/PR CI completion also emits workflow_run events, but those jobs
+# are skipped by the job gate. They must not cancel an already running main
+# publication at the workflow-level concurrency reservation.
 concurrency:
-  group: macbid-live-refresh
+  group: macbid-live-refresh-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || 'main' }}
   cancel-in-progress: true
 
 jobs:
