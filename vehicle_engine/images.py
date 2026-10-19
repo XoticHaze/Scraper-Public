@@ -15,8 +15,8 @@ BAD_IMAGE_TOKENS = (
     "brandmark", "googlemap", "mapbox", "facebook", "instagram", "youtube",
     "transparent", "spacer", "loading", "pixel.gif", "thumbs_up",
 )
-CAR_CUES = re.compile(r"\\brav\\s*4\\b|\\btoyota\\b.{0,25}\\brav4\\b", re.I)
-VIN_CUE = re.compile(r"\\b[A-HJ-NPR-Z0-9]{17}\\b")
+CAR_CUES = re.compile(r"\brav\s*4\b|\btoyota\b.{0,25}\brav4\b", re.I)
+VIN_CUE = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b")
 
 
 def valid_photo_url(value: str | None) -> bool:
@@ -26,7 +26,7 @@ def valid_photo_url(value: str | None) -> bool:
     if parsed.scheme != "https" or not parsed.netloc:
         return False
     needle = (parsed.path + "?" + parsed.query).lower()
-    return not any(token in needle for token in BAD_IMAGE_TOKENS) and not re.search(r"\\.svg(?:$|\\?)", needle)
+    return not any(token in needle for token in BAD_IMAGE_TOKENS) and not re.search(r"\.svg(?:$|\?)", needle)
 
 
 def select_gallery_photo(candidates: list[dict], *, vin: str | None = None) -> dict | None:
