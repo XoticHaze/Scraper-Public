@@ -192,10 +192,16 @@ jobs:
               vehicle_doc = json.loads(Path('site/vehicle_catalog.json').read_text())
               assert vehicle_doc['discovery_links_are_live_listings'] is False
               assert Path('site/vehicle_catalog.js').exists()
+              assert vehicle.locator('#max-mileage').input_value() == '45000'
               if not vehicle_doc.get('vehicles'):
                   assert vehicle.locator('#empty-state').is_visible()
-                  assert 'NO VERIFIED INVENTORY' in vehicle.locator('#meta').inner_text()
-              print('VEHICLE_EXISTING_ROUTE_SMOKE=PASS offline-discovery+source-truth')
+                  assert 'NO LIVE VEHICLE SNAPSHOT' in vehicle.locator('#meta').inner_text()
+              else:
+                  assert vehicle.locator('#total').inner_text().strip()
+                  assert vehicle.locator('#photo-count').inner_text().strip()
+                  assert vehicle.locator('#max-mileage').is_visible()
+                  assert vehicle.locator('#source-links a').count() >= 5
+              print('VEHICLE_EXISTING_ROUTE_SMOKE=PASS purchase-filters+source-truth+photo-telemetry')
               vehicle.close()
 
               mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True)
