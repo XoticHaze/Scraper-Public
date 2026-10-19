@@ -3,37 +3,51 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Vehicle Hunt</title>
+  <title>Vehicle Hunt · Scraper</title>
   <link rel="stylesheet" href="vehicles.css" />
 </head>
 <body>
-  <header>
-    <p>SAN ANTONIO · LOCAL VEHICLE DEAL ENGINE</p>
-    <h1>Vehicle Hunt</h1>
-    <p id="meta">Loading latest scan…</p>
-    <a href="index.html">MAC.BID Hunt</a>
+  <header class="top">
+    <div class="top-title">
+      <p class="eyebrow">SCRAPER · SAN ANTONIO VEHICLE RESEARCH</p>
+      <h1>Vehicle Hunt</h1>
+      <p class="subhead">Toyota RAV4 · buy the right vehicle, not just the lowest sticker price</p>
+      <p id="meta" aria-live="polite">Loading current inventory…</p>
+    </div>
+    <nav aria-label="App navigation"><a href="index.html">← MAC.BID Hunt</a><a href="paotexas.html">PAOTEXAS</a></nav>
   </header>
   <main>
-    <section class="controls">
-      <label>Max price <input id="max-price" type="number" value="27000" /></label>
-      <label>Max mileage <input id="max-mileage" type="number" value="100000" /></label>
-      <label>Max distance <input id="max-distance" type="number" value="200" /></label>
-      <label><input id="awd" type="checkbox" /> AWD only</label>
-      <label><input id="local" type="checkbox" /> local / nearby only</label>
+    <section class="summary" aria-label="Vehicle inventory summary">
+      <div><small>VIN-linked listings</small><strong id="total">—</strong></div>
+      <div><small>Preferred under 35k miles</small><strong id="preferred-count">—</strong></div>
+      <div><small>AWD confirmed</small><strong id="awd-count">—</strong></div>
+      <div><small>Vehicle photos captured</small><strong id="photo-count">—</strong></div>
     </section>
-    <section class="source-panel">
-      <h2>Coverage</h2>
-      <p id="source-status">Loading source health…</p>
+    <section class="controls" aria-label="Vehicle filters">
+      <label>Max asking price <input id="max-price" type="number" inputmode="numeric" min="5000" value="27000" /></label>
+      <label>Max mileage <input id="max-mileage" type="number" inputmode="numeric" min="1" max="200000" value="45000" /></label>
+      <label>Max distance (mi) <input id="max-distance" type="number" inputmode="numeric" min="1" value="200" /></label>
+      <label>Order <select id="sort"><option value="fit">Best fit</option><option value="price">Lowest price</option><option value="mileage">Lowest mileage</option><option value="otd">Lowest est. out-the-door</option></select></label>
+      <label class="toggle"><input id="awd" type="checkbox" /> AWD only</label>
+      <label class="toggle"><input id="local" type="checkbox" /> Nearby only (50 mi)</label>
+    </section>
+    <p class="filter-note">Preferred ≤35,000 miles; showing up to 45,000 by default. Increase the mileage filter to review higher-mileage compromises. Prices, mileage and photos are dealer-sourced observations, not independently certified facts.</p>
+    <div class="list-heading"><h2>Listings</h2><span><strong id="count">0</strong> match your filters</span></div>
+    <section id="empty-state" class="empty" hidden>
+      <h3>No matching vehicles in this snapshot</h3>
+      <p id="empty-description">Try widening the filters or use the direct dealer inventory links below. A missing vehicle-specific photo is never replaced with a generic car image.</p>
+      <button id="expand-mileage" type="button">Review up to 100,000 miles</button>
+    </section>
+    <section id="grid" class="grid" aria-live="polite"></section>
+    <details class="source-panel">
+      <summary>Inventory coverage, source health &amp; wider market searches</summary>
+      <p id="source-status"></p>
+      <h3>Dealer inventory</h3>
       <div id="source-links" class="route-links"></div>
       <h3>Broaden / verify the market</h3>
       <div id="discovery-links" class="route-links"></div>
-    </section>
-    <p><strong id="count">0</strong> matching vehicles</p>
-    <section id="empty-state" class="source-panel" hidden>
-      <h2>No verified vehicle photos or active listing cards yet</h2>
-      <p>The published vehicle inventory is empty. Photos only appear for real source-observed vehicles, never unrelated stock images. Use the dealer and discovery links above to search now; those are search entry points, not verified vehicle listings.</p>
-    </section>
-    <section id="grid" class="grid"></section>
+      <p class="disclaimer">Dealer and market-search buttons are search entry points. They do not certify an individual active listing.</p>
+    </details>
   </main>
   <script src="vehicle_catalog.js"></script>
   <script src="vehicles.js" defer></script>
