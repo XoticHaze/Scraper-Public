@@ -40,6 +40,12 @@ def select_gallery_photo(candidates: list[dict], *, vin: str | None = None) -> d
         if width < 450 or height < 225 or width / max(height, 1) > 3.0:
             continue
         alt = str(photo.get("alt") or "")
+        if any(term in alt.lower() for term in (
+            "photos unavailable", "photo unavailable", "no vehicle photos",
+            "no photos", "no photo", "check back soon", "coming soon",
+            "stock photo", "stock image", "not actual vehicle",
+        )):
+            continue
         gallery = bool(photo.get("gallery"))
         vehicle_text = bool(CAR_CUES.search(alt)) or bool(vin and vin.lower() in (alt + url).lower())
         if not gallery and not vehicle_text:
