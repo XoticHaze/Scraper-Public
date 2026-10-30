@@ -51,6 +51,7 @@ def test_external_market_value_derives_realistic_value_and_allocation_ceiling():
         premium_rate=0.15,
         lot_fee=3.0,
         sales_tax_rate=0.0825,
+        as_of="2026-09-27",
     )
     assert derived["market_price_status"] == "verified_external"
     assert derived["verified_new_price"] == 110.0
