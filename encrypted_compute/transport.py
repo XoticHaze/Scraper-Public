@@ -22,7 +22,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 SCHEMA = "repo-app-ephemeral-x25519-v2"
 AUTHORITY = "private_compute_only"
-INFO = b"repo-app-ephemeral-x25519-v1"
+INFO = b"repo-app-ephemeral-x25519-v2"
 DIRECTIONS = {"workload", "result"}
 ENVELOPE_FIELDS = {
     "schema",
