@@ -306,7 +306,7 @@ def add_history(rows: list[dict], previous_path: Path) -> None:
 def source_registry(cfg: dict) -> list[dict]:
     fields = (
         "id", "name", "location", "market_local", "locality_hint", "area_priority",
-        "inventory_url", "doc_fee", "mandatory_addon_amount", "addon_warning", "role",
+        "inventory_url", "doc_fee", "doc_fee_included_in_price", "mandatory_addon_amount", "addon_warning", "role",
     )
     sources = [*configured_dealers(cfg), *configured_aggregators(cfg)]
     return [
