@@ -125,6 +125,11 @@
       const a=link('Open VIN-linked vehicle ↗',v.source_url,'primary');
       if(a) links.appendChild(a);
     } else links.appendChild(node('span','unverified','Vehicle detail link is not verified'));
+    if (v.vin && /^[A-HJ-NPR-Z0-9]{17}$/.test(String(v.vin))) {
+      const marketLink=node('a', 'market-link', 'Price history + ownership costs');
+      marketLink.href='vehicle-market.html?vin='+encodeURIComponent(v.vin);
+      links.appendChild(marketLink);
+    }
     if(links.children.length) body.appendChild(links);
     const more=node('details','more');
     more.appendChild(node('summary','', 'Why ranked here · fees and risks'));
@@ -161,14 +166,28 @@
     if($('sort').value==='mileage') rows.sort((a,b)=>a.mileage-b.mileage);
     if($('sort').value==='otd') rows.sort((a,b)=>a.estimated_otd-b.estimated_otd);
     if($('sort').value==='fit') rows.sort((a,b)=>(b.deal_score||0)-(a.deal_score||0));
-    $('count').textContent=number(rows.length);
-    $('empty-state').hidden=rows.length>0;
+    const allMatches = rows.length;
+    const dealers = new Set(rows.map(v=>String(v.dealer||v.source||'Unknown')));
+    const available = {};
+    const visible = $('balance-dealers').checked ? rows.filter(v => {
+      const key=String(v.dealer||v.source||'Unknown');
+      available[key]=(available[key]||0)+1;
+      return available[key]<=2;
+    }) : rows;
+    $('dealer-coverage').textContent=allMatches
+      ? allMatches+' filtered VINs from '+dealers.size+' dealer'+(dealers.size===1?'':'s')+'. '+
+        (dealers.size===1?'All qualifying vehicles currently come from the same seller, so this is not a representative RAV4 market. ':'')+
+        (visible.length<allMatches?'Showing '+visible.length+' of '+allMatches+' to reduce same-dealer repetition. Uncheck the dealer limit to inspect every unique VIN. ':'')+
+        'Review broader sample and actual-time pricing on Market & Ownership.'
+      : 'No ranked listings meet your filters; dealer and regional coverage remains incomplete.';
+    $('count').textContent=number(visible.length)+' / '+number(allMatches);
+    $('empty-state').hidden=allMatches>0;
     if(!rows.length){
       $('empty-description').textContent= (catalog.vehicles||[]).length
         ? 'There are '+(catalog.vehicles||[]).length+' observed vehicles, but none pass these buying filters. Broaden mileage only if you want to consider the maintenance tradeoff.'
         : 'No usable dealer listing has been confirmed. Use the dealer inventory/search links below; do not treat search result cards as verified inventory.';
     }
-    $('grid').replaceChildren(...rows.map(card));
+    $('grid').replaceChildren(...visible.map(card));
   }
 
   function coverage() {
@@ -208,7 +227,7 @@
           ' · photos and listed details are dealer-sourced'
         : 'NO LIVE VEHICLE SNAPSHOT · Dealer searches below remain available';
       coverage();
-      for(const id of ['max-price','max-mileage','max-distance','sort','awd','local']) $(id).addEventListener('input',render);
+      for(const id of ['max-price','max-mileage','max-distance','sort','awd','local','balance-dealers']) $(id).addEventListener('input',render);
       $('expand-mileage').addEventListener('click',()=>{
         $('max-mileage').value='100000';
         render();
