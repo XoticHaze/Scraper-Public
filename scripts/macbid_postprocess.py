@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from deal_engine.grouping import collapse_ranked, product_identity
+from scripts.vehicle_scan import source_registry as configured_vehicle_source_registry
 
 REPORT = Path("results/macbid-deal-engine.json")
 VEHICLE_REPORT = Path("results/vehicle-hunt.json")
@@ -51,13 +52,19 @@ def vehicle_catalog_cache_valid(data: dict[str, Any]) -> bool:
     return True
 
 
-def previous_vehicle_age_minutes() -> float | None:
+def previous_vehicle_age_minutes(expected_source_registry: list[dict] | None = None) -> float | None:
     if not VEHICLE_PREVIOUS.exists():
         return None
     try:
         data = json.loads(VEHICLE_PREVIOUS.read_text(encoding="utf-8"))
         if not vehicle_catalog_cache_valid(data):
             print("VEHICLE_PREVIOUS=invalid_catalog forcing_refresh=true")
+            return None
+        # Freshness only describes *age*, not config compatibility. Adding,
+        # removing or changing dealer inputs must invalidate the catalog even
+        # inside the normal 180-minute reuse interval.
+        if expected_source_registry is not None and data.get("source_registry") != expected_source_registry:
+            print("VEHICLE_PREVIOUS=source_registry_changed forcing_refresh=true")
             return None
         generated = int(data.get("generated_epoch_utc") or 0)
         if generated <= 0:
@@ -81,7 +88,7 @@ def refresh_vehicle_hunt() -> None:
     automation = vehicle_config.get("automation", {})
     refresh_interval = int(automation.get("refresh_interval_minutes", 180))
     scanner_timeout = int(automation.get("scanner_timeout_seconds", 360))
-    age_minutes = previous_vehicle_age_minutes()
+    age_minutes = previous_vehicle_age_minutes(configured_vehicle_source_registry(vehicle_config))
 
     if age_minutes is not None and age_minutes < refresh_interval:
         shutil.copyfile(VEHICLE_PREVIOUS, VEHICLE_REPORT)

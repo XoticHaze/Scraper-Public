@@ -315,3 +315,29 @@ def test_hill_country_honda_realistic_selling_price_and_exact_vin_fwd_detail():
     assert row["dealer_doc_fee_included_in_price"] is True
     ranked = rank_vehicles([row], POLICY)
     assert ranked and ranked[0]["incremental_doc_fee"] == 0
+
+
+def test_fresh_vehicle_snapshot_invalidates_when_dealer_registry_changes(tmp_path, monkeypatch):
+    import json
+    import time
+    from scripts import macbid_postprocess as post
+
+    path = tmp_path / "vehicle-previous.json"
+    dealer = {
+        "id": "toyota_of_boerne",
+        "inventory_url": "https://dealer.test/used/toyota/rav4",
+        "doc_fee": 225,
+        "doc_fee_included_in_price": False,
+    }
+    old = {
+        "generated_epoch_utc": int(time.time()),
+        "vehicles": [{"price": 26225}],
+        "source_registry": [dealer],
+    }
+    path.write_text(json.dumps(old), encoding="utf-8")
+    monkeypatch.setattr(post, "VEHICLE_PREVIOUS", path)
+    assert post.previous_vehicle_age_minutes([dealer]) is not None
+    new_dealer = {"id": "hill_country_honda", "inventory_url": "https://www.hillcountryhonda.com/inventory/used/toyota/rav4"}
+    assert post.previous_vehicle_age_minutes([dealer, new_dealer]) is None
+    changed_fee = {**dealer, "doc_fee_included_in_price": True}
+    assert post.previous_vehicle_age_minutes([changed_fee]) is None
