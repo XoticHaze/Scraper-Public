@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from vehicle_engine.vin_specs import infer_2025_rav4_drivetrain
+
 PRICE_RE = re.compile(r"\$\s*([0-9][0-9,]*)")
 PLAIN_PRICE_RE = re.compile(r"^\$?([0-9]{1,3}(?:,[0-9]{3})+)$")
 MILES_RE = re.compile(r"(?<![.\d])\b([0-9][0-9,]*)\s+(?:mi\.?|miles?)\b", re.I)
@@ -202,6 +204,11 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         vin = vin_match.group(1) if vin_match else None
 
     drivetrain = _drivetrain(_label_value(lines, ("drivetrain", "drive type")), title_line)
+    # The exact dealer detail wins. A reviewed 2025 Toyota build-family VIN
+    # clue fills only missing detail fields, with non-confirmed provenance.
+    vin_family = infer_2025_rav4_drivetrain(vin, year, make, "RAV4") if not drivetrain else None
+    if vin_family:
+        drivetrain = vin_family["drivetrain"]
 
     return {
         "source": str(dealer.get("id") or "local_dealer"),
@@ -224,6 +231,10 @@ def parse_dealer_detail(page: dict[str, Any], dealer: dict[str, Any]) -> dict[st
         "locality_hint": dealer.get("locality_hint"),
         "area_priority": dealer.get("area_priority"),
         "drivetrain": drivetrain,
+        "drivetrain_provenance": (
+            "vin_family_inferred" if vin_family else "dealer_detail" if drivetrain else "unknown"
+        ),
+        "drivetrain_evidence_url": vin_family["drivetrain_evidence_url"] if vin_family else None,
         "fuel_type": _label_value(lines, ("fuel type", "fuel")),
         "transmission": _label_value(lines, ("transmission",)),
         "certified": bool(re.search(r"\bCertified\b", title_line, re.I) or re.search(r"\bGold Certified\b|\bSilver Certified\b", text, re.I)),
