@@ -110,7 +110,8 @@ def test_node_producer_full_capsule_executes_and_private_result_round_trips(tmp_
     assert receipt["private_plaintext_emitted"] is False
     assert receipt["stdout_stderr_public"] is False
     assert receipt["github_credentials_exposed_to_workload"] is False
-    assert receipt["private_output_file_count"] == 1
+    # The public receipt has no private output counts. Inspect the private
+    # decrypted result below instead of leaking output cardinality.
 
     result_envelope = json.loads((result_staging / "result-envelope.json").read_text(encoding="utf-8"))
     result_chunks = {

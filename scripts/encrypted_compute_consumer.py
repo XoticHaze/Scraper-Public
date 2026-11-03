@@ -328,19 +328,12 @@ def consume(args: argparse.Namespace) -> dict[str, Any]:
         )
 
     return {
-        "schema": "repo-app-encrypted-compute-receipt-v1",
-        "contract_id": args.contract_id,
-        "contract_version": args.contract_version,
+        "schema": "repo-app-encrypted-compute-receipt-v2",
         "run_id": str(args.run_id),
         "status": "PASS" if return_code == 0 and not timed_out else "FAIL",
         "return_code": return_code,
         "timed_out": timed_out,
-        "duration_seconds": round(duration, 3),
-        "workload_plaintext_sha256": sha256_bytes(plaintext),
         "result_ciphertext_sha256": result_envelope["ciphertext_sha256"],
-        "result_chunk_count": chunk_count,
-        "private_output_file_count": output_count,
-        "private_output_bytes": output_bytes,
         "private_plaintext_emitted": False,
         "stdout_stderr_public": False,
         "github_credentials_exposed_to_workload": False,

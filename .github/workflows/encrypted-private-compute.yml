@@ -1,5 +1,5 @@
 name: Encrypted Private Compute
-run-name: Private compute · ${{ inputs.workload_id || 'request-marker' }} · #${{ github.run_number }}
+run-name: Encrypted compute · #${{ github.run_number }}
 
 on:
   workflow_dispatch:
@@ -68,14 +68,15 @@ jobs:
               contract = str(doc.get('contract_id') or contract).strip()
               source = marker.as_posix()
           ident = re.compile(r'^[a-z0-9][a-z0-9._-]{0,63}$')
-          if not ident.fullmatch(contract) or not ident.fullmatch(workload):
+          # Public metadata accepts only nonsemantic high-entropy IDs.
+          if not ident.fullmatch(contract) or not re.fullmatch(r'^[a-f0-9]{32,64}$', workload):
               raise SystemExit('invalid contract_id/workload_id')
           out = Path(os.environ['GITHUB_OUTPUT'])
           with out.open('a', encoding='utf-8') as f:
               f.write(f'contract_id={contract}\n')
               f.write(f'workload_id={workload}\n')
               f.write(f'request_source={source}\n')
-          print(f'PRIVATE_COMPUTE_RESOLVED workload={workload} contract={contract} source={source}')
+          print('PRIVATE_COMPUTE_RESOLVED=OPAQUE_VALIDATED')
           PY
 
   pinned-runtime:
