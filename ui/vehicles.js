@@ -30,6 +30,7 @@
     return match ? match[0] : prefix;
   };
   const isAWD = v => drive(v.drivetrain) === 'AWD';
+  const isVINInferred = v => v.drivetrain_provenance === 'vin_family_inferred';
   const isPhoto = v => Boolean(safeURL(v.image_url)) && (
     v.photo_status === 'vehicle_specific' || /dealer_detail_gallery|dealer_detail_vehicle_photo/.test(String(v.image_source || ''))
   );
@@ -72,7 +73,7 @@
     }
     const figBadges = node('div','photo-flags');
     if (Number(v.mileage) <= 35000) figBadges.appendChild(badge('Preferred mileage','preferred'));
-    if (isAWD(v)) figBadges.appendChild(badge('AWD','preferred'));
+    if (isAWD(v)) figBadges.appendChild(badge(isVINInferred(v) ? 'AWD · VIN family' : 'AWD · dealer', 'preferred'));
     if (v.certified) figBadges.appendChild(badge('Dealer CPO'));
     figure.appendChild(figBadges);
     el.appendChild(figure);
@@ -92,7 +93,7 @@
     metrics.append(
       field('Estimated out-the-door',money(v.estimated_otd),true),
       field('Mileage',number(v.mileage)+' mi',true),
-      field('Drivetrain',drive(v.drivetrain)),
+      field('Drivetrain',drive(v.drivetrain) + (isVINInferred(v) ? ' · inferred' : '')),
       field('Location',v.locality ? String(v.locality).replaceAll('_',' ') : 'Unknown'),
       field('Vs. local listings',v.market_delta_pct == null ? 'Insufficient comps' : ((Number(v.market_delta_pct) > 0 ? '+' : '')+v.market_delta_pct+'%')),
       field('Price change',v.price_delta == null ? 'No history' : (Number(v.price_delta) === 0 ? 'Unchanged' : money(v.price_delta))),
@@ -112,6 +113,12 @@
       v.stock_number ? 'Stock '+v.stock_number : null,
     ].filter(Boolean).join(' · ');
     body.appendChild(facts);
+    if (isVINInferred(v)) {
+      const note = node('p', 'risk-note', 'Drivetrain inferred from a 2025 Toyota VIN build family. Confirm this exact VIN using its factory sticker before purchase. ');
+      const example = link('Reference build-family sticker', v.drivetrain_evidence_url);
+      if (example) note.appendChild(example);
+      body.appendChild(note);
+    }
     if(v.dealer_addon_warning) body.appendChild(node('p','risk-note',v.dealer_addon_warning));
     const links = node('div','card-actions');
     if(v.listing_link_status === 'verified') {

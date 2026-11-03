@@ -20,7 +20,7 @@
     <section class="summary" aria-label="Vehicle inventory summary">
       <div><small>VIN-linked listings</small><strong id="total">—</strong></div>
       <div><small>Preferred under 35k miles</small><strong id="preferred-count">—</strong></div>
-      <div><small>AWD confirmed</small><strong id="awd-count">—</strong></div>
+      <div><small>AWD indicated · verify</small><strong id="awd-count">—</strong></div>
       <div><small>Vehicle photos captured</small><strong id="photo-count">—</strong></div>
     </section>
     <section class="controls" aria-label="Vehicle filters">
@@ -28,10 +28,10 @@
       <label>Max mileage <input id="max-mileage" type="number" inputmode="numeric" min="1" max="200000" value="45000" /></label>
       <label>Max distance (mi) <input id="max-distance" type="number" inputmode="numeric" min="1" value="200" /></label>
       <label>Order <select id="sort"><option value="fit">Best fit</option><option value="price">Lowest price</option><option value="mileage">Lowest mileage</option><option value="otd">Lowest est. out-the-door</option></select></label>
-      <label class="toggle"><input id="awd" type="checkbox" /> AWD only</label>
+      <label class="toggle"><input id="awd" type="checkbox" /> AWD indicated only</label>
       <label class="toggle"><input id="local" type="checkbox" /> Nearby only (50 mi)</label>
     </section>
-    <p class="filter-note">Preferred ≤35,000 miles; showing up to 45,000 by default. Increase the mileage filter to review higher-mileage compromises. Prices, mileage and photos are dealer-sourced observations, not independently certified facts.</p>
+    <p class="filter-note">Preferred ≤35,000 miles; showing up to 45,000 by default. Increase the mileage filter to review higher-mileage compromises. Prices, mileage and photos are dealer-sourced observations, not independently certified facts. A VIN-family drivetrain clue is not an exact-vehicle factory sticker.</p>
     <div class="list-heading"><h2>Listings</h2><span><strong id="count">0</strong> match your filters</span></div>
     <section id="empty-state" class="empty" hidden>
       <h3>No matching vehicles in this snapshot</h3>

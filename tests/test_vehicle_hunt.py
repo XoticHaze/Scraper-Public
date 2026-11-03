@@ -1,6 +1,7 @@
 from vehicle_engine.identity import dedupe_rows
 from vehicle_engine.normalize import parse_autotrader_card, parse_cars_com_card, parse_dealer_detail
 from vehicle_engine.scoring import estimate_otd, locality_bucket, rank_vehicles
+from vehicle_engine.vin_specs import infer_2025_rav4_drivetrain
 
 
 POLICY = {
@@ -201,3 +202,75 @@ def test_included_doc_fee_is_not_added_twice_to_otd():
 
 def test_otd_estimate_is_explicit_and_tax_aware():
     assert estimate_otd(23000, POLICY) == 24912.5
+
+
+def test_2025_rav4_vin_family_drive_is_inferred_not_exact_vin_confirmed():
+    awd = infer_2025_rav4_drivetrain("2T3F1RFV1SC512476", 2025, "Toyota", "RAV4")
+    fwd = infer_2025_rav4_drivetrain("2T3W1RFV2SW378883", 2025, "Toyota", "RAV4")
+    assert awd and awd["drivetrain"] == "All-wheel Drive"
+    assert fwd and fwd["drivetrain"] == "Front-wheel Drive"
+    assert awd["drivetrain_provenance"] == "vin_family_inferred"
+    assert awd["drivetrain_evidence_url"].startswith("https://")
+    assert fwd["drivetrain_provenance"] == "vin_family_inferred"
+
+
+def test_vin_family_inference_fails_closed_on_other_builds_years_and_bad_vins():
+    assert infer_2025_rav4_drivetrain("2T3F1RFV1SC512476", 2024, "Toyota", "RAV4") is None
+    assert infer_2025_rav4_drivetrain("2T3F1RFV1SC512476", 2025, "Honda", "RAV4") is None
+    assert infer_2025_rav4_drivetrain("2T3F1RFV1SC512476", 2025, "Toyota", "Prius") is None
+    assert infer_2025_rav4_drivetrain("2T3P1RFV1SC496123", 2025, "Toyota", "RAV4") is None
+    assert infer_2025_rav4_drivetrain("2T3F1RFV1SC", 2025, "Toyota", "RAV4") is None
+
+
+def test_dealer_detail_fills_missing_drive_from_vin_family_without_claiming_proof():
+    row = parse_dealer_detail({
+        "url": "https://dealer.test/used/2025-toyota-rav4-le",
+        "text": """
+        Certified Pre-Owned 2025 Toyota RAV4 LE
+        Asking Price $24,225
+        Odometer
+        67,400 miles
+        VIN
+        2T3F1RFV1SC512476
+        """,
+    }, {"id": "example", "name": "Example Toyota", "market_local": True})
+    assert row is not None
+    assert row["drivetrain"] == "All-wheel Drive"
+    assert row["drivetrain_provenance"] == "vin_family_inferred"
+    assert row["drivetrain_evidence_url"].startswith("https://")
+
+
+def test_dealer_detail_explicit_drive_overrides_family_inference():
+    row = parse_dealer_detail({
+        "url": "https://dealer.test/used/2025-toyota-rav4-le",
+        "text": """
+        2025 Toyota RAV4 LE
+        Asking Price $24,225
+        Odometer
+        42,414 miles
+        Drivetrain
+        All-wheel Drive
+        VIN
+        2T3F1RFV1SW512766
+        """,
+    }, {"id": "example", "name": "Example Toyota", "market_local": True})
+    assert row is not None
+    assert row["drivetrain_provenance"] == "dealer_detail"
+    assert row["drivetrain_evidence_url"] is None
+
+
+def test_buyer_fit_prefers_lower_maintenance_miles_to_deeply_discounted_67k_car():
+    common = {
+        "year": 2025, "make": "Toyota", "model": "RAV4",
+        "drivetrain": "All-wheel Drive",
+        "drivetrain_provenance": "vin_family_inferred",
+        "locality_hint": "nearby", "certified": True,
+        "source_url": "https://dealer.test/vehicle",
+    }
+    high = {**common, "vin": "2T3F1RFV1SC512476", "mileage": 67400, "price": 24225}
+    lower = {**common, "vin": "2T3F1RFV1SW512766", "mileage": 42414, "price": 26225}
+    ranked = rank_vehicles([high, lower], POLICY)
+    assert ranked[0]["vin"] == lower["vin"]
+    assert "above_preferred_mileage" in ranked[1]["risks"]
+    assert "past_60k_service_ambiguity" in ranked[1]["risks"]
+    assert "awd_family_indicated_verify_exact_sticker" in ranked[0]["reasons"]
