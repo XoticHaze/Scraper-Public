@@ -362,6 +362,17 @@ def main() -> int:
         "verified_vehicle_photo_count": sum(row.get("photo_status") == "vehicle_specific" for row in ranked),
         "deduped_listing_count": len(rows),
         "eligible_count": len(ranked),
+        # A broader VIN-verified sample for the independent market page,
+        # including vehicles outside the buyer's price/mileage shortlist.
+        "market_observations": [
+            {key: row.get(key) for key in (
+                "vin", "price", "mileage", "year", "trim", "dealer", "source",
+                "source_url", "location", "area_priority", "drivetrain",
+                "drivetrain_provenance", "listing_link_status", "photo_status",
+                "dealer_doc_fee", "dealer_doc_fee_included_in_price",
+                "dealer_mandatory_addon_amount",
+            )} for row in rows
+        ],
         "vehicles": ranked,
     }
     output = Path(args.output)

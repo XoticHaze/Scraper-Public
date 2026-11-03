@@ -341,3 +341,60 @@ def test_fresh_vehicle_snapshot_invalidates_when_dealer_registry_changes(tmp_pat
     assert post.previous_vehicle_age_minutes([dealer, new_dealer]) is None
     changed_fee = {**dealer, "doc_fee_included_in_price": True}
     assert post.previous_vehicle_age_minutes([changed_fee]) is None
+
+
+
+def test_market_history_only_records_real_verified_vin_scan_times():
+    from scripts.vehicle_price_history import build_history
+
+    def catalog(when, price, status="verified"):
+        return {
+            "generated_utc": when,
+            "market_observations": [{
+                "vin": "2T3F1RFV1SW512766", "price": price, "year": 2025,
+                "mileage": 42414, "trim": "LE", "source": "toyota_of_boerne",
+                "dealer": "Vic Vaughan Toyota of Boerne", "listing_link_status": status,
+            }],
+            "vehicles": [],
+        }
+
+    a=catalog("2026-11-02T23:54:36+00:00",26225)
+    b=catalog("2026-11-03T04:06:59+00:00",26025)
+    output=build_history(b, a, published_available=True, bootstrap_seed=[])
+    assert output["record_count"] == 2
+    assert [r["price"] for r in output["observations"]] == [26225,26025]
+    assert [r["observed_at"] for r in output["observations"]] == [
+        a["generated_utc"],b["generated_utc"]]
+    # Cached replay of an already published scrape is not a new point.
+    duplicate=build_history(b,a,published=output["observations"],published_available=True,bootstrap_seed=[])
+    assert duplicate["record_count"]==2
+    blocked=build_history(catalog("2026-11-04T00:00:00+00:00",22000,"discovery_only"),
+                          published=duplicate["observations"],published_available=True,bootstrap_seed=[])
+    assert blocked["record_count"]==2
+
+
+def test_price_history_bootstrap_is_real_short_window_not_invented_trend():
+    from scripts.vehicle_price_history import build_history, load_seed
+    seed=load_seed()
+    assert len(seed)==15
+    history=build_history({},published_available=False,bootstrap_seed=seed)
+    assert history["record_count"]==15
+    assert history["vin_count"]==5
+    assert history["continuity_status"]=="SEED_AND_LAST_CATALOG_ONLY"
+    by_vin={}
+    for row in history["observations"]:
+        by_vin.setdefault(row["vin"],[]).append(row)
+    assert all(len(rows)==3 and len({r["price"] for r in rows})==1 for rows in by_vin.values())
+
+
+def test_price_history_skips_unverified_and_invalid_price_and_year():
+    from scripts.vehicle_price_history import build_history
+    current={"generated_utc":"2026-11-03T07:00:00Z",
+             "market_observations":[
+                {"vin":"2T3F1RFV1SW512766","year":2025,"price":27100,"mileage":42414,"listing_link_status":"verified"},
+                {"vin":"NOT-A-REAL-VIN","year":2025,"price":25999,"mileage":40000,"listing_link_status":"verified"},
+                {"vin":"2T3F1RFV1SC512476","year":2025,"price":225,"mileage":67400,"listing_link_status":"verified"},
+                {"vin":"2T3F1RFV5SC527627","year":2025,"price":24000,"mileage":47000,"listing_link_status":"discovery_only"},
+             ],"vehicles":[]}
+    history=build_history(current,published_available=True,bootstrap_seed=[])
+    assert [(row["vin"],row["price"]) for row in history["observations"]]==[("2T3F1RFV1SW512766",27100)]

@@ -90,6 +90,8 @@ jobs:
           node --check ui/browser-state.js
           node --check ui/browser-profile.js
           node --check ui/app.js
+          node --check ui/vehicle-market.js
+          node --check ui/vehicles.js
           node --check ui/app-enhancements.js
           node --check ui/action-center.js
           node --check ui/catalog-loader.js
@@ -209,7 +211,24 @@ jobs:
                   assert vehicle.locator('#max-mileage').is_visible()
                   assert vehicle.locator('#source-links a').count() >= 5
               print('VEHICLE_EXISTING_ROUTE_SMOKE=PASS purchase-filters+source-truth+photo-telemetry')
+              assert vehicle.locator('#balance-dealers').is_checked()
+              assert vehicle.locator('a[href="vehicle-market.html"]').count() == 1
               vehicle.close()
+
+              # Separate market/finance page, built from actual catalog snapshots.
+              market = browser.new_page(viewport={"width": 1280, "height": 900})
+              market.goto(Path('site/vehicle-market.html').resolve().as_uri(), wait_until='domcontentloaded', timeout=30000)
+              market.wait_for_selector('#vin-select option', timeout=30000)
+              assert market.locator('#history-rows tr').count() >= 3
+              assert market.locator('#price-history-chart polyline').count() == 1
+              assert '$' in market.locator('#out-payment').inner_text()
+              first_payment = market.locator('#out-payment').inner_text()
+              market.fill('#apr', '6.29')
+              assert market.locator('#out-payment').inner_text() != first_payment
+              market.fill('#insurance', '300')
+              assert '$' in market.locator('#out-allin').inner_text()
+              print('VEHICLE_MARKET_SMOKE=PASS chart+apr+insurance+distinct-route')
+              market.close()
 
               mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True)
               mobile.goto(url, wait_until='domcontentloaded', timeout=30000)

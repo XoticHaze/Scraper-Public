@@ -57,3 +57,5 @@ nav{display:flex;gap:12px;flex-wrap:wrap}nav a{padding:9px 13px;border-radius:9p
 .route-links{display:flex;flex-wrap:wrap;gap:8px}.route-links a{border:1px solid #41526c;border-radius:8px;background:#25344a;padding:8px 10px;text-decoration:none;font-size:.77rem}
 @media(max-width:960px){.top{display:block}.summary{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr))}}
 @media(max-width:580px){.top,main{padding:16px}.controls label:not(.toggle){flex:1 1 140px}.controls input[type=number],.controls select{width:100%}.grid{grid-template-columns:1fr}.photo{height:225px}.card-head{display:block}.price-top{text-align:left;margin-top:8px}.card-body{padding:15px}.summary{gap:8px}.summary>div{padding:11px}.summary strong{font-size:1.3rem}}
+
+.dealer-coverage{margin:16px 0 5px}.card-actions a.market-link{padding:10px 12px;background:#243b51;border:1px solid #4b687f;border-radius:9px;color:#d3eaff;text-decoration:none;font-size:.82rem;font-weight:650}
