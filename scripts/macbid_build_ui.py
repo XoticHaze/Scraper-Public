@@ -11,6 +11,7 @@ from deal_engine.compatibility import compatibility_allows_hunt, evaluate_compat
 from deal_engine.grouping import product_identity
 from deal_engine.hunts import match_profiles
 from deal_engine.valuation import derive_market_valuation, summarize_market_value
+from scripts.vehicle_price_history import build_and_write
 
 REPORT = Path("results/macbid-deal-engine.json")
 UI_SOURCE = Path("ui")
@@ -339,6 +340,18 @@ def main() -> int:
         vehicle_page_catalog.write_text(compact_vehicle, encoding="utf-8")
         (SITE / "vehicle_catalog.js").write_text(
             "window.VEHICLE_CATALOG=" + compact_vehicle + ";\n",
+            encoding="utf-8",
+        )
+        # Retain actual VIN+scan observations across Pages artifact deployments.
+        # This separate data file is not a synthetic price index.
+        history_doc = build_and_write(
+            vehicle_page_catalog, SITE / "vehicle_price_history.json",
+            Path("results/vehicle-previous.json")
+        )
+        (SITE / "vehicle_price_history.js").write_text(
+            "window.VEHICLE_PRICE_HISTORY=" + json.dumps(
+                history_doc, separators=(",", ":"), ensure_ascii=False
+            ) + ";\n",
             encoding="utf-8",
         )
         print(
