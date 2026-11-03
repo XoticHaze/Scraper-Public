@@ -14,7 +14,7 @@
       <p class="subhead">Toyota RAV4 · buy the right vehicle, not just the lowest sticker price</p>
       <p id="meta" aria-live="polite">Loading current inventory…</p>
     </div>
-    <nav aria-label="App navigation"><a href="index.html">← MAC.BID Hunt</a><a href="paotexas.html">PAOTEXAS</a></nav>
+    <nav aria-label="App navigation"><a href="vehicle-market.html">Market &amp; Ownership</a><a href="index.html">MAC.BID Hunt</a><a href="paotexas.html">PAOTEXAS</a></nav>
   </header>
   <main>
     <section class="summary" aria-label="Vehicle inventory summary">
@@ -30,9 +30,11 @@
       <label>Order <select id="sort"><option value="fit">Best fit</option><option value="price">Lowest price</option><option value="mileage">Lowest mileage</option><option value="otd">Lowest est. out-the-door</option></select></label>
       <label class="toggle"><input id="awd" type="checkbox" /> AWD indicated only</label>
       <label class="toggle"><input id="local" type="checkbox" /> Nearby only (50 mi)</label>
+      <label class="toggle"><input id="balance-dealers" type="checkbox" checked /> Show at most two cars per dealer</label>
     </section>
     <p class="filter-note">Preferred ≤35,000 miles; showing up to 45,000 by default. Increase the mileage filter to review higher-mileage compromises. Prices, mileage and photos are dealer-sourced observations, not independently certified facts. A VIN-family drivetrain clue is not an exact-vehicle factory sticker.</p>
-    <div class="list-heading"><h2>Listings</h2><span><strong id="count">0</strong> match your filters</span></div>
+    <p class="risk-note dealer-coverage" id="dealer-coverage" aria-live="polite"></p>
+    <div class="list-heading"><h2>Listings</h2><span><strong id="count">0</strong> shown from ranked inventory</span></div>
     <section id="empty-state" class="empty" hidden>
       <h3>No matching vehicles in this snapshot</h3>
       <p id="empty-description">Try widening the filters or use the direct dealer inventory links below. A missing vehicle-specific photo is never replaced with a generic car image.</p>
