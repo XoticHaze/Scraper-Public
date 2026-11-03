@@ -218,7 +218,7 @@ jobs:
               # Separate market/finance page, built from actual catalog snapshots.
               market = browser.new_page(viewport={"width": 1280, "height": 900})
               market.goto(Path('site/vehicle-market.html').resolve().as_uri(), wait_until='domcontentloaded', timeout=30000)
-              market.wait_for_selector('#vin-select option', timeout=30000)
+              market.wait_for_function("document.querySelector('#vin-select') && document.querySelector('#vin-select').options.length > 0", timeout=30000)
               assert market.locator('#history-rows tr').count() >= 3
               assert market.locator('#price-history-chart polyline').count() == 1
               assert '$' in market.locator('#out-payment').inner_text()
