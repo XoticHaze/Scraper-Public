@@ -96,6 +96,11 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
     if price <= target_price:
         reasons.append("at_or_below_target_price")
 
+    # A discounted high-mileage car should not outrank a maintenance-control
+    # candidate merely because a narrow local price comparison is favorable.
+    if mileage > preferred_mileage:
+        score -= 8.0
+        risks.append("above_preferred_mileage")
     if mileage <= maintenance_control:
         score += 18.0
         reasons.append("maintenance_history_can_be_taken_over_early")
@@ -105,17 +110,23 @@ def score_vehicle(row: dict[str, Any], policy: dict[str, Any], universe: list[di
     elif mileage <= 60000:
         score += 3.0
     else:
-        score -= min(24.0, (mileage - 60000) / 2500.0)
+        score -= 12.0 + min(24.0, (mileage - 60000) / 2500.0)
         risks.append("past_60k_service_ambiguity")
 
     score += max(0.0, min(10.0, (year - 2018) * 1.4))
 
     drive = str(row.get("drivetrain") or "").lower()
     if "all-wheel" in drive or "awd" in drive:
-        score += 6.0
-        reasons.append("awd_colorado_trip_capability")
+        if row.get("drivetrain_provenance") == "vin_family_inferred":
+            score += 3.0  # family evidence is not exact-VIN factory confirmation
+            reasons.append("awd_family_indicated_verify_exact_sticker")
+        else:
+            score += 6.0
+            reasons.append("awd_colorado_trip_capability")
     elif "front-wheel" in drive or "fwd" in drive:
-        reasons.append("simpler_fwd_driveline")
+        reasons.append("fwd_family_indicated_verify_exact_sticker" if row.get("drivetrain_provenance") == "vin_family_inferred" else "simpler_fwd_driveline")
+    else:
+        risks.append("drivetrain_unconfirmed")
 
     bucket = locality_bucket(
         distance,
