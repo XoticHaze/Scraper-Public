@@ -48,7 +48,10 @@
         "market_local": true,
         "area_priority": "kelly_inner_west",
         "inventory_url": "https://www.northparktoyota.com/used-inventory/index.htm?make=Toyota&model=RAV4",
-        "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
+        "detail_url_contains": [
+          "/used/Toyota/",
+          "/certified/Toyota/"
+        ],
         "doc_fee": 225,
         "doc_fee_included_in_price": true,
         "mandatory_addon_amount": 0,
@@ -61,7 +64,11 @@
         "market_local": true,
         "area_priority": "west_sa",
         "inventory_url": "https://www.redmccombsdriveaway.com/inventory-west",
-        "detail_url_contains": ["/used-San%2BAntonio-", "/used-San+Antonio-", "/used-"],
+        "detail_url_contains": [
+          "/used-San%2BAntonio-",
+          "/used-San+Antonio-",
+          "/used-"
+        ],
         "doc_fee": 225,
         "doc_fee_included_in_price": false,
         "mandatory_addon_amount": 0,
@@ -74,7 +81,10 @@
         "market_local": true,
         "area_priority": "west_sa",
         "inventory_url": "https://www.cavendertoyota.com/used-cars/toyota-rav4.htm",
-        "detail_url_contains": ["/used/Toyota/", "/certified/Toyota/"],
+        "detail_url_contains": [
+          "/used/Toyota/",
+          "/certified/Toyota/"
+        ],
         "doc_fee": 225,
         "doc_fee_included_in_price": true,
         "mandatory_addon_amount": 0,
@@ -87,7 +97,11 @@
         "market_local": true,
         "area_priority": "san_antonio_other",
         "inventory_url": "https://www.universaltoyota.com/used-vehicles/?make=Toyota&model=RAV4",
-        "detail_url_contains": ["/used-San%2BAntonio-", "/used-San+Antonio-", "/used-"],
+        "detail_url_contains": [
+          "/used-San%2BAntonio-",
+          "/used-San+Antonio-",
+          "/used-"
+        ],
         "doc_fee": 225,
         "doc_fee_included_in_price": false,
         "mandatory_addon_amount": 0,
@@ -100,11 +114,29 @@
         "market_local": true,
         "area_priority": "san_antonio_other",
         "inventory_url": "https://www.shottenkirktoyotasanantonio.com/used-vehicles/?model=RAV4",
-        "detail_url_contains": ["/inventory/", "/used-vehicles/"],
+        "detail_url_contains": [
+          "/inventory/",
+          "/used-vehicles/"
+        ],
         "doc_fee": 225,
         "doc_fee_included_in_price": false,
         "mandatory_addon_amount": 3696,
         "addon_warning": "Dealer currently discloses a $3,696 tint/nitrogen/VIP package on used vehicles; verify removal or full OTD before ranking as a buy."
+      },
+      {
+        "id": "hill_country_honda",
+        "name": "Hill Country Honda",
+        "location": "San Antonio, TX",
+        "market_local": true,
+        "area_priority": "west_sa",
+        "inventory_url": "https://www.hillcountryhonda.com/inventory/used/toyota/rav4",
+        "detail_url_contains": [
+          "/viewdetails/used/"
+        ],
+        "doc_fee": 225,
+        "doc_fee_included_in_price": true,
+        "mandatory_addon_amount": 0,
+        "addon_warning": "Advertised selling price includes the $225 doc fee, according to the dealer's vehicle-specific financing disclosure. Confirm cash and financed OTD independently; listed PermaPlate, Nitro Fill and Lifetime Oil options may be extra and must be confirmed optional."
       }
     ],
     "nearby_dealers": [
@@ -116,7 +148,11 @@
         "locality_hint": "nearby",
         "area_priority": "nearby",
         "inventory_url": "https://www.toyotaofboerne.com/used-vehicles-boerne/rav4.aspx",
-        "detail_url_contains": ["/inventory/", "/used-", "/vehicle-details/"],
+        "detail_url_contains": [
+          "/inventory/",
+          "/used-",
+          "/vehicle-details/"
+        ],
         "doc_fee": 225,
         "doc_fee_included_in_price": false,
         "mandatory_addon_amount": 0,
@@ -131,7 +167,9 @@
         "kind": "autotrader",
         "location": "San Antonio, TX",
         "inventory_url": "https://www.autotrader.com/cars-for-sale/toyota/rav4/san-antonio-tx?zip=78237",
-        "detail_url_contains": ["/cars-for-sale/inventory/"],
+        "detail_url_contains": [
+          "/cars-for-sale/inventory/"
+        ],
         "max_cards": 60,
         "role": "discovery_enrichment"
       }
