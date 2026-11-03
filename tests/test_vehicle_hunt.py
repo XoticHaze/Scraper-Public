@@ -274,3 +274,44 @@ def test_buyer_fit_prefers_lower_maintenance_miles_to_deeply_discounted_67k_car(
     assert "above_preferred_mileage" in ranked[1]["risks"]
     assert "past_60k_service_ambiguity" in ranked[1]["risks"]
     assert "awd_family_indicated_verify_exact_sticker" in ranked[0]["reasons"]
+
+
+
+def test_hill_country_honda_realistic_selling_price_and_exact_vin_fwd_detail():
+    """Use the precise dealer selling price and don't double-add the doc fee."""
+    page = {
+        "url": "https://www.hillcountryhonda.com/viewdetails/used/2t3h1rfv8pw283437/2023-toyota-rav4-sport-utility?type=finance",
+        "text": """
+        2023 Toyota RAV4 LE 8-Speed A/T
+        Vin: 2T3H1RFV8PW283437
+        Stock: PW283437P
+        Mileage: 36,720 Miles
+        Drive Type:
+        FWD
+        Transmission:
+        8-Speed A/T
+        Payment And Price Options
+        Finance For
+        $384.42
+        Per Month
+        Finance this 2023 Toyota RAV4 LE (Model 4430, VIN 2T3H1RFV8PW283437).
+        Price $26,195.00. Selling price $26,420.00, with $3,929.00 down.
+        Prices include $225 dealer doc fee.
+        Does not include optional accessories of $695 PermaPlate 1-Year.
+        """,
+    }
+    dealer = {
+        "id": "hill_country_honda", "name": "Hill Country Honda",
+        "market_local": True, "area_priority": "west_sa", "doc_fee": 225,
+        "doc_fee_included_in_price": True, "mandatory_addon_amount": 0,
+    }
+    row = parse_dealer_detail(page, dealer)
+    assert row is not None
+    assert row["vin"] == "2T3H1RFV8PW283437"
+    assert row["price"] == 26420
+    assert row["mileage"] == 36720
+    assert row["drivetrain"] == "Front-Wheel Drive"
+    assert row["drivetrain_provenance"] == "dealer_detail"
+    assert row["dealer_doc_fee_included_in_price"] is True
+    ranked = rank_vehicles([row], POLICY)
+    assert ranked and ranked[0]["incremental_doc_fee"] == 0
