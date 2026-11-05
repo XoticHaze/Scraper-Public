@@ -38,6 +38,13 @@
     <p id="history-continuity" class="market-muted"></p>
   </section>
 
+  <section class="market-panel" aria-labelledby="movers-title">
+    <div class="market-heading"><div><p class="eyebrow">Same VIN, actual observed prices</p><h2 id="movers-title">Price drops and increases</h2></div></div>
+    <p class="market-muted">These are changes for the same car over time, not shifts in a citywide price index. Listings may already have sold or changed terms. Open a VIN's chart to review every observed scan before contacting the seller.</p>
+    <p id="moves-summary" class="market-status" aria-live="polite">Comparing observed asking-price movements…</p>
+    <div class="scroll-table"><table><thead><tr><th>Vehicle / VIN</th><th>Dealer</th><th>First seen</th><th>Most recent</th><th>Change</th><th>Last scanned</th></tr></thead><tbody id="movement-rows"></tbody></table></div>
+  </section>
+
   <section class="market-panel" aria-labelledby="breadth-title">
     <div class="market-heading"><div><p class="eyebrow">Compare actual observed inventory</p><h2 id="breadth-title">Dealer &amp; area coverage</h2></div></div>
     <p class="market-muted">Uses the broader VIN-confirmed sample, including cars outside your $27,000 asking-price ceiling. Median asking prices are <strong>not</strong> quality-adjusted market valuations: years, trims, mileages and dealer mix can differ.</p>
@@ -78,8 +85,21 @@
       <div><small>Max asking price for monthly budget *</small><strong id="out-maxprice">—</strong></div>
     </div>
     <p id="scenario-note" class="market-status"></p>
-    <p class="market-muted">* The offer ceiling is arithmetic, not a fair-market valuation or a recommended bid. Texas dealer motor vehicle sales tax is 6.25% of the taxable sale amount after qualifying trade allowance; trade payoff affects financing but not that tax credit. Amounts and fee inclusions require a buyer's order. Private-party vehicle tax valuation can differ.</p>
-    <p class="market-muted">2026 reference inputs: <a href="https://www.experian.com/blogs/ask-experian/used-car-loan-rates/" target="_blank" rel="noopener noreferrer">Experian Q2 2026 used-loan averages (6.29% / 8.81% / 11.19% / 13.93%)</a>; <a href="https://www.insurancequotes.com/auto/car-insurance-rates/texas/san-antonio" target="_blank" rel="noopener noreferrer">78237 full-coverage benchmark $270/mo as of Aug 31, 2026</a>; <a href="https://www.helpinsure.com/" target="_blank" rel="noopener noreferrer">Texas TDI HelpInsure for real insurance comparisons</a>; <a href="https://comptroller.texas.gov/taxes/motor-vehicle/faq.php" target="_blank" rel="noopener noreferrer">Texas motor vehicle tax rules</a>. Estimates depend strongly on credit, driver, car VIN, financing and insurance coverage. No preapproval or personal quote is implied.</p>
+    <h3>What another APR or term would change</h3>
+    <p class="market-muted">The same vehicle, down payment, fees and operating estimates at example used-car APRs. These are not lender offers. Lower monthly payments at longer terms can mean substantially more total interest.</p>
+    <div class="scroll-table"><table><thead><tr><th>APR scenario</th><th>48 months</th><th>60 months</th><th>72 months</th></tr></thead><tbody id="loan-sensitivity"></tbody></table></div>
+    <p class="market-muted">* The offer ceiling is arithmetic, not a fair-market valuation or a recommended bid. Texas dealer motor vehicle sales tax is 6.25% of taxable consideration, including any dealer-installed accessories affixed at sale, after a qualifying trade allowance; trade payoff affects financing but not that tax credit. Amounts and fee inclusions require a buyer's order. Private-party vehicle tax valuation can differ.</p>
+    <p class="market-muted">2026 reference inputs: <a href="https://www.experian.com/blogs/ask-experian/used-car-loan-rates/" target="_blank" rel="noopener noreferrer">Experian Q2 2026 used-loan averages (6.29% / 8.81% / 11.19% / 13.93%)</a>; <a href="https://www.insurancequotes.com/auto/car-insurance-rates/texas/san-antonio" target="_blank" rel="noopener noreferrer">78237 full-coverage benchmark $270/mo as of Aug 31, 2026</a>; <a href="https://www.helpinsure.com/" target="_blank" rel="noopener noreferrer">Texas TDI HelpInsure for real insurance comparisons</a>; <a href="https://comptroller.texas.gov/taxes/motor-vehicle/faq.php" target="_blank" rel="noopener noreferrer">Texas motor vehicle tax rules</a>. Estimates depend strongly on credit, driver, car VIN, financing and insurance coverage. No preapproval or personal quote is implied. <a href="https://comptroller.texas.gov/taxes/publications/96-254/accessories-equipment.php" target="_blank" rel="noopener noreferrer">Texas taxable dealer-installed accessories guidance</a>.</p>
+  </section>
+  <section class="market-panel" aria-labelledby="offer-title">
+    <p class="eyebrow">Prepare, compare, then decide</p>
+    <h2 id="offer-title">Request a real out-the-door quote</h2>
+    <p class="market-muted">This creates a copyable message for the selected exact VIN. It asks the seller to confirm availability and all compulsory costs. It does not contact anyone, apply for credit, or submit an offer.</p>
+    <p id="offer-readiness" class="market-status" aria-live="polite">Reviewing source and quote readiness…</p>
+    <p><a id="offer-dealer-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Open this exact vehicle's dealer page</a></p>
+    <label class="request-label" for="request-draft">Copyable buyer's-order request</label>
+    <textarea id="request-draft" class="offer-message" rows="14" readonly aria-label="Prepared VIN-specific buyer order quote request"></textarea>
+    <div class="offer-actions"><button id="copy-request" type="button">Copy quote request</button><span id="copy-status" role="status" aria-live="polite">Not sent. Copy only.</span></div>
   </section>
   <section class="market-panel">
     <h2>From research to a responsible offer</h2>
