@@ -171,6 +171,79 @@
     renderSensitivity(v);
     renderQuoteDraft();
   }
+  function renderSensitivity(base) {
+    const table=$('loan-sensitivity');
+    table.replaceChildren();
+    const scenarios=[
+      {name:'6.29% · strong credit example',apr:6.29},
+      {name:'8.81% · prime example',apr:8.81},
+      {name:'11.19% · used-loan average',apr:11.19},
+      {name:'13.93% · near-prime example',apr:13.93}
+    ];
+    scenarios.forEach(scenario=>{
+      const tr=document.createElement('tr');
+      tr.appendChild(lineText('td',scenario.name));
+      [48,60,72].forEach(term=>{
+        const loan=monthly(base.financed,scenario.apr,term);
+        const interest=Math.max(0,loan*term-base.financed);
+        const operating=n('insurance')+n('fuel')+n('upkeep');
+        const td=lineText('td',money(loan)+'/mo loan · '+money(loan+operating)+'/mo all-in · '+money(interest)+' interest');
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
+  }
+
+  function renderQuoteDraft() {
+    const vin=$('finance-vehicle').value;
+    const current=ranked.find(v=>v.vin===vin)||market.find(v=>v.vin===vin)||null;
+    const row=current||newest[vin]||null;
+    const draft=$('request-draft'),target=$('include-target').checked;
+    if(!row) {
+      draft.value='No exact-VIN observation selected. Select a verified vehicle before preparing a quote request.';
+      $('copy-request').disabled=true;
+      $('offer-readiness').textContent='No VIN selected.';
+      $('offer-dealer-link').hidden=true;
+      return;
+    }
+    $('copy-request').disabled=false;
+    const observedAt=current?catalog.generated_utc:row.observed_at;
+    const ageHours=(Date.now()-Date.parse(observedAt))/3600000;
+    const stale=!Number.isFinite(ageHours)||ageHours>24;
+    const year=String(row.year||'');
+    const model=String(row.model||'RAV4');
+    const trim=String(row.trim||'');
+    const dealership=String(row.dealer||row.source||'seller');
+    const drive=String(row.drivetrain||'not confirmed');
+    const driveNote=row.drivetrain_provenance==='vin_family_inferred'?' (VIN-family inference, confirm exact-VIN build)':'';
+    const source=safeLink(row.source_url);
+    const dealerLink=$('offer-dealer-link');
+    dealerLink.hidden=!source;
+    if(source)dealerLink.href=source;
+    const state=current?'Found in the last successfully published VIN-confirmed catalog.':'Historical VIN only; not listed in the current verified catalog.';
+    $('offer-readiness').textContent=state+' Last observed '+formatDate(observedAt)+'. '+
+      (stale?'STALE listing observation: confirm availability and prices before discussing an offer. ':
+       'Price is still only a scraped asking observation, not an accepted quote. ')+
+      'No contact is sent from this page.';
+    const lines=[
+      'Hello,',
+      '',
+      'Could you confirm current availability and provide a written, itemized cash out-the-door quote for this exact vehicle?',
+      year+' Toyota '+model+' '+trim,
+      'VIN: '+vin,
+      'Dealer: '+dealership,
+      'Last observed advertised asking: '+money(Number(row.price))+' ('+formatDate(observedAt)+')',
+      'Drivetrain reported: '+drive+driveNote,
+      '',
+      'Please itemize the actual selling price, documentation fee, dealer inventory tax, all compulsory dealer packages, motor vehicle sales tax, title, registration, and any other unavoidable charges.',
+      'Please distinguish optional packages from required charges, and show cash and financing prices separately if they differ.',
+      'Please also confirm clean title status, disclosed accidents/damage, service records, CPO warranty status if applicable, and permission for an independent pre-purchase inspection.'
+    ];
+    if(target)lines.push('','For discussion, I am evaluating a pre-tax selling price of '+money(n('offer-price'))+' if the vehicle, history and written buyer order check out.');
+    lines.push('','Thank you. Please reply with the exact VIN-specific buyer order and quote validity date.');
+    draft.value=lines.join('\n');
+  }
+
   function vehicleFinanceChange(){
     const v=vinRows.find(x=>x.vin===$('finance-vehicle').value);
     if(!v)return;
@@ -184,5 +257,20 @@
   $('finance-vehicle').addEventListener('change',vehicleFinanceChange);
   inputs.forEach(id=>$(id).addEventListener('input',updateFinance));
   document.querySelectorAll('[data-apr]').forEach(b=>b.addEventListener('click',()=>{$('apr').value=b.dataset.apr;updateFinance();}));
+  $('include-target').addEventListener('change', renderQuoteDraft);
+  $('copy-request').addEventListener('click', async () => {
+    const draft=$('request-draft'),status=$('copy-status');
+    try {
+      if(navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(draft.value);
+      } else {
+        draft.focus();draft.select();
+        if(!document.execCommand('copy')) throw new Error('Clipboard not supported');
+      }
+      status.textContent='Copied to clipboard. Nothing sent.';
+    } catch(_) {
+      status.textContent='Clipboard permission unavailable. Select the text and copy it manually; nothing was sent.';
+    }
+  });
   vehicleFinanceChange();
 })();
