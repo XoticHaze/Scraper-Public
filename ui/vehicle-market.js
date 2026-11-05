@@ -16,7 +16,7 @@
     const row = ranked.find(v=>v.vin===vin) || newest[vin];
     return {vin,label:String(row.year||'')+' Toyota RAV4 '+String(row.trim||'')+' · '+String(vin).slice(-6)+' · '+money(row.price),price:Number(row.price),row};
   });
-  const formatDate = s => {const ms=Date.parse(s);return Number.isFinite(ms)?new Date(ms).toLocaleString('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Unknown';};
+  const formatDate = s => {const ms=Date.parse(s);return Number.isFinite(ms)?new Date(ms).toLocaleString('en-US',{timeZone:'America/Chicago',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Unknown';};
   const median = data => {const a=data.map(Number).filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const mid=Math.floor(a.length/2);return a.length%2?a[mid]:(a[mid-1]+a[mid])/2;};
   const distinctDealers = new Set(ranked.map(v=>v.dealer||v.source||'unknown'));
   $('kpi-listings').textContent=num(ranked.length);
@@ -85,6 +85,49 @@
   $('vin-select').addEventListener('change',()=>plot($('vin-select').value));
   plot($('vin-select').value);
   $('history-continuity').textContent='Continuity: '+history.continuity_status+' · First stored observation '+(history.first_observed_utc?formatDate(history.first_observed_utc):'none')+'. Asking prices, not sale transactions; a flat short series is not evidence the broader market is flat.';
+
+  // A price movement is valid only when the same VIN was observed more than
+  // once on distinct scanner timestamps. Never compare different cars as a
+  // price cut, or present dealer-listing changes as a regional market index.
+  const historyByVin = new Map();
+  observations.forEach(o => {
+    if (!historyByVin.has(o.vin)) historyByVin.set(o.vin, []);
+    historyByVin.get(o.vin).push(o);
+  });
+  const movements = Array.from(historyByVin.entries()).map(([vin, rows]) => {
+    const scans = rows.slice().sort((a,b) => Date.parse(a.observed_at) - Date.parse(b.observed_at));
+    const first = scans[0], last = scans[scans.length-1];
+    return {vin,first,last,count:scans.length,delta:Number(last.price)-Number(first.price)};
+  }).filter(m => m.count >= 2 && m.delta !== 0 && Number.isFinite(m.delta))
+    .sort((a,b) => a.delta-b.delta);
+  const drops = movements.filter(m => m.delta < 0);
+  const rises = movements.filter(m => m.delta > 0);
+  $('moves-summary').textContent = movements.length
+    ? drops.length+' VINs decreased and '+rises.length+' increased across their real observed scan windows. Not a metro price index; verify current seller availability.'
+    : 'No observed same-VIN price changes yet. Repeat scans may mean prices are unchanged or the source sample is too limited.';
+  const moveBody = $('movement-rows');
+  moveBody.replaceChildren();
+  if (!movements.length) {
+    const tr=document.createElement('tr'),td=lineText('td','No verified same-VIN asking-price changes in stored history.');
+    td.colSpan=6;tr.appendChild(td);moveBody.appendChild(tr);
+  }
+  movements.slice(0,12).forEach(m => {
+    const tr=document.createElement('tr');
+    const vinCell=document.createElement('td');
+    const a=lineText('a',String(m.last.year||'')+' RAV4 '+String(m.last.trim||'')+' · '+m.vin.slice(-6));
+    a.href='vehicle-market.html?vin='+encodeURIComponent(m.vin);
+    vinCell.appendChild(a);tr.appendChild(vinCell);
+    const dealer=String(m.last.dealer||m.last.source||'Dealer not recorded');
+    [
+      dealer,
+      money(Number(m.first.price)),
+      money(Number(m.last.price)),
+      (m.delta>0?'+':'')+money(m.delta),
+      formatDate(m.last.observed_at)
+    ].forEach(value=>tr.appendChild(lineText('td',value)));
+    tr.className=m.delta<0?'move-drop':'move-rise';
+    moveBody.appendChild(tr);
+  });
 
   const grouped={};
   market.forEach(v=>{const key=String(v.dealer||v.source||'Unknown')+'|'+String(v.location||'Unspecified');(grouped[key]||(grouped[key]=[])).push(v);});
