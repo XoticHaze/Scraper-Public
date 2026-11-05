@@ -219,8 +219,24 @@ jobs:
               market = browser.new_page(viewport={"width": 1280, "height": 900})
               market.goto(Path('site/vehicle-market.html').resolve().as_uri(), wait_until='domcontentloaded', timeout=30000)
               market.wait_for_function("document.querySelector('#vin-select') && document.querySelector('#vin-select').options.length > 0", timeout=30000)
-              assert market.locator('#history-rows tr').count() >= 3
-              assert market.locator('#price-history-chart polyline').count() == 1
+              # The initial VIN can be newly discovered with just one real
+              # observation. Do not reject a valid production catalog because
+              # an unrelated older VIN happened to have a longer series.
+              history_doc = json.loads(Path('site/vehicle_price_history.json').read_text())
+              selected_vin = market.locator('#vin-select').input_value()
+              selected_points = sum(
+                  row.get('vin') == selected_vin
+                  for row in history_doc.get('observations', [])
+              )
+              assert selected_points >= 1, f'no history for selected VIN {selected_vin}'
+              assert market.locator('#history-rows tr').count() == selected_points
+              assert market.locator('#price-history-chart circle').count() == selected_points
+              expected_lines = 1 if selected_points > 1 else 0
+              assert market.locator('#price-history-chart polyline').count() == expected_lines
+              assert 'observed scans' in market.locator('#history-summary').inner_text()
+              if selected_points == 1:
+                  assert 'Single actual observation' in market.locator('#price-history-chart').inner_text()
+              print(f'VEHICLE_MARKET_HISTORY_SMOKE=PASS vin={selected_vin} observed={selected_points}')
               assert '$' in market.locator('#out-payment').inner_text()
               first_payment = market.locator('#out-payment').inner_text()
               market.fill('#apr', '6.29')
