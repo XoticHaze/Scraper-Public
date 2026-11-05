@@ -256,7 +256,7 @@ jobs:
               new_otd = float(market.locator('#out-otd').inner_text().replace('$','').replace(',',''))
               assert abs((new_otd - old_otd) - 1062.50) <= 1.0, (old_otd,new_otd)
               assert market.locator('#copy-request').is_enabled()
-              assert 'Nothing sent' in market.locator('#copy-status').inner_text()
+              assert 'Not sent. Copy only.' in market.locator('#copy-status').inner_text()
               print('VEHICLE_BUYER_SMOKE=PASS real-movers+loan-sensitivity+offer-optin+taxable-addons')
               print('VEHICLE_MARKET_SMOKE=PASS chart+apr+insurance+distinct-route')
               market.close()
