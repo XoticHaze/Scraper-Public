@@ -4,8 +4,8 @@
   const catalog = window.VEHICLE_CATALOG || {vehicles:[]};
   const history = window.VEHICLE_PRICE_HISTORY || {observations:[],continuity_status:'NOT_AVAILABLE'};
   const observations = (history.observations || []).filter(o => o && /^[A-HJ-NPR-Z0-9]{17}$/.test(String(o.vin || '')) && Number.isFinite(Number(o.price)));
-  const money = n => Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n) : '—';
-  const num = n => Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US').format(n) : '—';
+  const money = n => n != null && n !== '' && Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n) : '—';
+  const num = n => n != null && n !== '' && Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US').format(n) : '—';
   const lineText = (tag, text) => {const el=document.createElement(tag);el.textContent=String(text);return el;};
   const safeLink = url => {try {const u=new URL(url);return u.protocol==='https:' ? u.href : null;} catch (_) {return null;}};
   const newest = {};
@@ -147,7 +147,9 @@
     return rate===0?principal/term:principal*rate/(1-Math.pow(1+rate,-term));
   };
   function evaluate(price) {
-    const tax = .0625*Math.max(0,price-n('trade'));
+    // Texas vehicle tax includes dealer-installed accessories affixed at
+    // sale, but not separately stated documentary/registration fees.
+    const tax = .0625*Math.max(0,price+n('addons')-n('trade'));
     const otd=price+tax+n('doc')+n('addons')+n('title-fee');
     const financed=Math.max(0,otd-n('down')-n('trade')+n('payoff'));
     const payment=monthly(financed,n('apr'),n('term'));
@@ -166,6 +168,8 @@
     $('out-maxprice').textContent=n('monthly-budget')<=n('insurance')+n('fuel')+n('upkeep')?'No positive offer':money(max);
     const diff=max-price;
     $('scenario-note').textContent='Illustrative payment '+money(v.payment)+'/month; total including insurance, fuel and maintenance '+money(v.allin)+'/month. '+(diff>=0?'Selected price is within your estimated affordability ceiling.':'Selected price exceeds your estimated affordability ceiling by about '+money(-diff)+'.')+' Actual loan APR, insurer premium and dealer charges may materially differ.';
+    renderSensitivity(v);
+    renderQuoteDraft();
   }
   function vehicleFinanceChange(){
     const v=vinRows.find(x=>x.vin===$('finance-vehicle').value);
