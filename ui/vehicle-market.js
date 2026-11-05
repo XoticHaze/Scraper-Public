@@ -139,7 +139,7 @@
   });
   $('dealer-footnote').textContent=Object.keys(grouped).length+' distinct dealer/area groups in the broader observed sample. Filtered ranked results: '+distinctDealers.size+' sellers. Source HTTP 403 errors and missing detail pages create selection bias; do not call the sample market representative.';
 
-  const inputs=['offer-price','apr','term','down','trade','payoff','addons','doc','title-fee','insurance','fuel','upkeep','monthly-budget'];
+  const inputs=['offer-price','apr','term','down','trade','payoff','addons','non-tax-fees','doc','title-fee','insurance','fuel','upkeep','monthly-budget'];
   const n=id=>Math.max(0,Number($(id).value)||0);
   const monthly = (principal,apr,term) => {
     if(principal<=0)return 0;
@@ -150,7 +150,7 @@
     // Texas vehicle tax includes dealer-installed accessories affixed at
     // sale, but not separately stated documentary/registration fees.
     const tax = .0625*Math.max(0,price+n('addons')-n('trade'));
-    const otd=price+tax+n('doc')+n('addons')+n('title-fee');
+    const otd=price+tax+n('doc')+n('addons')+n('non-tax-fees')+n('title-fee');
     const financed=Math.max(0,otd-n('down')-n('trade')+n('payoff'));
     const payment=monthly(financed,n('apr'),n('term'));
     return {otd,financed,payment,interest:Math.max(0,payment*n('term')-financed),allin:payment+n('insurance')+n('fuel')+n('upkeep')};
