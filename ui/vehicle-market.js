@@ -4,8 +4,8 @@
   const catalog = window.VEHICLE_CATALOG || {vehicles:[]};
   const history = window.VEHICLE_PRICE_HISTORY || {observations:[],continuity_status:'NOT_AVAILABLE'};
   const observations = (history.observations || []).filter(o => o && /^[A-HJ-NPR-Z0-9]{17}$/.test(String(o.vin || '')) && Number.isFinite(Number(o.price)));
-  const money = n => Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n) : '—';
-  const num = n => Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US').format(n) : '—';
+  const money = n => n != null && n !== '' && Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n) : '—';
+  const num = n => n != null && n !== '' && Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US').format(n) : '—';
   const lineText = (tag, text) => {const el=document.createElement(tag);el.textContent=String(text);return el;};
   const safeLink = url => {try {const u=new URL(url);return u.protocol==='https:' ? u.href : null;} catch (_) {return null;}};
   const newest = {};
@@ -16,7 +16,7 @@
     const row = ranked.find(v=>v.vin===vin) || newest[vin];
     return {vin,label:String(row.year||'')+' Toyota RAV4 '+String(row.trim||'')+' · '+String(vin).slice(-6)+' · '+money(row.price),price:Number(row.price),row};
   });
-  const formatDate = s => {const ms=Date.parse(s);return Number.isFinite(ms)?new Date(ms).toLocaleString('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Unknown';};
+  const formatDate = s => {const ms=Date.parse(s);return Number.isFinite(ms)?new Date(ms).toLocaleString('en-US',{timeZone:'America/Chicago',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Unknown';};
   const median = data => {const a=data.map(Number).filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const mid=Math.floor(a.length/2);return a.length%2?a[mid]:(a[mid-1]+a[mid])/2;};
   const distinctDealers = new Set(ranked.map(v=>v.dealer||v.source||'unknown'));
   $('kpi-listings').textContent=num(ranked.length);
@@ -86,6 +86,49 @@
   plot($('vin-select').value);
   $('history-continuity').textContent='Continuity: '+history.continuity_status+' · First stored observation '+(history.first_observed_utc?formatDate(history.first_observed_utc):'none')+'. Asking prices, not sale transactions; a flat short series is not evidence the broader market is flat.';
 
+  // A price movement is valid only when the same VIN was observed more than
+  // once on distinct scanner timestamps. Never compare different cars as a
+  // price cut, or present dealer-listing changes as a regional market index.
+  const historyByVin = new Map();
+  observations.forEach(o => {
+    if (!historyByVin.has(o.vin)) historyByVin.set(o.vin, []);
+    historyByVin.get(o.vin).push(o);
+  });
+  const movements = Array.from(historyByVin.entries()).map(([vin, rows]) => {
+    const scans = rows.slice().sort((a,b) => Date.parse(a.observed_at) - Date.parse(b.observed_at));
+    const first = scans[0], last = scans[scans.length-1];
+    return {vin,first,last,count:scans.length,delta:Number(last.price)-Number(first.price)};
+  }).filter(m => m.count >= 2 && m.delta !== 0 && Number.isFinite(m.delta))
+    .sort((a,b) => a.delta-b.delta);
+  const drops = movements.filter(m => m.delta < 0);
+  const rises = movements.filter(m => m.delta > 0);
+  $('moves-summary').textContent = movements.length
+    ? drops.length+' VINs decreased and '+rises.length+' increased across their real observed scan windows. Not a metro price index; verify current seller availability.'
+    : 'No observed same-VIN price changes yet. Repeat scans may mean prices are unchanged or the source sample is too limited.';
+  const moveBody = $('movement-rows');
+  moveBody.replaceChildren();
+  if (!movements.length) {
+    const tr=document.createElement('tr'),td=lineText('td','No verified same-VIN asking-price changes in stored history.');
+    td.colSpan=6;tr.appendChild(td);moveBody.appendChild(tr);
+  }
+  movements.slice(0,12).forEach(m => {
+    const tr=document.createElement('tr');
+    const vinCell=document.createElement('td');
+    const a=lineText('a',String(m.last.year||'')+' RAV4 '+String(m.last.trim||'')+' · '+m.vin.slice(-6));
+    a.href='vehicle-market.html?vin='+encodeURIComponent(m.vin);
+    vinCell.appendChild(a);tr.appendChild(vinCell);
+    const dealer=String(m.last.dealer||m.last.source||'Dealer not recorded');
+    [
+      dealer,
+      money(Number(m.first.price)),
+      money(Number(m.last.price)),
+      (m.delta>0?'+':'')+money(m.delta),
+      formatDate(m.last.observed_at)
+    ].forEach(value=>tr.appendChild(lineText('td',value)));
+    tr.className=m.delta<0?'move-drop':'move-rise';
+    moveBody.appendChild(tr);
+  });
+
   const grouped={};
   market.forEach(v=>{const key=String(v.dealer||v.source||'Unknown')+'|'+String(v.location||'Unspecified');(grouped[key]||(grouped[key]=[])).push(v);});
   $('dealer-rows').replaceChildren();
@@ -96,7 +139,7 @@
   });
   $('dealer-footnote').textContent=Object.keys(grouped).length+' distinct dealer/area groups in the broader observed sample. Filtered ranked results: '+distinctDealers.size+' sellers. Source HTTP 403 errors and missing detail pages create selection bias; do not call the sample market representative.';
 
-  const inputs=['offer-price','apr','term','down','trade','payoff','addons','doc','title-fee','insurance','fuel','upkeep','monthly-budget'];
+  const inputs=['offer-price','apr','term','down','trade','payoff','addons','non-tax-fees','doc','title-fee','insurance','fuel','upkeep','monthly-budget'];
   const n=id=>Math.max(0,Number($(id).value)||0);
   const monthly = (principal,apr,term) => {
     if(principal<=0)return 0;
@@ -104,8 +147,10 @@
     return rate===0?principal/term:principal*rate/(1-Math.pow(1+rate,-term));
   };
   function evaluate(price) {
-    const tax = .0625*Math.max(0,price-n('trade'));
-    const otd=price+tax+n('doc')+n('addons')+n('title-fee');
+    // Texas vehicle tax includes dealer-installed accessories affixed at
+    // sale, but not separately stated documentary/registration fees.
+    const tax = .0625*Math.max(0,price+n('addons')-n('trade'));
+    const otd=price+tax+n('doc')+n('addons')+n('non-tax-fees')+n('title-fee');
     const financed=Math.max(0,otd-n('down')-n('trade')+n('payoff'));
     const payment=monthly(financed,n('apr'),n('term'));
     return {otd,financed,payment,interest:Math.max(0,payment*n('term')-financed),allin:payment+n('insurance')+n('fuel')+n('upkeep')};
@@ -123,7 +168,82 @@
     $('out-maxprice').textContent=n('monthly-budget')<=n('insurance')+n('fuel')+n('upkeep')?'No positive offer':money(max);
     const diff=max-price;
     $('scenario-note').textContent='Illustrative payment '+money(v.payment)+'/month; total including insurance, fuel and maintenance '+money(v.allin)+'/month. '+(diff>=0?'Selected price is within your estimated affordability ceiling.':'Selected price exceeds your estimated affordability ceiling by about '+money(-diff)+'.')+' Actual loan APR, insurer premium and dealer charges may materially differ.';
+    renderSensitivity(v);
+    renderQuoteDraft();
   }
+  function renderSensitivity(base) {
+    const table=$('loan-sensitivity');
+    table.replaceChildren();
+    const scenarios=[
+      {name:'6.29% · strong credit example',apr:6.29},
+      {name:'8.81% · prime example',apr:8.81},
+      {name:'11.19% · used-loan average',apr:11.19},
+      {name:'13.93% · near-prime example',apr:13.93}
+    ];
+    scenarios.forEach(scenario=>{
+      const tr=document.createElement('tr');
+      tr.appendChild(lineText('td',scenario.name));
+      [48,60,72].forEach(term=>{
+        const loan=monthly(base.financed,scenario.apr,term);
+        const interest=Math.max(0,loan*term-base.financed);
+        const operating=n('insurance')+n('fuel')+n('upkeep');
+        const td=lineText('td',money(loan)+'/mo loan · '+money(loan+operating)+'/mo all-in · '+money(interest)+' interest');
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
+  }
+
+  function renderQuoteDraft() {
+    const vin=$('finance-vehicle').value;
+    const current=ranked.find(v=>v.vin===vin)||market.find(v=>v.vin===vin)||null;
+    const row=current||newest[vin]||null;
+    const draft=$('request-draft'),target=$('include-target').checked;
+    if(!row) {
+      draft.value='No exact-VIN observation selected. Select a verified vehicle before preparing a quote request.';
+      $('copy-request').disabled=true;
+      $('offer-readiness').textContent='No VIN selected.';
+      $('offer-dealer-link').hidden=true;
+      return;
+    }
+    $('copy-request').disabled=false;
+    const observedAt=current?catalog.generated_utc:row.observed_at;
+    const ageHours=(Date.now()-Date.parse(observedAt))/3600000;
+    const stale=!Number.isFinite(ageHours)||ageHours>24;
+    const year=String(row.year||'');
+    const model=String(row.model||'RAV4');
+    const trim=String(row.trim||'');
+    const dealership=String(row.dealer||row.source||'seller');
+    const drive=String(row.drivetrain||'not confirmed');
+    const driveNote=row.drivetrain_provenance==='vin_family_inferred'?' (VIN-family inference, confirm exact-VIN build)':'';
+    const source=safeLink(row.source_url);
+    const dealerLink=$('offer-dealer-link');
+    dealerLink.hidden=!source;
+    if(source)dealerLink.href=source;
+    const state=current?'Found in the last successfully published VIN-confirmed catalog.':'Historical VIN only; not listed in the current verified catalog.';
+    $('offer-readiness').textContent=state+' Last observed '+formatDate(observedAt)+'. '+
+      (stale?'STALE listing observation: confirm availability and prices before discussing an offer. ':
+       'Price is still only a scraped asking observation, not an accepted quote. ')+
+      'No contact is sent from this page.';
+    const lines=[
+      'Hello,',
+      '',
+      'Could you confirm current availability and provide a written, itemized cash out-the-door quote for this exact vehicle?',
+      year+' Toyota '+model+' '+trim,
+      'VIN: '+vin,
+      'Dealer: '+dealership,
+      'Last observed advertised asking: '+money(Number(row.price))+' ('+formatDate(observedAt)+')',
+      'Drivetrain reported: '+drive+driveNote,
+      '',
+      'Please itemize the actual selling price, documentation fee, dealer inventory tax, all compulsory dealer packages, motor vehicle sales tax, title, registration, and any other unavoidable charges.',
+      'Please distinguish optional packages from required charges, and show cash and financing prices separately if they differ.',
+      'Please also confirm clean title status, disclosed accidents/damage, service records, CPO warranty status if applicable, and permission for an independent pre-purchase inspection.'
+    ];
+    if(target)lines.push('','For discussion, I am evaluating a pre-tax selling price of '+money(n('offer-price'))+' if the vehicle, history and written buyer order check out.');
+    lines.push('','Thank you. Please reply with the exact VIN-specific buyer order and quote validity date.');
+    draft.value=lines.join('\n');
+  }
+
   function vehicleFinanceChange(){
     const v=vinRows.find(x=>x.vin===$('finance-vehicle').value);
     if(!v)return;
@@ -137,5 +257,20 @@
   $('finance-vehicle').addEventListener('change',vehicleFinanceChange);
   inputs.forEach(id=>$(id).addEventListener('input',updateFinance));
   document.querySelectorAll('[data-apr]').forEach(b=>b.addEventListener('click',()=>{$('apr').value=b.dataset.apr;updateFinance();}));
+  $('include-target').addEventListener('change', renderQuoteDraft);
+  $('copy-request').addEventListener('click', async () => {
+    const draft=$('request-draft'),status=$('copy-status');
+    try {
+      if(navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(draft.value);
+      } else {
+        draft.focus();draft.select();
+        if(!document.execCommand('copy')) throw new Error('Clipboard not supported');
+      }
+      status.textContent='Copied to clipboard. Nothing sent.';
+    } catch(_) {
+      status.textContent='Clipboard permission unavailable. Select the text and copy it manually; nothing was sent.';
+    }
+  });
   vehicleFinanceChange();
 })();

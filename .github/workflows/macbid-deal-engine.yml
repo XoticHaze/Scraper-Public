@@ -243,6 +243,21 @@ jobs:
               assert market.locator('#out-payment').inner_text() != first_payment
               market.fill('#insurance', '300')
               assert '$' in market.locator('#out-allin').inner_text()
+              assert market.locator('#loan-sensitivity tr').count() == 4
+              assert market.locator('#movement-rows tr').count() >= 1
+              finance_vin = market.locator('#finance-vehicle').input_value()
+              assert finance_vin in market.locator('#request-draft').input_value()
+              assert 'For discussion' not in market.locator('#request-draft').input_value()
+              market.check('#include-target')
+              assert 'For discussion' in market.locator('#request-draft').input_value()
+              old_addons = float(market.locator('#addons').input_value())
+              old_otd = float(market.locator('#out-otd').inner_text().replace('$','').replace(',',''))
+              market.fill('#addons', str(old_addons + 1000))
+              new_otd = float(market.locator('#out-otd').inner_text().replace('$','').replace(',',''))
+              assert abs((new_otd - old_otd) - 1062.50) <= 1.0, (old_otd,new_otd)
+              assert market.locator('#copy-request').is_enabled()
+              assert 'Nothing sent' in market.locator('#copy-status').inner_text()
+              print('VEHICLE_BUYER_SMOKE=PASS real-movers+loan-sensitivity+offer-optin+taxable-addons')
               print('VEHICLE_MARKET_SMOKE=PASS chart+apr+insurance+distinct-route')
               market.close()
 

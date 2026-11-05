@@ -72,8 +72,8 @@ def _label_value(lines: list[str], labels: tuple[str, ...]) -> str | None:
 def _dealer_price(lines: list[str], text: str) -> int | None:
     """Prefer an advertised/final dealer price over MSRP/retail and fee values."""
     preferred_labels = (
-        "cavender price", "shottenkirk price", "hill country honda price",
-        "selling price", "asking price", "internet price",
+        "rmt price", "cavender price", "shottenkirk price",
+        "hill country honda price", "selling price", "asking price", "internet price",
         "sale price", "our price", "price",
     )
     for label in preferred_labels:

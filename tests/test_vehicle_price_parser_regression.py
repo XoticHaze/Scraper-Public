@@ -61,3 +61,36 @@ def test_fee_only_page_is_rejected_instead_of_publishing_fake_225_price():
     )
 
     assert row is None
+
+
+
+def test_red_mccombs_toyota_uses_rmt_price_with_included_doc_fee():
+    """Seller calls RMT price retail+doc; only RMT price is taxed once."""
+    dealer = {
+        "id": "red_mccombs_toyota", "name": "Red McCombs Toyota",
+        "location": "San Antonio, TX", "market_local": True,
+        "area_priority": "west_sa", "doc_fee": 225,
+        "doc_fee_included_in_price": True, "mandatory_addon_amount": 0,
+    }
+    page = {
+        "url": "https://www.redmccombstoyota.com/inventory/used-2025-toyota-rav4-le-awd-sport-utility-2t3f1rfv9sw546972/",
+        "text": """
+        Used 2025 Toyota RAV4 LE AWD Sport Utility
+        VIN: 2T3F1RFV9SW546972
+        Stock: T2498
+        Retail $28,444
+        Doc Fee $225
+        RMT Price $28,669
+        Mileage:
+        46,320
+        Drivetrain:
+        AWD
+        """,
+    }
+    row = parse_dealer_detail(page, dealer)
+    assert row is not None
+    assert row["vin"] == "2T3F1RFV9SW546972"
+    assert row["price"] == 28669
+    assert row["mileage"] == 46320
+    assert row["drivetrain"] == "All-wheel Drive"
+    assert row["dealer_doc_fee_included_in_price"] is True
