@@ -231,8 +231,11 @@ jobs:
               assert selected_points >= 1, f'no history for selected VIN {selected_vin}'
               assert market.locator('#history-rows tr').count() == selected_points
               assert market.locator('#price-history-chart circle').count() == selected_points
-              assert market.locator('#price-history-chart polyline').count() == 1
+              expected_lines = 1 if selected_points > 1 else 0
+              assert market.locator('#price-history-chart polyline').count() == expected_lines
               assert 'observed scans' in market.locator('#history-summary').inner_text()
+              if selected_points == 1:
+                  assert 'Single actual observation' in market.locator('#price-history-chart').inner_text()
               print(f'VEHICLE_MARKET_HISTORY_SMOKE=PASS vin={selected_vin} observed={selected_points}')
               assert '$' in market.locator('#out-payment').inner_text()
               first_payment = market.locator('#out-payment').inner_text()
