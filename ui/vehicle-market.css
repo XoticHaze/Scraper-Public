@@ -31,3 +31,17 @@
 .cost-results .cost-primary strong{color:#c2f5fa}
 @media(max-width:980px){.market-form{grid-template-columns:repeat(3,minmax(0,1fr))}.market-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.cost-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.market-panel{padding:15px}.market-form{grid-template-columns:repeat(2,minmax(0,1fr))}.cost-results{grid-template-columns:1fr}.market-kpis strong{font-size:1.3rem}}
+
+#movement-rows .move-drop td:nth-child(5){color:#9fe7c6;font-weight:750}
+#movement-rows .move-rise td:nth-child(5){color:#ffd59a;font-weight:750}
+#movement-rows a{color:#a5dbff;text-decoration:underline;text-underline-offset:3px}
+#loan-sensitivity td{min-width:200px;line-height:1.5;font-variant-numeric:tabular-nums}
+#loan-sensitivity td:first-child{min-width:170px;font-weight:650}
+.request-label{display:block;color:#d9e9f8;font-weight:750;font-size:.9rem;margin:12px 0 7px}
+.quote-option{display:flex;align-items:center;gap:9px;color:#c5dcf2;font-size:.83rem;margin:14px 0}
+.quote-option input{width:17px;height:17px;accent-color:#a0d9ff}
+.offer-message{display:block;width:100%;min-height:260px;resize:vertical;background:#09131f;border:1px solid #40617c;border-radius:10px;color:#dbeaf6;padding:15px;font:500 .87rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}
+.offer-actions{display:flex;align-items:center;flex-wrap:wrap;gap:13px;margin-top:12px}
+.offer-actions button{background:#b8d9ff;color:#102032;border:0;border-radius:9px;padding:11px 16px;font:750 .9rem system-ui;cursor:pointer}
+.offer-actions button:disabled{opacity:.45;cursor:not-allowed}
+#copy-status{color:#b9cce0;font-size:.85rem}
