@@ -155,9 +155,18 @@ def fetch_local_dealers(cfg: dict) -> tuple[list[dict], dict[str, str]]:
                         )
                         if row:
                             photo = select_gallery_photo(gallery_candidates, vin=row.get("vin"))
+                            # Some dealer sites explicitly warn their photos might
+                            # depict another car. Such a gallery cannot be called
+                            # actual-VIN verified even when its dimensions look real.
+                            representative = bool(dealer.get("photos_may_be_representative"))
+                            if representative:
+                                photo = None
                             row["image_url"] = photo["url"] if photo else None
                             row["image_source"] = photo["source"] if photo else None
-                            row["photo_status"] = "vehicle_specific" if photo else "missing"
+                            row["photo_status"] = (
+                                "representative_unconfirmed" if representative
+                                else "vehicle_specific" if photo else "missing"
+                            )
                         if row:
                             verified, reason = verify_vehicle_detail(
                                 status=detail_status,
@@ -306,7 +315,7 @@ def add_history(rows: list[dict], previous_path: Path) -> None:
 def source_registry(cfg: dict) -> list[dict]:
     fields = (
         "id", "name", "location", "market_local", "locality_hint", "area_priority",
-        "inventory_url", "doc_fee", "doc_fee_included_in_price", "mandatory_addon_amount", "addon_warning", "role",
+        "inventory_url", "doc_fee", "doc_fee_included_in_price", "mandatory_addon_amount", "addon_warning", "photos_may_be_representative", "role",
     )
     sources = [*configured_dealers(cfg), *configured_aggregators(cfg)]
     return [
