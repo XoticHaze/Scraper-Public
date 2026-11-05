@@ -243,6 +243,213 @@ jobs:
               assert market.locator('#out-payment').inner_text() != first_payment
               market.fill('#insurance', '300')
               assert '$' in market.locator('#out-allin').inner_text()
+              assert market.locator('#loan-sensitivity tr').count() == 4
+              assert market.locator('#movement-rows tr').count() >= 1
+              finance_vin = market.locator('#finance-vehicle').input_value()
+              assert finance_vin in market.locator('#request-draft').input_value()
+              assert 'For discussion' not in market.locator('#request-draft').input_value()
+              market.check('#include-target')
+              assert 'For discussion' in market.locator('#request-draft').input_value()
+              old_addons = float(market.locator('#addons').input_value())
+              old_otd = float(market.locator('#out-otd').inner_text().replace('
+              mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True)
+              mobile.goto(url, wait_until='domcontentloaded', timeout=30000)
+              mobile.wait_for_selector('.card', timeout=30000)
+              mobile.wait_for_selector('.app-status', timeout=30000)
+              mobile.wait_for_selector('#app-actions-open', timeout=30000)
+              assert mobile.locator('#app-actions-open').is_visible(), 'app actions hidden on mobile'
+              assert mobile.locator('#browser-profile-open').is_visible(), 'browser profile hidden on mobile'
+              assert mobile.locator('a[href*="macbid-deal-engine.yml"]').first.is_visible(), 'refresh hidden on mobile'
+              assert mobile.locator('a[href="https://github.com/XoticHaze/Scraper-Public/actions"]').first.is_visible(), 'actions hidden on mobile'
+              close_metric = mobile.locator('.card').first.locator('.metric').nth(3)
+              assert close_metric.is_visible(), 'close time hidden on mobile'
+              assert close_metric.inner_text().strip()
+              assert mobile.evaluate('document.body.scrollWidth') <= 390
+              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile+semantic-hunts+browser-profile+actions')
+              mobile.close()
+              browser.close()
+          PY
+
+      - name: Show compact ranked summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f results/macbid-deal-engine.json ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('results/macbid-deal-engine.json').read_text())
+          print(json.dumps(data.get('scan', {}), indent=2, sort_keys=True))
+          market_path = Path('results/market-values.runtime.json')
+          if market_path.exists():
+              market = json.loads(market_path.read_text())
+              print('===== market_enrichment =====')
+              print(json.dumps(market.get('runtime_enrichment', {}), indent=2, sort_keys=True))
+              print(f"MARKET_RUNTIME_VALUATIONS={len(market.get('valuations') or [])}")
+          for view, rows in data.get('views', {}).items():
+              print(f'===== {view} =====')
+              for row in rows[:25]:
+                  print(json.dumps({
+                      'product_name': row.get('product_name') or row.get('title') or row.get('name'),
+                      'auction_location': row.get('auction_location'),
+                      'condition': row.get('condition'),
+                      'current_bid': row.get('current_bid'),
+                      'retail_price': row.get('retail_price'),
+                      'estimated_pre_tax_total': row.get('estimated_pre_tax_total'),
+                      'deal_score': row.get('deal_score'),
+                      'expected_closing_utc': row.get('expected_closing_utc'),
+                      'unique_bidders': row.get('unique_bidders'),
+                      'duplicate_lot_count': row.get('duplicate_lot_count'),
+                      'market_price_status': row.get('market_price_status'),
+                      'macbid_url': row.get('macbid_url'),
+                  }, sort_keys=True))
+          PY
+          else
+            echo 'No deal-engine report was produced.'
+          fi
+
+      - name: Upload deal engine report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-deal-engine
+          path: |
+            results/macbid-deal-engine.json
+            results/market-values.runtime.json
+            results/paotexas-store.json
+          if-no-files-found: warn
+          retention-days: 2
+
+      - name: Upload browsable UI artifact
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-hunt-ui
+          path: site
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Upload GitHub Pages artifact
+        if: success()
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: site
+
+  deploy-pages:
+    if: ${{ needs.engine.result == 'success' && (github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main') }}
+    needs: engine
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy MAC.BID Hunt to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+,'').replace(',',''))
+              market.fill('#addons', str(old_addons + 1000))
+              new_otd = float(market.locator('#out-otd').inner_text().replace('
+              mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True)
+              mobile.goto(url, wait_until='domcontentloaded', timeout=30000)
+              mobile.wait_for_selector('.card', timeout=30000)
+              mobile.wait_for_selector('.app-status', timeout=30000)
+              mobile.wait_for_selector('#app-actions-open', timeout=30000)
+              assert mobile.locator('#app-actions-open').is_visible(), 'app actions hidden on mobile'
+              assert mobile.locator('#browser-profile-open').is_visible(), 'browser profile hidden on mobile'
+              assert mobile.locator('a[href*="macbid-deal-engine.yml"]').first.is_visible(), 'refresh hidden on mobile'
+              assert mobile.locator('a[href="https://github.com/XoticHaze/Scraper-Public/actions"]').first.is_visible(), 'actions hidden on mobile'
+              close_metric = mobile.locator('.card').first.locator('.metric').nth(3)
+              assert close_metric.is_visible(), 'close time hidden on mobile'
+              assert close_metric.inner_text().strip()
+              assert mobile.evaluate('document.body.scrollWidth') <= 390
+              print('UI_DIRECT_OPEN_SMOKE=PASS desktop+mobile+semantic-hunts+browser-profile+actions')
+              mobile.close()
+              browser.close()
+          PY
+
+      - name: Show compact ranked summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f results/macbid-deal-engine.json ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('results/macbid-deal-engine.json').read_text())
+          print(json.dumps(data.get('scan', {}), indent=2, sort_keys=True))
+          market_path = Path('results/market-values.runtime.json')
+          if market_path.exists():
+              market = json.loads(market_path.read_text())
+              print('===== market_enrichment =====')
+              print(json.dumps(market.get('runtime_enrichment', {}), indent=2, sort_keys=True))
+              print(f"MARKET_RUNTIME_VALUATIONS={len(market.get('valuations') or [])}")
+          for view, rows in data.get('views', {}).items():
+              print(f'===== {view} =====')
+              for row in rows[:25]:
+                  print(json.dumps({
+                      'product_name': row.get('product_name') or row.get('title') or row.get('name'),
+                      'auction_location': row.get('auction_location'),
+                      'condition': row.get('condition'),
+                      'current_bid': row.get('current_bid'),
+                      'retail_price': row.get('retail_price'),
+                      'estimated_pre_tax_total': row.get('estimated_pre_tax_total'),
+                      'deal_score': row.get('deal_score'),
+                      'expected_closing_utc': row.get('expected_closing_utc'),
+                      'unique_bidders': row.get('unique_bidders'),
+                      'duplicate_lot_count': row.get('duplicate_lot_count'),
+                      'market_price_status': row.get('market_price_status'),
+                      'macbid_url': row.get('macbid_url'),
+                  }, sort_keys=True))
+          PY
+          else
+            echo 'No deal-engine report was produced.'
+          fi
+
+      - name: Upload deal engine report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-deal-engine
+          path: |
+            results/macbid-deal-engine.json
+            results/market-values.runtime.json
+            results/paotexas-store.json
+          if-no-files-found: warn
+          retention-days: 2
+
+      - name: Upload browsable UI artifact
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-hunt-ui
+          path: site
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Upload GitHub Pages artifact
+        if: success()
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: site
+
+  deploy-pages:
+    if: ${{ needs.engine.result == 'success' && (github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main') }}
+    needs: engine
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy MAC.BID Hunt to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+,'').replace(',',''))
+              assert abs((new_otd - old_otd) - 1062.50) <= 1.0, (old_otd,new_otd)
+              assert market.locator('#copy-request').is_enabled()
+              assert 'Nothing sent' in market.locator('#copy-status').inner_text()
+              print('VEHICLE_BUYER_SMOKE=PASS price-movements+APR-table+offer-optin+taxable-dealer-addons')
               print('VEHICLE_MARKET_SMOKE=PASS chart+apr+insurance+distinct-route')
               market.close()
 
