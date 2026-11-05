@@ -58,7 +58,10 @@
       svg.appendChild(shape('text',{x:78,y:y+5,fill:'#b5c9dd','text-anchor':'end','font-size':14},money(price)));
     }
     const points=list.map(o=>scaleX(Date.parse(o.observed_at))+','+scaleY(Number(o.price))).join(' ');
-    svg.appendChild(shape('polyline',{points,fill:'none',stroke:'#76c7ec','stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round'}));
+    // A single observation is a point, not a price trend.
+    if (list.length > 1) {
+      svg.appendChild(shape('polyline',{points,fill:'none',stroke:'#76c7ec','stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round'}));
+    }
     list.forEach(o=>svg.appendChild(shape('circle',{cx:scaleX(Date.parse(o.observed_at)),cy:scaleY(Number(o.price)),r:5,fill:'#a1e9ff',stroke:'#142536','stroke-width':2})));
     svg.appendChild(shape('text',{x:left,y:277,fill:'#b5c9dd','font-size':14},formatDate(list[0].observed_at)));
     svg.appendChild(shape('text',{x:right,y:277,fill:'#b5c9dd','font-size':14,'text-anchor':'end'},formatDate(last.observed_at)));
