@@ -151,7 +151,8 @@
         "doc_fee": 225,
         "doc_fee_included_in_price": true,
         "mandatory_addon_amount": 0,
-        "addon_warning": "Dealer website labels its RMT Price as retail price plus $225 documentary fee. Confirm the VIN-specific current cash and financed selling prices, any dealer inventory tax and all optional packages in a buyer's order. Photos may be representative."
+        "addon_warning": "Dealer's RMT Price includes $225 doc fee. Official listing states pictures may not represent the actual vehicle. Verify the exact-VIN photos, current cash/financed price, inventory tax and all options before purchase.",
+        "photos_may_be_representative": true
       }
     ],
     "nearby_dealers": [
