@@ -33,4 +33,4 @@ jobs:
           python-version: '3.11'
       - name: Execute one read-only official GSA probe
         run: |
-          python scripts/gsa_public_scan.py --demo-probe
+          python -m scripts.gsa_public_scan --demo-probe
