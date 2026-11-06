@@ -37,6 +37,17 @@ class GSASourceTests(unittest.TestCase):
     def test_wont_invent_deal_from_other_location(self):
         self.assertEqual(normalize_gsa_auctions([self.row], state="CA"), [])
 
+    def test_actual_gsa_results_wrapper_and_camelcase(self):
+        real_shape = {"Results": [{
+            "saleNo": "41QSCI123", "lotNo": "3", "itemName": "UPS",
+            "auctionStatus": "A", "aucEndDt": "2026-11-10",
+            "propertyState": "TX", "highBidAmount": 42.5,
+            "itemDescURL": "https://www.gsaauctions.gov/items/1",
+        }]}
+        rows = normalize_gsa_auctions(real_shape, observed_at=STAMP)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["current_bid"], 42.5)
+
     def test_inactive_preview_excluded(self):
         r = dict(self.row, AuctionStatus="P")
         self.assertEqual(normalize_gsa_auctions([r]), [])
