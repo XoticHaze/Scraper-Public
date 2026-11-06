@@ -1,12 +1,5 @@
 name: GSA Official API Source Probe
 on:
-  push:
-    branches:
-      - feat/gsa-surplus-source-hub-20261106
-    paths:
-      - .github/workflows/gsa-public-probe.yml
-      - deal_engine/marketplace/gsa.py
-      - scripts/gsa_public_scan.py
   workflow_dispatch:
     inputs:
       run_demo_probe:
@@ -20,8 +13,8 @@ permissions:
 
 jobs:
   gsa-api-probe:
-    # Demo is explicitly a bounded validation probe, not an ongoing source.
-    if: ${{ github.event_name == 'push' || inputs.run_demo_probe == true }}
+    # Public demo is manual-only to respect shared limits.
+    if: ${{ inputs.run_demo_probe == true }}
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
