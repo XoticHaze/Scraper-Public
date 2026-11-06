@@ -22,7 +22,21 @@ def main(argv=None):
     try:
         if args.demo_probe:
             payload = fetch_gsa_auctions(key="DEMO_KEY", timeout=25)
-            records = _records(payload)
+            try:
+                records = _records(payload)
+            except GSASourceError:
+                # Schema diagnostic logs keys and value shapes only, never listing contents.
+                def shape(obj, depth=0):
+                    if depth > 2:
+                        return type(obj).__name__
+                    if isinstance(obj, dict):
+                        return {str(k): shape(v, depth + 1) for k, v in list(obj.items())[:30]}
+                    if isinstance(obj, list):
+                        return {"type": "list", "count": len(obj),
+                                "first_item_shape": shape(obj[0], depth + 1) if obj else None}
+                    return type(obj).__name__
+                print(json.dumps({"status": "GSA_RESPONSE_SCHEMA_CHANGED", "structure": shape(payload)}))
+                raise
             # Log schema and count only. No location, description, or third-party URL data in logs.
             print(json.dumps({"status": "PROBE_RESPONSE_READ", "total_records": len(records),
                               "record_field_names": sorted(str(k) for k in records[0])[:45] if records else []}))
