@@ -10,7 +10,7 @@ import os
 import sys
 from pathlib import Path
 
-from deal_engine.marketplace.gsa import GSASourceError, build_gsa_catalog, fetch_gsa_auctions, _records
+from deal_engine.marketplace.gsa import GSASourceError, build_gsa_catalog, fetch_gsa_auctions, _records, normalize_gsa_auctions
 
 
 def main(argv=None):
@@ -39,7 +39,9 @@ def main(argv=None):
                 raise
             # Log schema and count only. No location, description, or third-party URL data in logs.
             print(json.dumps({"status": "PROBE_RESPONSE_READ", "total_records": len(records),
-                              "record_field_names": sorted(str(k) for k in records[0])[:45] if records else []}))
+                              "record_field_names": sorted(str(k) for k in records[0])[:45] if records else [],
+                              "active_auctions": len(normalize_gsa_auctions(payload)),
+                              "active_texas_auctions": len(normalize_gsa_auctions(payload, state="TX"))}))
             return 0
         if not os.environ.get("GSA_API_KEY"):
             raise GSASourceError("GSA_API_KEY missing; not using DEMO_KEY in scheduled runs")
