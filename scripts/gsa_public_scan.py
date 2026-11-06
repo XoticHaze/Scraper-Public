@@ -10,7 +10,7 @@ import os
 import sys
 from pathlib import Path
 
-from deal_engine.marketplace.gsa import GSASourceError, build_gsa_catalog, fetch_gsa_auctions, _records, normalize_gsa_auctions
+from deal_engine.marketplace.gsa import GSASourceError, build_gsa_catalog, fetch_gsa_auctions, _records, normalize_gsa_auctions, _field
 
 
 def main(argv=None):
@@ -38,7 +38,16 @@ def main(argv=None):
                 print(json.dumps({"status": "GSA_RESPONSE_SCHEMA_CHANGED", "structure": shape(payload)}))
                 raise
             # Log schema and count only. No location, description, or third-party URL data in logs.
+            from collections import Counter
+            status_counts = Counter(str(_field(r, "AuctionStatus")) for r in records if isinstance(r, dict))
+            ids_present = sum(bool(str(_field(r, "SaleNo") or "").strip()) for r in records)
+            lot_present = sum(bool(str(_field(r, "LotNo") or "").strip()) for r in records)
+            title_present = sum(bool(str(_field(r, "ItemName") or "").strip()) for r in records)
             print(json.dumps({"status": "PROBE_RESPONSE_READ", "total_records": len(records),
+                              "status_distribution": dict(status_counts.most_common(12)),
+                              "sale_numbers_present": ids_present,
+                              "lot_numbers_present": lot_present,
+                              "item_names_present": title_present,
                               "record_field_names": sorted(str(k) for k in records[0])[:45] if records else [],
                               "active_auctions": len(normalize_gsa_auctions(payload)),
                               "active_texas_auctions": len(normalize_gsa_auctions(payload, state="TX"))}))
