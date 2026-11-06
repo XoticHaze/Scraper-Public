@@ -40,7 +40,7 @@ class GSASourceTests(unittest.TestCase):
     def test_actual_gsa_results_wrapper_and_camelcase(self):
         real_shape = {"Results": [{
             "saleNo": "41QSCI123", "lotNo": "3", "itemName": "UPS",
-            "auctionStatus": "A", "aucEndDt": "2026-11-10",
+            "auctionStatus": "Active", "aucEndDt": "2026-11-10",
             "propertyState": "TX", "highBidAmount": 42.5,
             "itemDescURL": "https://www.gsaauctions.gov/items/1",
         }]}
