@@ -1,0 +1,105 @@
+{
+  "schema": "scraper-marketplace-source-registry-v1",
+  "description": "Registration does not imply a working live feed or permission to collect.",
+  "sources": [
+    {
+      "id": "ebay",
+      "name": "eBay",
+      "kind": "third_party_marketplace",
+      "priority": "P0",
+      "adapter": "browse_item_v1",
+      "collector_enabled": false,
+      "access": "application_token_and_production_eligibility_required",
+      "next_step": "Configure approved application token in an admitted runtime; validate single-item item API before source refresh",
+      "url": "https://www.ebay.com"
+    },
+    {
+      "id": "bestbuy",
+      "name": "Best Buy",
+      "kind": "first_party_retail",
+      "priority": "P0",
+      "adapter": "products_and_open_box_v1",
+      "collector_enabled": false,
+      "access": "developer_api_key_required",
+      "next_step": "Provide authorized Best Buy API key in an admitted runtime; verify product + open box endpoints",
+      "url": "https://www.bestbuy.com"
+    },
+    {
+      "id": "gsa",
+      "name": "GSA Auctions",
+      "kind": "federal_surplus",
+      "priority": "P1",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "public_site_discovery_review_pending",
+      "next_step": "Validate available authorized public feed and lot fee/pickup schema",
+      "url": "https://gsaauctions.gov"
+    },
+    {
+      "id": "govdeals",
+      "name": "GovDeals",
+      "kind": "government_surplus",
+      "priority": "P1",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "public_site_discovery_review_pending",
+      "next_step": "Validate permitted public-data access, fees, pickup restrictions, and seller identity",
+      "url": "https://www.govdeals.com"
+    },
+    {
+      "id": "publicsurplus",
+      "name": "Public Surplus",
+      "kind": "government_surplus",
+      "priority": "P1",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "public_site_discovery_review_pending",
+      "next_step": "Validate permitted public-data access and multi-agency duplication",
+      "url": "https://www.publicsurplus.com"
+    },
+    {
+      "id": "san_antonio_surplus",
+      "name": "City of San Antonio Surplus",
+      "kind": "local_government_surplus",
+      "priority": "P1",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "public_site_discovery_review_pending",
+      "next_step": "Assess bid rules, pickup logistics, official listing endpoint, and permitted access",
+      "url": "https://webapp1.sanantonio.gov/surplus/"
+    },
+    {
+      "id": "tx_state_surplus",
+      "name": "Texas Facilities Commission Surplus",
+      "kind": "state_surplus_discovery",
+      "priority": "P1",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "referral_to_auction_platforms",
+      "next_step": "Treat as origin/agency; resolve GovDeals/Public Surplus duplicates without double counting",
+      "url": "https://web.tfc.texas.gov/public/state-surplus-store"
+    },
+    {
+      "id": "heb",
+      "name": "H-E-B",
+      "kind": "local_grocery",
+      "priority": "P2",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "authorization_required",
+      "next_step": "Use operator-entered offers until explicit permission for automated collection",
+      "url": "https://www.heb.com"
+    },
+    {
+      "id": "walmart",
+      "name": "Walmart",
+      "kind": "retail_and_marketplace",
+      "priority": "P2",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "partner_feed_review_pending",
+      "next_step": "Verify authorized localized offers endpoint and seller type",
+      "url": "https://www.walmart.com"
+    }
+  ]
+}
