@@ -85,7 +85,8 @@ def _identity_values(product: dict[str, Any]) -> set[str]:
         "gtin14",
         "isbn",
         "asin",
-        "url",
+        # URL text is not an admissible product identity. A URL may contain
+        # an unrelated product ID in recommendations, tracking, or query text.
     ):
         value = product.get(key)
         if isinstance(value, (str, int, float)):
@@ -99,7 +100,10 @@ def structured_identity_match(product: dict[str, Any], identity: str) -> bool:
     target = normalize_identity(identity)
     if not target:
         return False
-    return any(target == value or target in value for value in _identity_values(product))
+    # Exact normalized identifiers only. Allowing substring identity evidence
+    # can copy a price from an unrelated SKU, model, or product URL.
+    # URL-verified sources must use the independent identity_in_url caller gate.
+    return target in _identity_values(product)
 
 
 def _condition_from_url(value: Any) -> str:
