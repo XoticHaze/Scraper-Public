@@ -408,6 +408,46 @@ def main() -> int:
             print("UI_PAOTEXAS=INVALID_SOURCE_SNAPSHOT_NOT_PUBLISHED")
     else:
         print("UI_PAOTEXAS=NO_SOURCE_SNAPSHOT")
+    # Separate marketplace-source directory. Registry records are public and
+    # DO NOT imply that live collecting, credentials or authenticated feeds exist.
+    source_registry_path = Path("config/marketplace_sources.json")
+    if source_registry_path.exists():
+        source_registry = json.loads(source_registry_path.read_text(encoding="utf-8"))
+        public_keys = ("id", "name", "kind", "priority", "adapter", "access",
+                       "next_step", "url", "collector_enabled")
+        sources = [{key: item[key] for key in public_keys if key in item}
+                   for item in (source_registry.get("sources") or [])
+                   if isinstance(item, dict) and str(item.get("url") or "").startswith("https://")]
+        directory = {"schema": "scraper-marketplace-directory-v1", "sources": sources}
+        (SITE / "marketplace-sources.json").write_text(
+            json.dumps(directory, separators=(",", ":"), ensure_ascii=False), encoding="utf-8"
+        )
+        print(f"UI_MARKETPLACE_SOURCES={len(sources)}")
+
+    # GSA publisher is strictly optional. Never promote missing or stale data
+    # to "live", and don't run the DEMO_KEY on the MAC.BID publishing schedule.
+    gsa_path = Path("results/gsa-auctions.json")
+    if gsa_path.exists():
+        try:
+            from datetime import datetime, timezone
+            gsa_doc = json.loads(gsa_path.read_text(encoding="utf-8"))
+            observed = datetime.fromisoformat(str(gsa_doc.get("observed_at", "")).replace("Z", "+00:00"))
+            age = (datetime.now(timezone.utc) - observed).total_seconds()
+            if (gsa_doc.get("schema") == "scraper-gsa-auctions-v1"
+                    and gsa_doc.get("source_status") == "verified_live_api_response"
+                    and isinstance(gsa_doc.get("auctions"), list)
+                    and observed.tzinfo is not None and 0 <= age <= 86400):
+                (SITE / "gsa-auctions.json").write_text(
+                    json.dumps(gsa_doc, separators=(",", ":"), ensure_ascii=False), encoding="utf-8"
+                )
+                print(f"UI_GSA_VERIFIED_AUCTIONS={len(gsa_doc['auctions'])}")
+            else:
+                print("UI_GSA=STALE_OR_INVALID_NOT_PUBLISHED")
+        except (ValueError, TypeError, KeyError, OSError):
+            print("UI_GSA=INVALID_NOT_PUBLISHED")
+    else:
+        print("UI_GSA=SOURCE_NOT_PROVIDED")
+
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
 
     print(f"UI_PRODUCTS={len(products)}")

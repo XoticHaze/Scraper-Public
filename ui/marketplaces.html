@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Marketplaces &amp; Surplus · Scraper</title>
+<style>
+:root{color-scheme:dark;background:#0b1422;color:#e6edf5;font-family:system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}body{margin:0;padding:0}header,main{max-width:1250px;margin:0 auto;padding:24px}
+a{color:#9dc9ff}a:hover{text-decoration:underline}nav{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0}
+h1{margin:8px 0;font-size:clamp(1.6rem,4vw,2.4rem)}h2{font-size:1.3rem;margin:22px 0 12px}
+.meta,.muted{color:#9cadbf}p{line-height:1.5}.notice{border:1px solid #355779;border-radius:12px;background:#122238;padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,275px),1fr));gap:14px}
+.card{background:#152235;border:1px solid #314158;border-radius:14px;padding:16px;min-width:0}
+.card h3{margin:0 0 6px;font-size:1.05rem}.card p{font-size:.92rem}.card .source{color:#aabdd2;font-size:.78rem}
+.tag{display:inline-block;border-radius:12px;background:#294158;padding:4px 9px;font-size:.75rem;font-weight:600;letter-spacing:.02em}
+.tag.live{background:#17553c;color:#d2fae8}.tag.off{background:#4c3431;color:#ffdcd5}
+.controls{display:flex;flex-wrap:wrap;gap:12px;margin:15px 0}
+label{display:flex;align-items:center;gap:8px}input,select{background:#0b1628;color:#fff;border:1px solid #49627a;border-radius:8px;padding:10px}
+input{width:min(100%,390px);flex:1;min-width:170px}.empty{color:#bbcad8}
+article a{display:inline-block;margin-top:10px}footer{margin:30px auto;color:#8ca4bb;font-size:.82rem}
+</style>
+</head>
+<body>
+<header>
+<p class="meta">SCRAPER · MULTI-SOURCE OPPORTUNITIES</p>
+<h1>Marketplaces &amp; Government Surplus</h1>
+<p class="muted">Official source directory and verifiable GSA auction observations. A registered source does not mean a live feed.</p>
+<nav aria-label="Scraper sections">
+<a href="index.html">MAC.BID Hunt</a>
+<a href="vehicles.html">Vehicle Hunt</a>
+<a href="paotexas.html">PAOTEXAS Store</a>
+<a href="finds.html">Finds &amp; Watchlists</a>
+</nav>
+</header>
+<main>
+<section class="notice"><strong>No automatic bidding, buying, or authenticity guarantee.</strong>
+<p>eBay / Best Buy are API-gated. GovDeals, Public Surplus and ShopGoodwill are discovery-only until authorized access is established. GSA uses an official API, but its public demo key is for bounded tests only. Prices exclude unverified fees, freight, pickup, tax and inspection costs.</p></section>
+<h2>Source Directory</h2>
+<div id="source-status" class="muted">Loading source registry…</div>
+<section id="sources" class="grid" aria-label="Marketplace sources"></section>
+<h2>GSA Auctions <span id="gsa-summary" class="meta" style="font-size:.85rem"></span></h2>
+<p id="gsa-health" class="muted">Checking published GSA snapshot…</p>
+<div class="controls">
+<label>Search auctions <input id="gsa-query" type="search" placeholder="Office equipment, UPS, cameras…" /></label>
+<label>State <select id="gsa-state"><option value="TX">Texas</option><option value="">All states</option></select></label>
+</div>
+<section id="gsa-items" class="grid" aria-live="polite"></section>
+<p id="gsa-empty" class="empty"></p>
+<footer>Observed bids are not maximum bids. Date-only close fields do not support exact ending countdowns. Verify seller terms and logistics before purchase.</footer>
+</main>
+<script src="marketplaces.js" defer></script>
+</body>
+</html>
