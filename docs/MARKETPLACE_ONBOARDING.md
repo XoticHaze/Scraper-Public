@@ -54,3 +54,21 @@ These are **registered prospective sources**, not integrated collectors. Avoid d
 - Best Buy APIs: https://developer.bestbuy.com/apis
 - Best Buy API reference: https://bestbuyapis.github.io/api-documentation/
 - GSA official guidance: https://www.gsa.gov/buy-through-us/government-property-for-sale-or-lease/office-of-personal-property-management/for-citizens-seeking-surplus-property
+
+## GSA and marketplace source hub (2026-11-06)
+
+The official GSA Auctions GET API was tested against the source's documented `DEMO_KEY`; the live result returned **1,125 nationwide records** with a `Results` wrapper and camelCase auction fields. The API schema was corrected against these actual response keys; a public workflow completed successfully without credentials.
+
+- `deal_engine/marketplace/gsa.py`: validates, normalizes, deduplicates real sale/lot identities and preserves date-only closing precision.
+- `scripts/gsa_public_scan.py --demo-probe`: explicit one-off bounded public API test, no catalog publication.
+- `scripts/gsa_public_scan.py --state TX`: authorized runtime needs `GSA_API_KEY`; publishes `results/gsa-auctions.json` only after validated data.
+- `ui/marketplaces.html`: multi-source directory; verified fresh GSA results appear only if the runtime provides and validates a snapshot within 24 hours.
+- No `DEMO_KEY` in schedules, no unauthorized crawling, and no claims of price history, all-in cost, accurate close time or max bid from GSA's date-only response.
+- GovDeals' terms ban automated crawlers/data mining; Public Surplus forbids automated monitoring without prior express written permission; ShopGoodwill requires consent for automated extraction. Their onboarding is **official discovery links only**.
+- The City of San Antonio's surplus page is public and independently useful for local pickup, but its site contract is not validated as an automated source. The hub links directly to it.
+- eBay and Best Buy listing probes remain ready when per-operator developer credentials are provided. Never borrow, embed or publish another application's API key.
+
+Official references: https://gsa.github.io/auctions_api/ , https://gsa.github.io/auctions_api/fields ,
+https://prod-seo.govdeals.com/content/site-terms ,
+https://m.publicsurplus.com/sms/login/plainTermsAndConditions ,
+https://shopgoodwill.com/about/terms-of-use

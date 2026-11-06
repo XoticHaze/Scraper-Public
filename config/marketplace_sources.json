@@ -29,10 +29,10 @@
       "name": "GSA Auctions",
       "kind": "federal_surplus",
       "priority": "P1",
-      "adapter": null,
+      "adapter": "gsa_official_api_v1",
       "collector_enabled": false,
-      "access": "public_site_discovery_review_pending",
-      "next_step": "Validate available authorized public feed and lot fee/pickup schema",
+      "access": "official_public_api_verified_demo_probe",
+      "next_step": "Real API schema proven (1,125 records on 2026-11-06). Request free per-operator api.data.gov key for durable independent refresh.",
       "url": "https://gsaauctions.gov"
     },
     {
@@ -42,8 +42,8 @@
       "priority": "P1",
       "adapter": null,
       "collector_enabled": false,
-      "access": "public_site_discovery_review_pending",
-      "next_step": "Validate permitted public-data access, fees, pickup restrictions, and seller identity",
+      "access": "automated_crawling_prohibited_without_license_or_permission",
+      "next_step": "Official browse link or user-entered references only until written authorization/approved data feed",
       "url": "https://www.govdeals.com"
     },
     {
@@ -53,8 +53,8 @@
       "priority": "P1",
       "adapter": null,
       "collector_enabled": false,
-      "access": "public_site_discovery_review_pending",
-      "next_step": "Validate permitted public-data access and multi-agency duplication",
+      "access": "prior_written_permission_required_for_automation",
+      "next_step": "Official browse link or user-entered references only until written authorization/approved data feed",
       "url": "https://www.publicsurplus.com"
     },
     {
@@ -64,8 +64,8 @@
       "priority": "P1",
       "adapter": null,
       "collector_enabled": false,
-      "access": "public_site_discovery_review_pending",
-      "next_step": "Assess bid rules, pickup logistics, official listing endpoint, and permitted access",
+      "access": "public_official_listing_visible_manual_review",
+      "next_step": "City's official as-is surplus site is public; preserve bid and pickup terms. Bounded automated adapter only after schema and rights validation.",
       "url": "https://webapp1.sanantonio.gov/surplus/"
     },
     {
@@ -97,8 +97,8 @@
       "priority": "P1",
       "adapter": null,
       "collector_enabled": false,
-      "access": "terms_and_public_data_access_review_pending",
-      "next_step": "Evaluate seller-specific condition, shipping, handling and returns before source access; focus on music/audio/electronics",
+      "access": "automated_extraction_requires_written_consent",
+      "next_step": "Official browse link or user-entered references only until written authorization/approved data feed",
       "url": "https://shopgoodwill.com/"
     },
     {
