@@ -85,7 +85,7 @@ def _records(obj, depth=0):
     if isinstance(obj, dict):
         if _field(obj, "SaleNo") is not None:
             return [obj]
-        for k in ("auctions", "Auctions", "data", "results", "items", "records", "List"):
+        for k in ("auctions", "Auctions", "data", "results", "items", "records", "List", "Results"):
             if k in obj:
                 return _records(obj[k], depth + 1)
         raise GSASourceError("GSA JSON response lacks documented auction field structure")
