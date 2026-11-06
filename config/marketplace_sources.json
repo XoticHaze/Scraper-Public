@@ -80,6 +80,28 @@
       "url": "https://web.tfc.texas.gov/public/state-surplus-store"
     },
     {
+      "id": "gsa_fleet",
+      "name": "GSA Fleet Vehicle Sales",
+      "kind": "federal_fleet_vehicles",
+      "priority": "P1",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "official_auction_feed_review_pending",
+      "next_step": "Evaluate vehicle VIN, inspection, title, fees, and location against existing Vehicle Hunt identity and history",
+      "url": "https://www.gsafleet.gov/"
+    },
+    {
+      "id": "shopgoodwill",
+      "name": "ShopGoodwill",
+      "kind": "nonprofit_multi_seller_auction",
+      "priority": "P1",
+      "adapter": null,
+      "collector_enabled": false,
+      "access": "terms_and_public_data_access_review_pending",
+      "next_step": "Evaluate seller-specific condition, shipping, handling and returns before source access; focus on music/audio/electronics",
+      "url": "https://shopgoodwill.com/"
+    },
+    {
       "id": "heb",
       "name": "H-E-B",
       "kind": "local_grocery",

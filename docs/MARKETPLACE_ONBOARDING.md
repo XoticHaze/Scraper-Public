@@ -43,6 +43,8 @@ Do not use those sample IDs as source-verified current listings. An operator sho
 - Public Surplus (https://www.publicsurplus.com/): government agency surplus; Texas Facilities Commission points here and to GovDeals.
 - City of San Antonio surplus (https://webapp1.sanantonio.gov/surplus/): direct municipal bid platform; **distinct from GovDeals**.
 - Texas Facilities Commission (https://web.tfc.texas.gov/public/state-surplus-store): agency/origin index, not necessarily a separate listing when it forwards to GovDeals/Public Surplus.
+- GSA Fleet (https://www.gsafleet.gov/): government-owned vehicles; feed into the **existing Vehicle Hunt** rather than duplicating VIN and price-history code.
+- ShopGoodwill (https://shopgoodwill.com/): a useful discovery source for instruments, music gear, tech and electronics, but seller-specific shipping/handling and pickup terms can erase savings.
 
 These are **registered prospective sources**, not integrated collectors. Avoid duplicate agency lots, require total landed cost (premium, shipping, tax, travel, removal), and fail closed where collection rights or item condition are unknown.
 

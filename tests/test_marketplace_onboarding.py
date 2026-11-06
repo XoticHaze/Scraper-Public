@@ -89,6 +89,16 @@ class MarketplaceOnboardingTests(unittest.TestCase):
             with self.assertRaises(SourceAccessError):
                 get_bestbuy_sku("1234567")
 
+    def test_source_registry_is_opt_in_and_has_unique_ids(self):
+        import json
+        from pathlib import Path
+        registry = json.loads((Path(__file__).resolve().parents[1] / "config/marketplace_sources.json").read_text())
+        ids = [source["id"] for source in registry["sources"]]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertTrue({"ebay", "bestbuy", "gsa", "govdeals", "publicsurplus",
+                         "san_antonio_surplus", "gsa_fleet", "shopgoodwill"} <= set(ids))
+        self.assertTrue(all(source["collector_enabled"] is False for source in registry["sources"]))
+
     def test_reject_unbounded_input(self):
         with self.assertRaises(ValueError):
             get_ebay_item("https://example.com")
