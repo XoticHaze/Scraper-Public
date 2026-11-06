@@ -110,7 +110,8 @@ def normalize_gsa_auctions(payload, *, observed_at=None, state=None, active_only
         status = _text(_field(row, "AuctionStatus")).upper()
         if not sale or not lot or not title or not re.fullmatch(r"[A-Za-z0-9._-]{1,32}", sale):
             continue
-        if status != "A" and active_only:
+        is_active = status in {"A", "ACTIVE"}
+        if not is_active and active_only:
             continue
         item_state = _text(_field(row, "PropertyState")).upper()
         if state is not None and item_state != state.upper():
@@ -125,7 +126,7 @@ def normalize_gsa_auctions(payload, *, observed_at=None, state=None, active_only
             "source": "gsa", "offer_id": "gsa:" + key,
             "sale_number": sale, "lot_number": lot,
             "title": title, "condition": "as_is",
-            "auction_status": "active" if status == "A" else "not_verified_active",
+            "auction_status": "active" if is_active else "not_verified_active",
             "current_bid": _number(_field(row, "HighBidAmount")),
             "reserve": _number(_field(row, "Reserve")),
             "bidder_count": _number(_field(row, "BiddersCount")),
