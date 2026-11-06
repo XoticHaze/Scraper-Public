@@ -90,7 +90,7 @@ def ebay_risk(item, *, expected_model_ids=()):
     if not item.get("itemWebUrl"):
         critical.append("official_listing_url_missing")
     return {
-        "decision": "PASS" if critical else "REVIEW",
+        "decision": "BLOCK" if critical else "REVIEW",
         "authenticity_status": "conflicting_evidence" if critical else "not_verified",
         "seller_status": "needs_evidence" if warnings else "unverified_category_feedback",
         "critical_flags": sorted(set(critical)),
