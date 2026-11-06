@@ -27,7 +27,7 @@ class MarketplaceOnboardingTests(unittest.TestCase):
 
     def test_ebay_mismatch_overrides_feedback(self):
         row = normalize_ebay_item(self.ebay(), observed_at=STAMP)
-        self.assertEqual(row["risk"]["decision"], "PASS")
+        self.assertEqual(row["risk"]["decision"], "BLOCK")
         self.assertIn("contradictory_product_model", row["risk"]["critical_flags"])
         self.assertIn("seller_no_returns", row["risk"]["warnings"])
         self.assertEqual(row["seller"]["positive_feedback_pct"], "99.8")
@@ -42,7 +42,7 @@ class MarketplaceOnboardingTests(unittest.TestCase):
     def test_explicit_model_mismatch(self):
         item = self.ebay()
         item["localizedAspects"] = [{"name": "Model", "value": "A2190"}]
-        self.assertEqual(ebay_risk(item, expected_model_ids=["A3055"])["decision"], "PASS")
+        self.assertEqual(ebay_risk(item, expected_model_ids=["A3055"])["decision"], "BLOCK")
 
     def test_reject_bad_ebay_url(self):
         item = self.ebay()
