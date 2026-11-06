@@ -43,7 +43,13 @@ def main(argv=None):
             ids_present = sum(bool(str(_field(r, "SaleNo") or "").strip()) for r in records)
             lot_present = sum(bool(str(_field(r, "LotNo") or "").strip()) for r in records)
             title_present = sum(bool(str(_field(r, "ItemName") or "").strip()) for r in records)
+            from urllib.parse import urlsplit, parse_qs
+            sample_link = str(_field(records[0], "ItemDescURL") or "") if records else ""
+            parsed_link = urlsplit(sample_link)
             print(json.dumps({"status": "PROBE_RESPONSE_READ", "total_records": len(records),
+                              "item_url_domain": parsed_link.hostname,
+                              "item_url_path": parsed_link.path,
+                              "item_url_query_keys": sorted(parse_qs(parsed_link.query).keys()),
                               "status_distribution": dict(status_counts.most_common(12)),
                               "sale_numbers_present": ids_present,
                               "lot_numbers_present": lot_present,
