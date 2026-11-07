@@ -134,5 +134,5 @@ getJson('gsa-auctions.json').then(data=>{
   }
   byId('gsa-health').textContent='Verified official GSA API snapshot · '+lots.length+' active lots · Observed '+new Date(observed).toLocaleString()+'. Bids are not total prices.';
   render();
-}).catch(()=>{byId('gsa-health').textContent='GSA feed not published or expired. A personal GSA API key is needed for recurring authorized refresh; other source links and your local shortlist remain usable.';render();});
+}).catch(error=>{byId('gsa-health').textContent='No usable current GSA snapshot: the published feed is absent, expired, or invalid. Check the public refresh status and configured GSA API access before relying on auction results. Other source links and your local shortlist remain usable.';render();});
 })();
