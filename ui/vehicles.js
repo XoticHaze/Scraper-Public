@@ -29,6 +29,8 @@
     const match = String(v.title || '').match(/20\d{2}\s+Toyota\s+RAV4(?:\s+(?:Hybrid|Prime|LE|XLE|XSE|Limited|SE|Adventure|TRD|Woodland|Premium|AWD|FWD)){0,4}/i);
     return match ? match[0] : prefix;
   };
+  const knownMileage = v => v.mileage !== null && v.mileage !== undefined && v.mileage !== '' && Number.isFinite(Number(v.mileage)) && Number(v.mileage) >= 0;
+  const knownPrice = v => v.price !== null && v.price !== undefined && v.price !== '' && Number.isFinite(Number(v.price)) && Number(v.price) > 0;
   const isAWD = v => drive(v.drivetrain) === 'AWD';
   const isVINInferred = v => v.drivetrain_provenance === 'vin_family_inferred';
   const isPhoto = v => Boolean(safeURL(v.image_url)) && (
@@ -72,7 +74,7 @@
       figure.classList.add('no-photo');
     }
     const figBadges = node('div','photo-flags');
-    if (Number(v.mileage) <= 35000) figBadges.appendChild(badge('Preferred mileage','preferred'));
+    if (knownMileage(v) && Number(v.mileage) <= 35000) figBadges.appendChild(badge('Preferred mileage','preferred'));
     if (isAWD(v)) figBadges.appendChild(badge(isVINInferred(v) ? 'AWD · VIN family' : 'AWD · dealer', 'preferred'));
     if (v.certified) figBadges.appendChild(badge('Dealer CPO'));
     figure.appendChild(figBadges);
@@ -92,7 +94,7 @@
     const metrics = node('div','metrics');
     metrics.append(
       field('Estimated out-the-door',money(v.estimated_otd),true),
-      field('Mileage',number(v.mileage)+' mi',true),
+      field('Mileage',knownMileage(v) ? number(v.mileage)+' mi' : 'Unknown',true),
       field('Drivetrain',drive(v.drivetrain) + (isVINInferred(v) ? ' · inferred' : '')),
       field('Location',v.locality ? String(v.locality).replaceAll('_',' ') : 'Unknown'),
       field('Vs. local listings',v.market_delta_pct == null ? 'Insufficient comps' : ((Number(v.market_delta_pct) > 0 ? '+' : '')+v.market_delta_pct+'%')),
@@ -102,7 +104,7 @@
     const chips = node('div','chips');
     if (v.listing_link_status === 'verified') chips.appendChild(badge('VIN seen on dealer detail','verified'));
     else chips.appendChild(badge('Discovery · URL unverified','pending'));
-    if (Number(v.mileage)>45000) chips.appendChild(badge('Above preferred mileage','risk'));
+    if (knownMileage(v) && Number(v.mileage)>45000) chips.appendChild(badge('Above preferred mileage','risk'));
     if (v.dealer_mandatory_addon_amount>0) chips.appendChild(badge('Dealer add-ons','risk'));
     body.appendChild(chips);
     const facts=node('p','vehicle-facts');
@@ -159,7 +161,7 @@
     const maxDistance=Number($('max-distance').value) || Infinity;
     const localOnly=$('local').checked, awdOnly=$('awd').checked;
     const rows=(catalog.vehicles||[]).filter(v=>
-      Number(v.price)<=maxPrice && Number(v.mileage)<=maxMileage
+      knownPrice(v) && knownMileage(v) && Number(v.price)<=maxPrice && Number(v.mileage)<=maxMileage
       && nearby(v,maxDistance,localOnly) && (!awdOnly||isAWD(v))
     );
     if($('sort').value==='price') rows.sort((a,b)=>a.price-b.price);
@@ -217,7 +219,7 @@
       if(!Array.isArray(catalog.vehicles)) throw new Error('No vehicle catalog schema');
       const rows=catalog.vehicles;
       $('total').textContent=number(rows.filter(v=>v.listing_link_status==='verified').length);
-      $('preferred-count').textContent=number(rows.filter(v=>Number(v.mileage)<=35000).length);
+      $('preferred-count').textContent=number(rows.filter(v=>knownMileage(v) && Number(v.mileage)<=35000).length);
       $('awd-count').textContent=number(rows.filter(isAWD).length);
       $('photo-count').textContent=number(rows.filter(isPhoto).length);
       const date=Date.parse(catalog.generated_utc);
