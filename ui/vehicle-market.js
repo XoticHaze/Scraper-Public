@@ -104,7 +104,6 @@
   fillSelect('vin-select');fillSelect('finance-vehicle');
   const requested=new URLSearchParams(location.search).get('vin');
   if(vinRows.some(v=>v.vin===requested)){$('vin-select').value=requested;$('finance-vehicle').value=requested;}
-  const originalPlot = plot;
   // Keep historical observations intact; warn alongside the selected VIN's history.
   const showPriceConflict = vin => {
     const conflict = priceConflicts.get(vin);
