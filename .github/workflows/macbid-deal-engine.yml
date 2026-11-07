@@ -277,6 +277,20 @@ jobs:
               print('VEHICLE_MARKET_SMOKE=PASS chart+apr+insurance+distinct-route')
               market.close()
 
+              # Source hub must remain navigable without API credentials.
+              # Browser-only manual tracking is not mistaken for a live source.
+              surplus = browser.new_page(viewport={"width": 1280, "height": 900})
+              surplus.goto(Path('site/marketplaces.html').resolve().as_uri(), wait_until='domcontentloaded', timeout=30000)
+              surplus.wait_for_selector('#manual-form', timeout=10000)
+              assert surplus.locator('#gsa-focus').count() == 1
+              assert surplus.locator('#gsa-sort').count() == 1
+              assert surplus.locator('#gsa-max-bid').count() == 1
+              assert surplus.locator('#manual-url').count() == 1
+              assert Path('site/marketplace-manual.js').exists()
+              assert 'No automatic bidding' in surplus.locator('.notice').inner_text()
+              print('MARKETPLACES_UI_SMOKE=PASS focus+cost-filter+manual-shortlist')
+              surplus.close()
+
               mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True)
               mobile.goto(url, wait_until='domcontentloaded', timeout=30000)
               mobile.wait_for_selector('.card', timeout=30000)
