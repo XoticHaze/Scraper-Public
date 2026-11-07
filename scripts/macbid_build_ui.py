@@ -424,21 +424,17 @@ def main() -> int:
         )
         print(f"UI_MARKETPLACE_SOURCES={len(sources)}")
 
-    # GSA publisher is strictly optional. Never promote missing or stale data
-    # to "live", and don't run the DEMO_KEY on the MAC.BID publishing schedule.
+    # Independent optional GSA source. Never present invalid or expired data.
+    # The demo API key is excluded from this scheduled publication path.
     gsa_path = Path("results/gsa-auctions.json")
     if gsa_path.exists():
         try:
-            from datetime import datetime, timezone
+            from deal_engine.marketplace.gsa import validate_gsa_catalog
             gsa_doc = json.loads(gsa_path.read_text(encoding="utf-8"))
-            observed = datetime.fromisoformat(str(gsa_doc.get("observed_at", "")).replace("Z", "+00:00"))
-            age = (datetime.now(timezone.utc) - observed).total_seconds()
-            if (gsa_doc.get("schema") == "scraper-gsa-auctions-v1"
-                    and gsa_doc.get("source_status") == "verified_live_api_response"
-                    and isinstance(gsa_doc.get("auctions"), list)
-                    and observed.tzinfo is not None and 0 <= age <= 86400):
+            if validate_gsa_catalog(gsa_doc):
                 (SITE / "gsa-auctions.json").write_text(
-                    json.dumps(gsa_doc, separators=(",", ":"), ensure_ascii=False), encoding="utf-8"
+                    json.dumps(gsa_doc, separators=(",", ":"), ensure_ascii=False),
+                    encoding="utf-8",
                 )
                 print(f"UI_GSA_VERIFIED_AUCTIONS={len(gsa_doc['auctions'])}")
             else:
