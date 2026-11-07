@@ -186,3 +186,56 @@ def build_gsa_catalog(payload, *, state=None, observed_at=None):
         "auctions": rows,
         "warning": "Current bids are not landed costs. As-is items; verify reserve, auction end time, pickup, fees and shipping with GSA.",
     }
+
+def validate_gsa_catalog(doc, *, at=None, max_age_seconds=86400):
+    """Validate a bounded live official snapshot before Pages publication.
+
+    Never interpret current high bids as total costs or safe bid ceilings.
+    """
+    if not isinstance(doc, dict) or doc.get("schema") != SOURCE_SCHEMA:
+        return False
+    if doc.get("source") != "gsa" or doc.get("source_status") != "verified_live_api_response":
+        return False
+    if doc.get("filter_state") not in (None, "TX"):
+        return False
+    rows = doc.get("auctions")
+    count = doc.get("count")
+    if not isinstance(rows, list) or not isinstance(count, int) or isinstance(count, bool) or count != len(rows):
+        return False
+    try:
+        stamp = datetime.fromisoformat(str(doc.get("observed_at") or "").replace("Z", "+00:00"))
+        clock = at if at is not None else datetime.now(timezone.utc)
+        if stamp.tzinfo is None or clock.tzinfo is None:
+            return False
+        age = (clock - stamp).total_seconds()
+        if not (0 <= age <= max_age_seconds):
+            return False
+    except (ValueError, TypeError, OverflowError):
+        return False
+    identities = set()
+    for row in rows:
+        if not isinstance(row, dict) or row.get("source") != "gsa" or row.get("auction_status") != "active":
+            return False
+        sale, lot = str(row.get("sale_number") or ""), str(row.get("lot_number") or "")
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,32}", sale) or not lot:
+            return False
+        identity = "gsa:" + sale + ":" + lot
+        if row.get("offer_id") != identity or identity in identities:
+            return False
+        identities.add(identity)
+        if not isinstance(row.get("title"), str) or not row["title"].strip():
+            return False
+        if doc.get("filter_state") and row.get("state") != doc["filter_state"]:
+            return False
+        if row.get("time_precision") != "date_only" or row.get("closing_time") is not None:
+            return False
+        if row.get("max_bid") is not None or row.get("verified_all_in_total") is not None:
+            return False
+        for field in ("url", "image_url"):
+            value = row.get(field)
+            if value is not None and _official_url(value) != value:
+                return False
+        if row.get("observed_at") != doc["observed_at"]:
+            return False
+    return True
+

@@ -70,6 +70,8 @@ jobs:
           node --check ui/action-center.js
           node --check ui/catalog-loader.js
           node --check ui/paotexas.js
+          node --check ui/marketplaces.js
+          node --check ui/marketplace-manual.js
           node --check ui/finds.js
           node --check ui/vehicles.js
           node --check producer_worker/index.mjs

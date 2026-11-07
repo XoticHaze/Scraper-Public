@@ -72,3 +72,21 @@ Official references: https://gsa.github.io/auctions_api/ , https://gsa.github.io
 https://prod-seo.govdeals.com/content/site-terms ,
 https://m.publicsurplus.com/sms/login/plainTermsAndConditions ,
 https://shopgoodwill.com/about/terms-of-use
+
+## GSA authorized publication and usable cross-source shortlist (2026-11-07)
+
+The **public** MAC.BID workflow retains its existing schedule, independent source contracts and Pages deployment. A new optional source step checks for an independently configured `GSA_API_KEY` GitHub Actions secret at runtime; when present, it runs `python -m scripts.gsa_public_scan --state TX` before staging the site. When absent, it logs `GSA_SOURCE=KEY_NOT_CONFIGURED` and continues the MAC.BID job without inventing GSA inventory. Network/API errors in this secondary step also cannot block MAC.BID. This path **never** schedules the shared `DEMO_KEY`.
+
+The Pages builder now requires an internally consistent, dated GSA snapshot: official source identity and allowlisted links, matching count and unique lot IDs, active status, TX state consistency, date-only close precision, and explicitly unknown all-in costs and bid ceilings. Snapshots older than 24 hours or with future timestamps are rejected. The browser independently rejects stale snapshots too.
+
+The marketplace UI now supports Texas-focused GSA searching, keyword hunt focus (UPS/power, home automation/cameras, rack/networking, instruments, vehicles, tech), San Antonio-first priority, closing-date sorting, lowest observed high-bid sorting and a maximum observed bid filter. These are **discovery filters**, not authenticity checks or bid recommendations. GSA's date-only close fields remain date-only; an observed high bid never becomes a verified total cost or a maximum bid.
+
+A new **browser-local manual shortlist** accepts official HTTPS item URLs from registered sources including eBay, Best Buy, GSA, GovDeals, Public Surplus, ShopGoodwill and San Antonio Surplus, plus user-entered titles, notes and optional asking-price/bid observations. Re-saving the same link creates another manual price observation. Those observations are not a verified market price history. It does **not** scrape, monitor, contact or bid on third-party sites, and it does **not** upload the shortlist to the repository. Unapproved sources remain discovery-only.
+
+Activation when the user obtains a personal GSA key:
+1. Add `GSA_API_KEY` as an Actions secret in **XoticHaze/Scraper-Public** only through an approved operator/secret-handling route. Do not paste credentials into issues, PRs, chat, code or workflow arguments. Confirm this public repo's main-branch workflow is the approved consumer before granting access.
+2. Allow the next existing public MAC.BID publication to execute, or dispatch its existing manual refresh. The GSA step outputs only status/count, never the secret.
+3. Verify `UI_GSA_VERIFIED_AUCTIONS` during build and a fresh `gsa-auctions.json` in the Pages artifact, then inspect live cards on `marketplaces.html`.
+4. If GSA is unavailable or the snapshot fails validation, keep the directory/manual shortlist usable without claiming the feed is live.
+
+The personal GSA key is still an external dependency. An adapter and runtime wiring do not imply it has already been supplied, activated or observed serving new auctions.

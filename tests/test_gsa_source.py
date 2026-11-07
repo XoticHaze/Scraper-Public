@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 from deal_engine.marketplace.gsa import (
-    GSASourceError, _records, normalize_gsa_auctions, build_gsa_catalog, fetch_gsa_auctions,
+    GSASourceError, _records, normalize_gsa_auctions, build_gsa_catalog, fetch_gsa_auctions, validate_gsa_catalog,
 )
 
 STAMP = datetime(2026, 11, 6, 18, 0, tzinfo=timezone.utc)
@@ -79,6 +79,23 @@ class GSASourceTests(unittest.TestCase):
         self.assertEqual(result["source_status"], "verified_live_api_response")
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["observed_at"], "2026-11-06T18:00:00+00:00")
+
+    def test_live_catalog_publication_requires_consistent_rows_and_timestamp(self):
+        from copy import deepcopy
+        from datetime import timedelta
+        doc = build_gsa_catalog([self.row], state="TX", observed_at=STAMP)
+        self.assertTrue(validate_gsa_catalog(doc, at=STAMP + timedelta(minutes=2)))
+        bad = deepcopy(doc)
+        bad["count"] = 999
+        self.assertFalse(validate_gsa_catalog(bad, at=STAMP))
+        bad = deepcopy(doc)
+        bad["auctions"][0]["max_bid"] = 75
+        self.assertFalse(validate_gsa_catalog(bad, at=STAMP))
+        bad = deepcopy(doc)
+        bad["auctions"][0]["image_url"] = "https://untrusted.invalid/pic"
+        self.assertFalse(validate_gsa_catalog(bad, at=STAMP))
+        self.assertFalse(validate_gsa_catalog(doc, at=STAMP + timedelta(days=2)))
+        self.assertFalse(validate_gsa_catalog(doc, at=STAMP - timedelta(seconds=1)))
 
     def test_demo_not_automatic(self):
         with patch.dict("os.environ", {}, clear=True):
