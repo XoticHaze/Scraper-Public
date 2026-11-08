@@ -455,3 +455,25 @@ def test_market_source_observations_reject_discovery_or_invalid_evidence():
     assert len(observations) == 1
     assert observations[0]["source_kind"] == "direct_dealer"
     assert observations[0]["price"] == 23178
+
+
+def test_vehicle_market_rejects_non_number_json_prices():
+    """Run the production JavaScript predicate against malformed JSON prices in V8."""
+    import re
+    import subprocess
+    from pathlib import Path
+
+    source = Path("ui/vehicle-market.js").read_text(encoding="utf-8")
+    match = re.search(r"const validPrice = value => ([^;\n]+);", source)
+    assert match, "Market price validator must be present in consumer source"
+    javascript = (
+        "const validPrice = value => " + match.group(1) + ";\n"
+        "for (const p of [true, false, [], [23178], {}, '23178', null, undefined, NaN, Infinity, 0, -1]) {\n"
+        "  if (validPrice(p)) throw new Error('accepted malformed price: '+JSON.stringify(p));\n"
+        "}\n"
+        "for (const p of [1, 23178, 27000]) {\n"
+        "  if (!validPrice(p)) throw new Error('rejected positive numeric price: '+p);\n"
+        "}\n"
+    )
+    result = subprocess.run(["node", "-e", javascript], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr

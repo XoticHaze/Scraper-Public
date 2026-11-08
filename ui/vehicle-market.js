@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const catalog = window.VEHICLE_CATALOG || {vehicles:[]};
   const history = window.VEHICLE_PRICE_HISTORY || {observations:[],continuity_status:'NOT_AVAILABLE'};
-  const validPrice = value => value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value)) && Number(value) > 0;
+  const validPrice = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
   const observations = (history.observations || []).filter(o => o && /^[A-HJ-NPR-Z0-9]{17}$/.test(String(o.vin || '')) && validPrice(o.price));
   const money = n => n != null && n !== '' && Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n) : '—';
   const num = n => n != null && n !== '' && Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US').format(n) : '—';
