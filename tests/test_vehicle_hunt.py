@@ -477,3 +477,29 @@ def test_vehicle_market_rejects_non_number_json_prices():
     )
     result = subprocess.run(["node", "-e", javascript], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
+
+
+def test_vehicle_card_numeric_guard_rejects_json_coercions():
+    """Execute buyer-card source validators against malformed JSON values in V8."""
+    import re
+    import subprocess
+    from pathlib import Path
+
+    source = Path("ui/vehicles.js").read_text(encoding="utf-8")
+    expressions = {}
+    for name, arg in (("finiteNumber", "n"), ("knownPrice", "v"), ("knownMileage", "v")):
+        match = re.search(r"const " + name + r" = " + arg + r" => ([^;\n]+);", source)
+        assert match, name + " predicate missing from buyer card"
+        expressions[name] = match.group(1)
+    lines = [
+        "const finiteNumber = n => " + expressions["finiteNumber"] + ";",
+        "const knownPrice = v => " + expressions["knownPrice"] + ";",
+        "const knownMileage = v => " + expressions["knownMileage"] + ";",
+        "for (const p of [true, false, [], [23178], {}, '23178', null, undefined, NaN, Infinity]) {",
+        "  if (knownPrice({price:p}) || knownMileage({mileage:p})) throw new Error('coerced value');",
+        "}",
+        "if (knownPrice({price:0}) || knownPrice({price:-1}) || !knownPrice({price:23178})) throw new Error('price bounds');",
+        "if (!knownMileage({mileage:0}) || !knownMileage({mileage:35000}) || knownMileage({mileage:-1})) throw new Error('mileage bounds');",
+    ]
+    result = subprocess.run(["node", "-e", "\n".join(lines)], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
