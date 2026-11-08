@@ -3,19 +3,20 @@
   const $ = id => document.getElementById(id);
   const catalog = window.VEHICLE_CATALOG || {vehicles:[]};
   const history = window.VEHICLE_PRICE_HISTORY || {observations:[],continuity_status:'NOT_AVAILABLE'};
-  const observations = (history.observations || []).filter(o => o && /^[A-HJ-NPR-Z0-9]{17}$/.test(String(o.vin || '')) && Number.isFinite(Number(o.price)));
+  const validPrice = value => value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value)) && Number(value) > 0;
+  const observations = (history.observations || []).filter(o => o && /^[A-HJ-NPR-Z0-9]{17}$/.test(String(o.vin || '')) && validPrice(o.price));
   const money = n => n != null && n !== '' && Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n) : '—';
   const num = n => n != null && n !== '' && Number.isFinite(Number(n)) ? new Intl.NumberFormat('en-US').format(n) : '—';
   const lineText = (tag, text) => {const el=document.createElement(tag);el.textContent=String(text);return el;};
   const safeLink = url => {try {const u=new URL(url);return u.protocol==='https:' ? u.href : null;} catch (_) {return null;}};
   const newest = {};
   observations.forEach(o => {const prev=newest[o.vin]; if(!prev || Date.parse(o.observed_at)>Date.parse(prev.observed_at)) newest[o.vin]=o;});
-  const ranked = (catalog.vehicles||[]).filter(v=>v.vin && Number.isFinite(Number(v.price)));
-  const market = (catalog.market_observations||ranked).filter(v=>v.vin && v.listing_link_status==='verified' && Number.isFinite(Number(v.price)));
+  const ranked = (catalog.vehicles||[]).filter(v=>v.vin && validPrice(v.price));
+  const market = (catalog.market_observations||ranked).filter(v=>v.vin && v.listing_link_status==='verified' && validPrice(v.price));
   // Compare only exact VINs with explicit dealer and aggregator provenance.
   // Different scan times are not necessarily simultaneous price conflicts.
   const priceConflicts = new Map();
-  const priceSources = [...ranked, ...market].filter(v => /^[A-HJ-NPR-Z0-9]{17}$/.test(String(v.vin || '')) && v.price != null && Number.isFinite(Number(v.price)));
+  const priceSources = [...ranked, ...market].filter(v => /^[A-HJ-NPR-Z0-9]{17}$/.test(String(v.vin || '')) && v.price != null && validPrice(v.price));
   const sourceKind = v => {
     const kind = String(v.source_type || v.source_kind || v.listing_source_type || '').toLowerCase();
     if (kind === 'dealer' || kind === 'dealer_direct' || kind === 'direct_dealer') return 'dealer';
