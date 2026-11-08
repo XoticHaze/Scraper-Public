@@ -4,7 +4,7 @@ import {
 } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 
-const SCHEMA = 'repo-app-ephemeral-x25519-v1';
+const SCHEMA = 'repo-app-ephemeral-x25519-v2';
 const AUTHORITY = 'private_compute_only';
 const INFO = Buffer.from(SCHEMA, 'utf8');
 const PUBLIC_REPO_DEFAULT = 'XoticHaze/Scraper-Public';
@@ -80,7 +80,6 @@ export function encryptPayload(plaintext, recipient) {
       sender_public_b64: b64(senderRaw),
       nonce_b64: b64(nonce),
       ciphertext_sha256: sha256(body),
-      plaintext_sha256: sha256(plaintext),
     },
   };
 }
@@ -101,7 +100,6 @@ export function decryptPayload(envelope, ciphertext, privateJwk) {
   decipher.setAAD(aad, { plaintextLength: body.length });
   decipher.setAuthTag(tag);
   const plain = Buffer.concat([decipher.update(body), decipher.final()]);
-  if (sha256(plain) !== envelope.plaintext_sha256) throw new Error('plaintext_digest_mismatch');
   return plain;
 }
 

@@ -20,9 +20,9 @@ from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-SCHEMA = "repo-app-ephemeral-x25519-v1"
+SCHEMA = "repo-app-ephemeral-x25519-v2"
 AUTHORITY = "private_compute_only"
-INFO = b"repo-app-ephemeral-x25519-v1"
+INFO = b"repo-app-ephemeral-x25519-v2"
 DIRECTIONS = {"workload", "result"}
 ENVELOPE_FIELDS = {
     "schema",
@@ -35,7 +35,6 @@ ENVELOPE_FIELDS = {
     "sender_public_b64",
     "nonce_b64",
     "ciphertext_sha256",
-    "plaintext_sha256",
     "chunks",
 }
 CHUNK_FIELDS = {"path", "sha256", "chars"}
@@ -215,7 +214,6 @@ def encrypt_bytes(
         "sender_public_b64": b64e(sender_public_raw),
         "nonce_b64": b64e(nonce),
         "ciphertext_sha256": sha256_bytes(ciphertext),
-        "plaintext_sha256": sha256_bytes(plaintext),
     }
     return ciphertext, meta
 
@@ -267,8 +265,6 @@ def decrypt_bytes(
     )
     shared = private.exchange(x25519.X25519PublicKey.from_public_bytes(sender_raw))
     plaintext = ChaCha20Poly1305(derive_key(shared, aad)).decrypt(nonce, ciphertext, aad)
-    if sha256_bytes(plaintext) != envelope["plaintext_sha256"]:
-        raise RuntimeError("decrypted plaintext digest mismatch")
     return plaintext
 
 
