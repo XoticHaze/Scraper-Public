@@ -18,7 +18,7 @@
   const priceSources = [...ranked, ...market].filter(v => /^[A-HJ-NPR-Z0-9]{17}$/.test(String(v.vin || '')) && v.price != null && Number.isFinite(Number(v.price)));
   const sourceKind = v => {
     const kind = String(v.source_type || v.source_kind || v.listing_source_type || '').toLowerCase();
-    if (kind === 'dealer' || kind === 'dealer_direct') return 'dealer';
+    if (kind === 'dealer' || kind === 'dealer_direct' || kind === 'direct_dealer') return 'dealer';
     if (kind === 'aggregator' || kind === 'third_party_aggregator') return 'aggregator';
     return null;
   };
