@@ -30,6 +30,35 @@ def test_jsonld_requires_exact_identity_unless_url_is_exact():
     )[0]["price"] == 149.99
 
 
+
+def test_strict_jsonld_product_identity_rejects_substring_and_other_product_url():
+    # A product with another ISBN/GTIN/SKU or a recommendation link to our
+    # sought item is NOT evidence of a price for that sought item.
+    html = """
+    <script type="application/ld+json">
+    {"@type":"Product","name":"Wrong widget","gtin12":"0341388408879",
+     "sku":"B0BZSD2L1WX",
+     "url":"https://shop.example/item/wrong?related=B0BZSD2L1W",
+     "offers":{"@type":"Offer","price":"49.99","priceCurrency":"USD"}}
+    </script>
+    """
+    assert extract_structured_prices(html, identity="034138840887") == []
+    assert extract_structured_prices(html, identity="B0BZSD2L1W") == []
+    # Only an independently exact-identity URL gate can authorize URL-only
+    # fallback; this never upgrades substring evidence into verified value.
+    assert extract_structured_prices(html, identity="B0BZSD2L1W", identity_in_url=True)
+
+
+def test_strict_jsonld_product_identity_preserves_exact_sku_match():
+    html = """
+    <script type="application/ld+json">
+    {"@type":"Product","name":"Exact widget","sku":"B0BZSD2L1W",
+     "offers":{"@type":"Offer","price":"129.99","priceCurrency":"USD"}}
+    </script>
+    """
+    assert extract_structured_prices(html, identity="B0BZSD2L1W")[0]["price"] == 129.99
+
+
 def test_labeled_price_is_allowed_only_on_exact_identity_url():
     html = "<html><body>Current Price: $134.99</body></html>"
     assert select_observation_price(
