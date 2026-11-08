@@ -480,7 +480,7 @@ def test_vehicle_market_rejects_non_number_json_prices():
 
 
 def test_vehicle_card_numeric_guard_rejects_json_coercions():
-    """Test real buyer-card predicates in Node/V8, including JSON booleans and arrays."""
+    """Execute buyer-card source validators against malformed JSON values in V8."""
     import re
     import subprocess
     from pathlib import Path
@@ -488,18 +488,18 @@ def test_vehicle_card_numeric_guard_rejects_json_coercions():
     source = Path("ui/vehicles.js").read_text(encoding="utf-8")
     expressions = {}
     for name, arg in (("finiteNumber", "n"), ("knownPrice", "v"), ("knownMileage", "v")):
-        match = re.search(r"const " + name + r" = " + arg + r" => ([^;\\n]+);", source)
-        assert match, name + " predicate missing in vehicle-card consumer"
+        match = re.search(r"const " + name + r" = " + arg + r" => ([^;\n]+);", source)
+        assert match, name + " predicate missing from buyer card"
         expressions[name] = match.group(1)
-    js = (
-        "const finiteNumber = n => " + expressions["finiteNumber"] + ";\n"
-        "const knownPrice = v => " + expressions["knownPrice"] + ";\n"
-        "const knownMileage = v => " + expressions["knownMileage"] + ";\n"
-        "for (const value of [true, false, [], [23178], {}, '23178', null, undefined, NaN, Infinity]) {\\n"
-        "  if (knownPrice({price:value}) || knownMileage({mileage:value})) throw new Error('coerced buyer value');\\n"
-        "}\\n"
-        "if (knownPrice({price:0}) || knownPrice({price:-1}) || !knownPrice({price:23178})) throw new Error('price bound');\\n"
-        "if (!knownMileage({mileage:0}) || !knownMileage({mileage:35000}) || knownMileage({mileage:-1})) throw new Error('mileage bound');\\n"
-    )
-    proc = subprocess.run(["node", "-e", js], capture_output=True, text=True, check=False)
-    assert proc.returncode == 0, proc.stderr
+    lines = [
+        "const finiteNumber = n => " + expressions["finiteNumber"] + ";",
+        "const knownPrice = v => " + expressions["knownPrice"] + ";",
+        "const knownMileage = v => " + expressions["knownMileage"] + ";",
+        "for (const p of [true, false, [], [23178], {}, '23178', null, undefined, NaN, Infinity]) {",
+        "  if (knownPrice({price:p}) || knownMileage({mileage:p})) throw new Error('coerced value');",
+        "}",
+        "if (knownPrice({price:0}) || knownPrice({price:-1}) || !knownPrice({price:23178})) throw new Error('price bounds');",
+        "if (!knownMileage({mileage:0}) || !knownMileage({mileage:35000}) || knownMileage({mileage:-1})) throw new Error('mileage bounds');",
+    ]
+    result = subprocess.run(["node", "-e", "\n".join(lines)], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
