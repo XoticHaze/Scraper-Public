@@ -45,12 +45,25 @@
   $('kpi-points').textContent=num(observations.length);
   $('kpi-market').textContent=num(new Set(market.map(v=>v.vin)).size);
   $('market-meta').textContent=String(catalog.generated_utc||'no live catalog').replace('T',' ').slice(0,19)+' UTC · Historical asking observations only';
+  // A missing conflict warning is not evidence that two independently
+  // verified sources agree. Only same-VIN, positive-price, verified detail
+  // observations provide an actual dealer-versus-aggregator comparison.
+  const verifiedKindsByVin = new Map();
+  for (const row of priceSources) {
+    if (row.listing_link_status !== 'verified') continue;
+    const kind = sourceKind(row);
+    if (!kind) continue;
+    if (!verifiedKindsByVin.has(row.vin)) verifiedKindsByVin.set(row.vin, new Set());
+    verifiedKindsByVin.get(row.vin).add(kind);
+  }
+  const verifiedComparableVins = [...verifiedKindsByVin.values()].filter(kinds => kinds.has('dealer') && kinds.has('aggregator')).length;
   const warnings=[];
   if(ranked.length && distinctDealers.size===1) warnings.push('All '+ranked.length+' current ranked cars come from ONE dealership. This is not a representative San Antonio RAV4 market.');
   if(!ranked.some(v=>Number(v.mileage)<=35000)) warnings.push('No current ranked match meets the ≤35,000-mile goal.');
   const times=observations.map(o=>Date.parse(o.observed_at)).filter(Number.isFinite);
   if(times.length<2 || Math.max(...times)-Math.min(...times)<86400000) warnings.push('History covers less than a day. It cannot establish whether market prices are increasing.');
   if(history.continuity_status!=='PUBLISHED_HISTORY_READ') warnings.push('History continuity is limited to verified seed/last-catalog observations until the previous published history is retrieved.');
+  if (!verifiedComparableVins) warnings.push('No verified same-VIN dealer-versus-aggregator asking-price comparison is available in this published snapshot. No conflict warning does not mean the prices agree.');
   if (priceConflicts.size) warnings.push(priceConflicts.size+' exact VIN(s) have conflicting dealer-versus-aggregator asking prices. Confirm the dealer price before relying on an aggregator quote.');
   $('coverage-alert').textContent=warnings.join(' ')||'Dealer breadth and historical observations are available. Verify the sample before drawing a trend conclusion.';
 
