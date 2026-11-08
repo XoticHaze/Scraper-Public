@@ -194,7 +194,7 @@
     for(let j=0;j<45;j++){const mid=(lo+hi)/2;if(evaluate(mid).allin<=n('monthly-budget'))lo=mid;else hi=mid;}
     const max=Math.floor(lo/50)*50;
     $('out-maxprice').textContent=n('monthly-budget')<=n('insurance')+n('fuel')+n('upkeep')?'No positive offer':money(max);
-    const diff=max-price;
+    const diff=max-n('offer-price');
     $('scenario-note').textContent='Illustrative payment '+money(v.payment)+'/month; total including insurance, fuel and maintenance '+money(v.allin)+'/month. '+(diff>=0?'Selected price is within your estimated affordability ceiling.':'Selected price exceeds your estimated affordability ceiling by about '+money(-diff)+'.')+' Actual loan APR, insurer premium and dealer charges may materially differ.';
     renderSensitivity(v);
     renderQuoteDraft();
