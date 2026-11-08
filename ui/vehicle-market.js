@@ -12,6 +12,27 @@
   observations.forEach(o => {const prev=newest[o.vin]; if(!prev || Date.parse(o.observed_at)>Date.parse(prev.observed_at)) newest[o.vin]=o;});
   const ranked = (catalog.vehicles||[]).filter(v=>v.vin && Number.isFinite(Number(v.price)));
   const market = (catalog.market_observations||ranked).filter(v=>v.vin && v.listing_link_status==='verified' && Number.isFinite(Number(v.price)));
+  // Compare only exact VINs with explicit dealer and aggregator provenance.
+  // Different scan times are not necessarily simultaneous price conflicts.
+  const priceConflicts = new Map();
+  const priceSources = [...ranked, ...market].filter(v => /^[A-HJ-NPR-Z0-9]{17}$/.test(String(v.vin || '')) && v.price != null && Number.isFinite(Number(v.price)));
+  const sourceKind = v => {
+    const kind = String(v.source_type || v.source_kind || v.listing_source_type || '').toLowerCase();
+    if (kind === 'dealer' || kind === 'dealer_direct') return 'dealer';
+    if (kind === 'aggregator' || kind === 'third_party_aggregator') return 'aggregator';
+    return null;
+  };
+  for (const vin of new Set(priceSources.map(v => v.vin))) {
+    const rows = priceSources.filter(v => v.vin === vin);
+    const dealers = rows.filter(v => sourceKind(v) === 'dealer');
+    const aggregators = rows.filter(v => sourceKind(v) === 'aggregator');
+    const conflicts = [];
+    for (const dealer of dealers) for (const aggregator of aggregators) {
+      if (Number(dealer.price) === Number(aggregator.price)) continue;
+      conflicts.push('Dealer '+money(dealer.price)+' vs aggregator '+money(aggregator.price));
+    }
+    if (conflicts.length) priceConflicts.set(vin, [...new Set(conflicts)]);
+  }
   const vinRows = Array.from(new Set([...ranked.map(v=>v.vin),...Object.keys(newest)])).map(vin => {
     const row = ranked.find(v=>v.vin===vin) || newest[vin];
     return {vin,label:String(row.year||'')+' Toyota RAV4 '+String(row.trim||'')+' · '+String(vin).slice(-6)+' · '+money(row.price),price:Number(row.price),row};
@@ -30,6 +51,7 @@
   const times=observations.map(o=>Date.parse(o.observed_at)).filter(Number.isFinite);
   if(times.length<2 || Math.max(...times)-Math.min(...times)<86400000) warnings.push('History covers less than a day. It cannot establish whether market prices are increasing.');
   if(history.continuity_status!=='PUBLISHED_HISTORY_READ') warnings.push('History continuity is limited to verified seed/last-catalog observations until the previous published history is retrieved.');
+  if (priceConflicts.size) warnings.push(priceConflicts.size+' exact VIN(s) have conflicting dealer-versus-aggregator asking prices. Confirm the dealer price before relying on an aggregator quote.');
   $('coverage-alert').textContent=warnings.join(' ')||'Dealer breadth and historical observations are available. Verify the sample before drawing a trend conclusion.';
 
   const svgNS='http://www.w3.org/2000/svg';
@@ -82,8 +104,14 @@
   fillSelect('vin-select');fillSelect('finance-vehicle');
   const requested=new URLSearchParams(location.search).get('vin');
   if(vinRows.some(v=>v.vin===requested)){$('vin-select').value=requested;$('finance-vehicle').value=requested;}
-  $('vin-select').addEventListener('change',()=>plot($('vin-select').value));
+  // Keep historical observations intact; warn alongside the selected VIN's history.
+  const showPriceConflict = vin => {
+    const conflict = priceConflicts.get(vin);
+    if (conflict) $('history-summary').textContent += ' PRICE CONFLICT (same VIN): '+conflict.join('; ')+'. Source observations may differ in time; verify current dealer asking price.';
+  };
+  $('vin-select').addEventListener('change',()=>{plot($('vin-select').value);showPriceConflict($('vin-select').value);});
   plot($('vin-select').value);
+  showPriceConflict($('vin-select').value);
   $('history-continuity').textContent='Continuity: '+history.continuity_status+' · First stored observation '+(history.first_observed_utc?formatDate(history.first_observed_utc):'none')+'. Asking prices, not sale transactions; a flat short series is not evidence the broader market is flat.';
 
   // A price movement is valid only when the same VIN was observed more than
