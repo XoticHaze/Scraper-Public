@@ -1,11 +1,12 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const money = n => Number.isFinite(Number(n)) && n != null
-    ? new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(n))
+  const finiteNumber = n => typeof n === 'number' && Number.isFinite(n);
+  const money = n => finiteNumber(n)
+    ? new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:0}).format(n)
     : 'Not provided';
-  const number = n => Number.isFinite(Number(n)) && n != null
-    ? new Intl.NumberFormat('en-US').format(Number(n)) : 'Unknown';
+  const number = n => finiteNumber(n)
+    ? new Intl.NumberFormat('en-US').format(n) : 'Unknown';
   const node = (tag, className, value) => {
     const el = document.createElement(tag);
     if (className) el.className = className;
@@ -29,8 +30,8 @@
     const match = String(v.title || '').match(/20\d{2}\s+Toyota\s+RAV4(?:\s+(?:Hybrid|Prime|LE|XLE|XSE|Limited|SE|Adventure|TRD|Woodland|Premium|AWD|FWD)){0,4}/i);
     return match ? match[0] : prefix;
   };
-  const knownMileage = v => v.mileage !== null && v.mileage !== undefined && String(v.mileage).trim() !== '' && Number.isFinite(Number(v.mileage)) && Number(v.mileage) >= 0;
-  const knownPrice = v => v.price !== null && v.price !== undefined && v.price !== '' && Number.isFinite(Number(v.price)) && Number(v.price) > 0;
+  const knownMileage = v => finiteNumber(v.mileage) && v.mileage >= 0;
+  const knownPrice = v => finiteNumber(v.price) && v.price > 0;
   const isAWD = v => drive(v.drivetrain) === 'AWD';
   const isVINInferred = v => v.drivetrain_provenance === 'vin_family_inferred';
   const isPhoto = v => Boolean(safeURL(v.image_url)) && (
