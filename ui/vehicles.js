@@ -29,7 +29,7 @@
     const match = String(v.title || '').match(/20\d{2}\s+Toyota\s+RAV4(?:\s+(?:Hybrid|Prime|LE|XLE|XSE|Limited|SE|Adventure|TRD|Woodland|Premium|AWD|FWD)){0,4}/i);
     return match ? match[0] : prefix;
   };
-  const knownMileage = v => v.mileage !== null && v.mileage !== undefined && v.mileage !== '' && Number.isFinite(Number(v.mileage)) && Number(v.mileage) >= 0;
+  const knownMileage = v => v.mileage !== null && v.mileage !== undefined && String(v.mileage).trim() !== '' && Number.isFinite(Number(v.mileage)) && Number(v.mileage) >= 0;
   const knownPrice = v => v.price !== null && v.price !== undefined && v.price !== '' && Number.isFinite(Number(v.price)) && Number(v.price) > 0;
   const isAWD = v => drive(v.drivetrain) === 'AWD';
   const isVINInferred = v => v.drivetrain_provenance === 'vin_family_inferred';
