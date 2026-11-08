@@ -375,7 +375,7 @@ def main() -> int:
         # including vehicles outside the buyer's price/mileage shortlist.
         "market_observations": [
             {key: row.get(key) for key in (
-                "vin", "price", "mileage", "year", "trim", "dealer", "source",
+                "vin", "price", "mileage", "year", "trim", "dealer", "source", "source_kind",
                 "source_url", "location", "area_priority", "drivetrain",
                 "drivetrain_provenance", "listing_link_status", "photo_status",
                 "dealer_doc_fee", "dealer_doc_fee_included_in_price",
