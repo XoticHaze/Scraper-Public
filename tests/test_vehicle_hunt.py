@@ -1,4 +1,5 @@
 from vehicle_engine.identity import dedupe_rows
+from scripts.vehicle_scan import verified_market_detail_observations
 from vehicle_engine.normalize import parse_autotrader_card, parse_cars_com_card, parse_dealer_detail
 from vehicle_engine.scoring import estimate_otd, locality_bucket, rank_vehicles
 from vehicle_engine.vin_specs import infer_2025_rav4_drivetrain
@@ -398,3 +399,59 @@ def test_price_history_skips_unverified_and_invalid_price_and_year():
              ],"vehicles":[]}
     history=build_history(current,published_available=True,bootstrap_seed=[])
     assert [(row["vin"],row["price"]) for row in history["observations"]]==[("2T3F1RFV1SW512766",27100)]
+
+
+def test_market_source_observations_preserve_verified_same_vin_price_disagreement():
+    """Market comparisons keep two verified source quotes even when ranking dedupes."""
+    vin = "2T3G1RFV9MC195862"
+    dealer = {
+        "vin": vin, "price": 23178, "mileage": 20776, "year": 2021,
+        "trim": "LE", "title": "2021 Toyota RAV4 LE",
+        "source": "dealer_a", "source_kind": "direct_dealer",
+        "source_url": "https://dealer.example/used/rav4/vin", "dealer": "Dealer A",
+        "listing_link_status": "verified",
+    }
+    aggregator = {
+        **dealer, "price": 22499, "source": "aggregator_b",
+        "source_kind": "aggregator",
+        "source_url": "https://aggregator.example/used/rav4/vin",
+    }
+    raw_verified = [aggregator, dealer]
+    deduped = dedupe_rows(raw_verified)
+    assert len(deduped) == 1
+    assert deduped[0]["source_kind"] == "direct_dealer"
+
+    # The former projection from deduped discarded the independent quote.
+    assert len(verified_market_detail_observations(deduped)) == 1
+    observed = verified_market_detail_observations(raw_verified)
+    assert len(observed) == 2
+    assert {(row["source_kind"], row["price"]) for row in observed} == {
+        ("direct_dealer", 23178), ("aggregator", 22499)
+    }
+    assert all(row["vin"] == vin and row["listing_link_status"] == "verified"
+               for row in observed)
+    assert deduped[0]["price"] == 23178  # Buyer-ranked price is unchanged.
+
+
+def test_market_source_observations_reject_discovery_or_invalid_evidence():
+    vin = "2T3G1RFV9MC195862"
+    good = {
+        "vin": vin, "price": 23178, "source": "dealer_a",
+        "source_kind": "direct_dealer", "listing_link_status": "verified",
+    }
+    invalid = [
+        {**good, "source_kind": "aggregator", "listing_link_status": None},
+        {**good, "vin": None},
+        {**good, "vin": "not-a-vin"},
+        {**good, "price": None},
+        {**good, "price": 0},
+        {**good, "price": -1},
+        {**good, "price": float("inf")},
+        {**good, "price": float("nan")},
+        {**good, "price": True},
+        {**good, "price": "23178"},
+    ]
+    observations = verified_market_detail_observations([*invalid, good])
+    assert len(observations) == 1
+    assert observations[0]["source_kind"] == "direct_dealer"
+    assert observations[0]["price"] == 23178
