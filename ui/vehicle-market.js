@@ -16,7 +16,7 @@
   // Compare only exact VINs with explicit dealer and aggregator provenance.
   // Different scan times are not necessarily simultaneous price conflicts.
   const priceConflicts = new Map();
-  const priceSources = [...ranked, ...market].filter(v => /^[A-HJ-NPR-Z0-9]{17}$/.test(String(v.vin || '')) && v.price != null && validPrice(v.price));
+  const priceSources = [...ranked, ...market].filter(v => v.listing_link_status === 'verified' && /^[A-HJ-NPR-Z0-9]{17}$/.test(String(v.vin || '')) && validPrice(v.price));
   const sourceKind = v => {
     const kind = String(v.source_type || v.source_kind || v.listing_source_type || '').toLowerCase();
     if (kind === 'dealer' || kind === 'dealer_direct' || kind === 'direct_dealer') return 'dealer';
