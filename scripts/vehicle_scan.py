@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from math import isfinite
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,7 +11,7 @@ from urllib.parse import urljoin
 
 from vehicle_engine.images import select_gallery_photo
 from vehicle_engine.identity import dedupe_rows
-from vehicle_engine.link_verification import verify_vehicle_detail
+from vehicle_engine.link_verification import VIN_RE, verify_vehicle_detail
 from vehicle_engine.normalize import parse_autotrader_card, parse_dealer_detail
 from vehicle_engine.scoring import rank_vehicles
 
@@ -324,6 +325,35 @@ def source_registry(cfg: dict) -> list[dict]:
     ]
 
 
+def verified_market_detail_observations(rows: list[dict]) -> list[dict]:
+    """Retain individual verified VIN detail evidence before buyer-list deduplication.
+
+    A search-result card is never a verified source observation. Separate
+    dealer/aggregator asking prices for the same VIN must not be collapsed
+    into the preferred buyer-list row or presented as sale transactions.
+    """
+    fields = (
+        "vin", "price", "mileage", "year", "trim", "dealer", "source", "source_kind",
+        "source_url", "location", "area_priority", "drivetrain",
+        "drivetrain_provenance", "listing_link_status", "photo_status",
+        "dealer_doc_fee", "dealer_doc_fee_included_in_price",
+        "dealer_mandatory_addon_amount",
+    )
+    result = []
+    for row in rows:
+        vin = str(row.get("vin") or "").strip().upper()
+        price = row.get("price")
+        if row.get("listing_link_status") != "verified" or not VIN_RE.fullmatch(vin):
+            continue
+        if (isinstance(price, bool) or not isinstance(price, (int, float))
+                or not isfinite(price) or price <= 0):
+            continue
+        observation = {key: row.get(key) for key in fields}
+        observation["vin"] = vin
+        result.append(observation)
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=str(CONFIG))
@@ -373,15 +403,9 @@ def main() -> int:
         "eligible_count": len(ranked),
         # A broader VIN-verified sample for the independent market page,
         # including vehicles outside the buyer's price/mileage shortlist.
-        "market_observations": [
-            {key: row.get(key) for key in (
-                "vin", "price", "mileage", "year", "trim", "dealer", "source", "source_kind",
-                "source_url", "location", "area_priority", "drivetrain",
-                "drivetrain_provenance", "listing_link_status", "photo_status",
-                "dealer_doc_fee", "dealer_doc_fee_included_in_price",
-                "dealer_mandatory_addon_amount",
-            )} for row in rows
-        ],
+        # Preserve independently verified source-specific asking observations.
+        # The buyer-ranked catalog remains deduped; the market comparison does not.
+        "market_observations": verified_market_detail_observations(verified_rows),
         "vehicles": ranked,
     }
     output = Path(args.output)
