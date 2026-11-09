@@ -60,7 +60,7 @@
   const verifiedComparableVins = [...verifiedKindsByVin.values()].filter(kinds => kinds.has('dealer') && kinds.has('aggregator')).length;
   const warnings=[];
   if(ranked.length && distinctDealers.size===1) warnings.push('All '+ranked.length+' current ranked cars come from ONE dealership. This is not a representative San Antonio RAV4 market.');
-  if(!ranked.some(v=>Number(v.mileage)<=35000)) warnings.push('No current ranked match meets the ≤35,000-mile goal.');
+  if(!ranked.some(v=>typeof v.mileage === 'number' && Number.isFinite(v.mileage) && v.mileage >= 0 && v.mileage <= 35000)) warnings.push('No current ranked match meets the ≤35,000-mile goal.');
   const times=observations.map(o=>Date.parse(o.observed_at)).filter(Number.isFinite);
   if(times.length<2 || Math.max(...times)-Math.min(...times)<86400000) warnings.push('History covers less than a day. It cannot establish whether market prices are increasing.');
   if(history.continuity_status!=='PUBLISHED_HISTORY_READ') warnings.push('History continuity is limited to verified seed/last-catalog observations until the previous published history is retrieved.');
