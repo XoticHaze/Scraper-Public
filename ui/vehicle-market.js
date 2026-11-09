@@ -137,10 +137,18 @@
     historyByVin.get(o.vin).push(o);
   });
   const movements = Array.from(historyByVin.entries()).map(([vin, rows]) => {
-    const scans = rows.slice().sort((a,b) => Date.parse(a.observed_at) - Date.parse(b.observed_at));
+    // A repeated observation at the same scanner timestamp is not a second scan.
+    // Keep one observation per valid timestamp before calculating a movement.
+    const byScanTime = new Map();
+    rows.forEach(row => {
+      const timestamp = Date.parse(row.observed_at);
+      if (Number.isFinite(timestamp)) byScanTime.set(timestamp, row);
+    });
+    const scans = [...byScanTime.entries()].sort((a,b) => a[0]-b[0]).map(([,row]) => row);
+    if (scans.length < 2) return null;
     const first = scans[0], last = scans[scans.length-1];
     return {vin,first,last,count:scans.length,delta:Number(last.price)-Number(first.price)};
-  }).filter(m => m.count >= 2 && m.delta !== 0 && Number.isFinite(m.delta))
+  }).filter(m => m && m.delta !== 0 && Number.isFinite(m.delta))
     .sort((a,b) => a.delta-b.delta);
   const drops = movements.filter(m => m.delta < 0);
   const rises = movements.filter(m => m.delta > 0);
