@@ -75,7 +75,15 @@
     if(text!==undefined)n.textContent=String(text);
     return n;
   }
-  const seriesFor = vin => observations.filter(o=>o.vin===vin).sort((a,b)=>Date.parse(a.observed_at)-Date.parse(b.observed_at));
+  // A duplicated scanner timestamp is one observation, not a second scan or a price change.
+  const seriesFor = vin => {
+    const byScanTime = new Map();
+    observations.filter(o => o.vin === vin).forEach(o => {
+      const timestamp = Date.parse(o.observed_at);
+      if (Number.isFinite(timestamp)) byScanTime.set(timestamp, o);
+    });
+    return [...byScanTime.entries()].sort((a,b) => a[0]-b[0]).map(([,row]) => row);
+  };
   function plot(vin) {
     const list=seriesFor(vin), svg=$('price-history-chart');
     svg.replaceChildren();$('history-rows').replaceChildren();
