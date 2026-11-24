@@ -89,40 +89,34 @@ jobs:
                   compact={k:v for k,v in r.items() if k not in ('stock_image','inventory_images','inventory_id','id')}
                   print('LOT',json.dumps(compact,ensure_ascii=True,separators=(',',':')))
               Path('last-chance-san-antonio.json').write_text(json.dumps({'summary':summary,'active':active,'all':clean},indent=2))
-              # Use publicly delivered page scripts to locate the native detail call.
+              detail=[]
               from concurrent.futures import ThreadPoolExecutor
-              from urllib.request import urlopen, Request
-              scripts=page.locator('script[src]').evaluate_all('(els)=>els.map(e=>e.src)')
-              def inspect_script(url):
+              from urllib.request import Request,urlopen
+              shades=[r for r in active if re.search(r'\b(?:shades?|blinds?)\b',r['product_name'],re.I) and not re.search(r'first aid kit|repair|lampshade',r['product_name'],re.I)]
+              allowed={'lot_id','auction_id','lot_number','inventory_id','product_name','title','name','description','product_description','dimension','dimensions','width','height','length','color','colour','upc','asin','model','model_number','manufacturer','brand','condition','stock_image','retail_price','location_id','building_id','is_partial','product_url','amazon_url'}
+              def fields(obj,depth=0):
+                  if depth>5:return {}
+                  out={}
+                  if isinstance(obj,dict):
+                      for k,v in obj.items():
+                          if k.lower() in allowed and isinstance(v,(str,int,float,bool)):
+                              out[k]=v[:1800] if isinstance(v,str) else v
+                          elif isinstance(v,(dict,list)) and k.lower() in {'lot','item','inventory','product','data','result','details','attributes'}:out.update(fields(v,depth+1))
+                  elif isinstance(obj,list) and len(obj)==1:out.update(fields(obj[0],depth+1))
+                  return out
+              def lookup(row):
                   try:
-                      u=urlsplit(url)
-                      if u.hostname!='www.mac.bid' or not u.path.startswith('/_next/'):return []
-                      with urlopen(Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=10) as resp: src=resp.read(3000000).decode('utf-8','replace')
-                      patterns=[r'.{0,130}last-chance-deals.{0,180}',r'.{0,80}/(?:map-bid/)?(?:lots?|inventory|auctions?)/.{0,120}']
-                      out=[]
-                      for pattern in patterns:
-                          for m in re.finditer(pattern,src,re.I):
-                              if len(out)<35:out.append(m.group())
-                      return out
-                  except Exception:return []
-              with ThreadPoolExecutor(max_workers=5) as pool:
-                  for matches in pool.map(inspect_script,scripts):
-                      for m in matches:print('PUBLIC_ROUTE_HINT',m)
-              # Inspect public auction link with known lot number and auction ID.
-              row=next((r for r in active if r['lot_number']=='3844Y'),None)
-              if row:
-                  page2=context.new_page()
-                  def trace(r):
-                      u=urlsplit(r.url)
-                      if u.hostname=='api.macdiscount.com' and r.request.resource_type in ('xhr','fetch'):
-                          print('LOT_ROUTE',u.path,r.status)
-                  page2.on('response',trace)
-                  try:
-                      result=page2.goto('https://www.mac.bid/auction/'+str(row['auction_id'])+'/lot/'+row['lot_number'],wait_until='domcontentloaded',timeout=15000)
-                      page2.wait_for_timeout(3500)
-                      print('LOT_PAGE',result.status if result else None,page2.locator('body').inner_text()[:3000])
-                  except Exception as e:print('LOT_PAGE_ERROR',type(e).__name__)
-              Path('last-chance-details.json').write_text('[]')
+                      url=base+'/map-bid/ddb/lot/'+str(row['lot_id'])
+                      req=Request(url,headers={'User-Agent':'Mozilla/5.0','Origin':'https://www.mac.bid','Referer':'https://www.mac.bid/','Accept':'application/json'})
+                      with urlopen(req,timeout=12) as resp:
+                          obj=json.load(resp)
+                          return {'lot':row['lot_number'],'lot_id':row['lot_id'],'status':resp.status,'keys':list(obj)[:70] if isinstance(obj,dict) else type(obj).__name__,'fields':fields(obj)}
+                  except Exception as e:return {'lot':row['lot_number'],'lot_id':row['lot_id'],'error':type(e).__name__}
+              with ThreadPoolExecutor(max_workers=3) as pool:
+                  detail=list(pool.map(lookup,shades))
+              for d in detail:print('SHADE_DETAIL',json.dumps(d,ensure_ascii=True,separators=(',',':')))
+              print('DETAIL_TOTAL',len(detail))
+              Path('last-chance-details.json').write_text(json.dumps(detail,indent=2))
               browser.close()
               assert complete,'inventory not proven complete'
           PY
