@@ -1,0 +1,64 @@
+name: Last Chance public discovery probe
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/last-chance-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install chromium
+      - name: Observe native unauthenticated Last Chance page
+        run: |
+          python - <<'PY'
+          import json, re
+          from datetime import datetime, timezone
+          from urllib.parse import urlsplit
+          from playwright.sync_api import sync_playwright
+          safe = {'lot_id','lot_number','auction_number','product_name','title','name','condition','retail_price','auction_location','location_name','price','current_price','brand','model','model_number','upc','is_last_chance','last_chance_price','status'}
+          rows, trace = {}, set()
+          def walk(obj):
+              if isinstance(obj, dict):
+                  loc = str(obj.get('auction_location') or obj.get('location_name') or '').strip().lower()
+                  if loc == 'san antonio' and (obj.get('product_name') or obj.get('title') or obj.get('name')) and (obj.get('lot_id') or obj.get('lot_number')):
+                      row = {k:v for k,v in obj.items() if k in safe and isinstance(v,(int,float,bool,str)) and (not isinstance(v,str) or len(v)<300)}
+                      key = str((row.get('auction_number'),row.get('lot_number'),row.get('lot_id')))
+                      rows[key] = row
+                  for v in obj.values():
+                      if isinstance(v,(dict,list)): walk(v)
+              elif isinstance(obj,list):
+                  for v in obj: walk(v)
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True)
+              context=browser.new_context(locale='en-US',timezone_id='America/Chicago')
+              page=context.new_page()
+              def inspect(response):
+                  u=urlsplit(response.url)
+                  if response.request.resource_type not in ('fetch','xhr'): return
+                  trace.add((u.hostname,u.path,response.status))
+                  try:
+                      if 'json' in response.headers.get('content-type',''):
+                          walk(response.json())
+                  except Exception: pass
+              page.on('response',inspect)
+              status=page.goto('https://www.mac.bid/last-chance-deals',wait_until='domcontentloaded',timeout=30000)
+              page.wait_for_timeout(10000)
+              for _ in range(5):
+                  page.mouse.wheel(0,1600)
+                  page.wait_for_timeout(800)
+              print('OBSERVED_UTC',datetime.now(timezone.utc).isoformat(),'HTTP',status.status if status else None)
+              print('PUBLIC_ENDPOINTS',json.dumps(sorted(trace,key=str)[:80]))
+              print('SAN_ANTONIO_CANDIDATES_UNVERIFIED',len(rows))
+              for row in list(rows.values())[:150]: print('CANDIDATE',json.dumps(row,ensure_ascii=True))
+              print('NOTE: candidates are not confirmed Last Chance offers until native eligibility and visible purchase price are verified; zero does not establish empty inventory.')
+              browser.close()
+          PY
