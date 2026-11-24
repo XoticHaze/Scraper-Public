@@ -9,7 +9,7 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
@@ -104,16 +104,55 @@ jobs:
                           elif isinstance(v,(dict,list)) and k.lower() in {'lot','item','inventory','product','data','result','details','attributes'}:out.update(fields(v,depth+1))
                   elif isinstance(obj,list) and len(obj)==1:out.update(fields(obj[0],depth+1))
                   return out
-              def lookup(row):
-                  try:
-                      url=base+'/map-bid/ddb/lot/'+str(row['lot_id'])
-                      req=Request(url,headers={'User-Agent':'Mozilla/5.0','Origin':'https://www.mac.bid','Referer':'https://www.mac.bid/','Accept':'application/json'})
-                      with urlopen(req,timeout=12) as resp:
-                          obj=json.load(resp)
-                          return {'lot':row['lot_number'],'lot_id':row['lot_id'],'status':resp.status,'keys':list(obj)[:70] if isinstance(obj,dict) else type(obj).__name__,'fields':fields(obj)}
-                  except Exception as e:return {'lot':row['lot_number'],'lot_id':row['lot_id'],'error':type(e).__name__}
-              with ThreadPoolExecutor(max_workers=3) as pool:
-                  detail=list(pool.map(lookup,shades))
+              # The public auction page emitted this successful GET natively.
+              # Retain native browser transport and do not copy auth or storage.
+              for offset in range(0,len(shades),5):
+                  pending=[]
+                  for row in shades[offset:offset+5]:
+                      tab=context.new_page()
+                      record={'lot':row['lot_number'],'lot_id':row['lot_id']}
+                      expected='/map-bid/ddb/lot/'+str(row['lot_id'])
+                      def capture(response,rec=record,target=expected):
+                          u=urlsplit(response.url)
+                          if u.hostname!='api.macdiscount.com' or u.path!=target:return
+                          rec['status']=response.status
+                          try:
+                              obj=response.json()
+                              rec['keys']=list(obj)[:70] if isinstance(obj,dict) else type(obj).__name__
+                              rec['fields']=fields(obj)
+                              # Preserve safe nested public fields including dimensions and variant labels.
+                              def find_public(o,depth=0):
+                                  result={}
+                                  if depth>6:return result
+                                  if isinstance(o,dict):
+                                      for k,v in o.items():
+                                          if k.lower() in allowed|{'size','item_dimensions','product_dimensions','product_model','product_color','product_upc','model_name','product_id','item_width','item_height','product_details','attributes','specifications'}:
+                                              if isinstance(v,(str,int,float,bool)):result[k]=v[:1800] if isinstance(v,str) else v
+                                          if isinstance(v,(dict,list)):result.update(find_public(v,depth+1))
+                                  elif isinstance(o,list):
+                                      for v in o[:15]:result.update(find_public(v,depth+1))
+                                  return result
+                              rec['public_detail']=find_public(obj)
+                          except Exception as e:rec['parse_error']=type(e).__name__
+                      tab.on('response',capture)
+                      pending.append((tab,row,record))
+                  for tab,row,record in pending:
+                      try:tab.goto('https://www.mac.bid/auction/'+str(row['auction_id'])+'/lot/'+row['lot_number'],wait_until='commit',timeout=12000)
+                      except Exception as e:record['navigation_error']=type(e).__name__
+                  for tab,row,record in pending:
+                      try:
+                          tab.wait_for_timeout(1800)
+                          if 'status' not in record:tab.wait_for_timeout(1500)
+                          # Public detail page text offers an independent dimension check.
+                          t=tab.locator('body').inner_text(timeout=3500)
+                          matches={}
+                          for label in ['Dimension','Dimensions','UPC','Lot Number','Mac.Bid ID','Condition','Aisle/Section']:
+                              m=re.search(re.escape(label)+r':?\s*\n?([^\n]+)',t,re.I)
+                              if m:matches[label]=m.group(1).strip()[:150]
+                          if matches:record['visible_fields']=matches
+                      except Exception as e:record['visible_error']=type(e).__name__
+                      detail.append(record)
+                      tab.close()
               for d in detail:print('SHADE_DETAIL',json.dumps(d,ensure_ascii=True,separators=(',',':')))
               print('DETAIL_TOTAL',len(detail))
               Path('last-chance-details.json').write_text(json.dumps(detail,indent=2))
