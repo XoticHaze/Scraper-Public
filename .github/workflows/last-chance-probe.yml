@@ -17,96 +17,62 @@ jobs:
       - run: |
           python -m pip install playwright==1.55.0
           python -m playwright install chromium
-      - name: Inspect native search schema and warehouse selection
+      - name: Fetch native San Antonio inventory and verify completeness
         run: |
           python - <<'PY'
-          import json, re
+          import json
           from datetime import datetime, timezone
-          from urllib.parse import urlsplit, parse_qs
+          from pathlib import Path
           from playwright.sync_api import sync_playwright
-          host='api.macdiscount.com'
-          endpoint='/map-bid/last-chance-deals/search'
-          payloads=[]
-          warehouses=[]
-          def emit(label,obj):
-              print(label,json.dumps(obj,ensure_ascii=True,default=str))
-          def shape(obj,depth=0):
-              if depth>4:return type(obj).__name__
-              if isinstance(obj,dict):return {str(k):shape(v,depth+1) for k,v in list(obj.items())[:75]}
-              if isinstance(obj,list):return {'length':len(obj),'sample':shape(obj[0],depth+1) if obj else None}
-              return type(obj).__name__
-          def objects(obj):
-              if isinstance(obj,dict):
-                  yield obj
-                  for v in obj.values():yield from objects(v)
-              elif isinstance(obj,list):
-                  for v in obj:yield from objects(v)
-          def norm(k):return re.sub('[^a-z0-9]','',str(k).lower())
-          safe={'id','lotid','lotnumber','auctionid','auctionnumber','inventoryid','productname','producttitle','title','name','condition','conditionname','retailprice','auctionlocation','locationname','locationid','buildingid','buildingname','warehouseid','warehousename','price','currentprice','brand','model','modelnumber','upc','islastchance','lastchanceprice','status','description','slug','itemid'}
-          reqsafe={'location','locations','locationid','locationids','building','buildings','buildingid','buildingids','warehouseid','warehouseids','page','pagenumber','pagesize','limit','offset','skip','take','sort','sortby','search','query','q','filter','filters','category','categoryid'}
-          def clean(obj,allowed):
-              return {k:v for k,v in obj.items() if norm(k) in allowed and (isinstance(v,(int,float,bool)) or isinstance(v,str) and len(v)<400 or isinstance(v,list) and len(v)<100 and all(isinstance(i,(int,float,str)) and len(str(i))<100 for i in v))}
-          def locmatched(obj):
-              return any(re.search(r'\bsan antonio\b',str(v),re.I) for k,v in obj.items() if norm(k) in {'name','locationname','buildingname','warehousename','auctionlocation','city','label','title'} and isinstance(v,str))
+          base='https://api.macdiscount.com'
           with sync_playwright() as p:
               browser=p.chromium.launch(headless=True)
               context=browser.new_context(locale='en-US',timezone_id='America/Chicago')
               page=context.new_page()
-              def inspect(response):
-                  u=urlsplit(response.url)
-                  if u.hostname!=host or u.path not in (endpoint,'/locations','/buildings'):return
-                  try: data=response.json()
-                  except Exception:
-                      emit('API_NON_JSON',{'path':u.path,'status':response.status});return
-                  if u.path!=endpoint:
-                      warehouses.extend(objects(data))
-                      emit('WAREHOUSE_SCHEMA',{'path':u.path,'shape':shape(data)})
-                      return
-                  request=response.request
-                  query={k:v for k,v in parse_qs(u.query).items() if norm(k) in reqsafe}
-                  try: body=request.post_data_json
-                  except Exception:body=None
-                  emit('NATIVE_REQUEST',{'method':request.method,'query':query,'body_shape':shape(body),'public_body':clean(body,reqsafe) if isinstance(body,dict) else None})
-                  emit('SEARCH_SCHEMA',{'status':response.status,'shape':shape(data)})
-                  payloads.append(data)
-              page.on('response',inspect)
-              response=page.goto('https://www.mac.bid/last-chance-deals',wait_until='domcontentloaded',timeout=30000)
-              page.wait_for_timeout(8000)
-              controls=page.get_by_text(re.compile('san antonio',re.I),exact=False)
-              emit('SAN_ANTONIO_CONTROL_COUNT',controls.count())
-              for i in range(min(controls.count(),10)):
-                  el=controls.nth(i)
-                  try:
-                      tag=el.evaluate('(e)=>({tag:e.tagName,role:e.getAttribute("role"),text:e.innerText?.slice(0,100)})')
-                      emit('MATCHED_CONTROL',tag)
-                      if tag['tag'] in ('BUTTON','LABEL','OPTION') or tag['role'] in ('option','checkbox'):
-                          if el.is_visible() and re.fullmatch(r'\s*San Antonio\s*',tag.get('text') or '',re.I):
-                              el.click(timeout=2000);page.wait_for_timeout(3000);break
-                  except Exception:pass
-              for _ in range(3):
-                  page.mouse.wheel(0,1400);page.wait_for_timeout(700)
-              matched=[clean(o,safe|{'city','label'}) for o in warehouses if locmatched(o)]
-              emit('SAN_ANTONIO_WAREHOUSE_MAP',matched[:40])
-              ids={str(v) for o in matched for k,v in o.items() if norm(k) in {'id','locationid','buildingid','warehouseid'}}
-              emit('SAN_ANTONIO_IDS',sorted(ids))
-              def in_scope(o):
-                  for k,v in o.items():
-                      n=norm(k)
-                      if n in {'locationid','buildingid','warehouseid'} and str(v) in ids:return True
-                      if n in {'auctionlocation','locationname','buildingname','warehousename','location','building','warehouse'}:
-                          if isinstance(v,str) and re.fullmatch(r'\s*San Antonio\s*',v,re.I):return True
-                          if isinstance(v,dict) and (locmatched(v) or str(v.get('id')) in ids):return True
-                  return False
-              results={}
-              for data in payloads:
-                  for o in objects(data):
-                      keys={norm(k) for k in o}
-                      if not in_scope(o):continue
-                      if not keys.intersection({'lotid','lotnumber','itemid','inventoryid','productname','producttitle'}):continue
-                      row=clean(o,safe)
-                      if row:results[json.dumps(row,sort_keys=True)]=row
-              emit('SAN_ANTONIO_CANDIDATE_COUNT',len(results))
-              for row in list(results.values())[:250]:emit('SAN_ANTONIO_CANDIDATE',row)
-              emit('OBSERVATION',{'utc':datetime.now(timezone.utc).isoformat(),'http':response.status if response else None,'search_responses':len(payloads),'candidate_scope':'diagnostic only; verify native offer eligibility'})
+              native=[]
+              def on_response(r):
+                  if r.url.startswith(base+'/map-bid/last-chance-deals/search?'):
+                      native.append(r.url)
+              page.on('response',on_response)
+              page.goto('https://www.mac.bid/last-chance-deals',wait_until='domcontentloaded',timeout=30000)
+              page.wait_for_timeout(5000)
+              def get(path):
+                  r=context.request.get(base+path,headers={'Origin':'https://www.mac.bid','Referer':'https://www.mac.bid/'},timeout=30000)
+                  print('HTTP',path,r.status)
+                  r.raise_for_status() if hasattr(r,'raise_for_status') else None
+                  assert r.ok, r.status
+                  return r.json()
+              buildings=get('/buildings')
+              target=[b for b in buildings if b.get('name')=='San Antonio']
+              assert len(target)==1 and target[0]['id']==29,target
+              data=get('/map-bid/last-chance-deals/search?buildings=29&limit=2000')
+              rows=data['items']
+              assert isinstance(rows,list)
+              now=datetime.now(timezone.utc)
+              keys=('id','lot_id','auction_id','inventory_id','lot_number','product_name','stock_image','inventory_images','retail_price','building_id','is_partial','condition','category','price','expires_at','is_sold')
+              clean=[{k:r[k] for k in keys if k in r} for r in rows]
+              assert all(r.get('building_id')==29 for r in clean)
+              assert len({str(r.get('lot_id')) for r in clean})==len(clean)
+              complete=data.get('has_more') is False and data.get('count')==len(clean)
+              active=[]
+              for r in clean:
+                  try: expires=datetime.fromisoformat(r['expires_at'].replace('Z','+00:00'))
+                  except (KeyError,ValueError,TypeError):continue
+                  if expires.tzinfo is None:continue
+                  if r.get('is_sold')==0 and float(r.get('price',0))==2.99 and expires>now:active.append(r)
+              summary={'observed_at':now.isoformat(),'warehouse':'San Antonio','building_id':29,'reported_count':data.get('count'),'received':len(clean),'has_more':data.get('has_more'),'complete':complete,'active':len(active),'native_page_observed':bool(native)}
+              print('INVENTORY_SUMMARY',json.dumps(summary))
+              for r in active:
+                  compact={k:v for k,v in r.items() if k not in ('stock_image','inventory_images','inventory_id','id')}
+                  print('LOT',json.dumps(compact,ensure_ascii=True,separators=(',',':')))
+              Path('last-chance-san-antonio.json').write_text(json.dumps({'summary':summary,'active':active,'all':clean},indent=2))
               browser.close()
+              assert complete,'inventory not proven complete'
           PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: last-chance-san-antonio
+          path: last-chance-san-antonio.json
+          if-no-files-found: warn
+          retention-days: 2
