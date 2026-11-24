@@ -25,6 +25,8 @@ jobs:
           from pathlib import Path
           from zoneinfo import ZoneInfo
           from collections import Counter
+          from urllib.parse import urlsplit, parse_qs, urlencode, urlunsplit
+          import re
           from playwright.sync_api import sync_playwright
           base='https://api.macdiscount.com'
           with sync_playwright() as p:
@@ -36,6 +38,12 @@ jobs:
                   if r.url.startswith(base+'/map-bid/last-chance-deals/search?'):
                       native.append(r.url)
               page.on('response',on_response)
+              def select_building(route):
+                  u=urlsplit(route.request.url)
+                  q=parse_qs(u.query)
+                  q['buildings']=['29']
+                  route.continue_(url=urlunsplit((u.scheme,u.netloc,u.path,urlencode(q,doseq=True),u.fragment)))
+              page.route('**/map-bid/last-chance-deals/search?*',select_building)
               page.goto('https://www.mac.bid/last-chance-deals',wait_until='domcontentloaded',timeout=30000)
               page.wait_for_timeout(5000)
               def get(path):
@@ -73,6 +81,53 @@ jobs:
                   compact={k:v for k,v in r.items() if k not in ('stock_image','inventory_images','inventory_id','id')}
                   print('LOT',json.dumps(compact,ensure_ascii=True,separators=(',',':')))
               Path('last-chance-san-antonio.json').write_text(json.dumps({'summary':summary,'active':active,'all':clean},indent=2))
+              wanted=['3844Y','2020Z','4905Y','4021Y','3640Y','2699Y','3267Y','4269Y','4560Y','2719Y','2593Y','3612Y','3140U','3296Y','3049Y','3628Y','3188Y','3203Y','2941Y','2630Y','1365R','2508Y','3125Y','3146K']
+              detail=[]
+              def observe(r):
+                  u=urlsplit(r.url)
+                  if u.hostname=='api.macdiscount.com' and r.request.resource_type in ('xhr','fetch') and 'last-chance-deals/search' not in u.path:
+                      print('DETAIL_ENDPOINT',u.path,r.status)
+                      try:
+                          obj=r.json()
+                          if isinstance(obj,dict):print('DETAIL_KEYS',list(obj)[:60])
+                      except Exception:pass
+              page.on('response',observe)
+              print('UI_TEXT',page.locator('body').inner_text()[:1800])
+              for lot in wanted:
+                  row=next((r for r in active if r['lot_number']==lot),None)
+                  if not row:continue
+                  name=row['product_name'].strip()
+                  candidates=page.get_by_text(name,exact=True)
+                  print('CARD_MATCH',lot,candidates.count())
+                  if candidates.count()!=1:continue
+                  try:
+                      candidates.first.click(timeout=1800)
+                      page.wait_for_timeout(850)
+                      body=page.locator('body').inner_text()
+                      # capture only modal field neighborhoods, never account data.
+                      found={}
+                      for label in ['Dimension','UPC','Lot Number','Mac.Bid ID','Condition','Aisle/Section']:
+                          m=re.search(re.escape(label)+r':?\\s*\\n?([^\\n]+)',body,re.I)
+                          if m:found[label]=m.group(1).strip()[:120]
+                      if found:print('DETAIL',lot,json.dumps(found));detail.append({'lot':lot,'fields':found})
+                      page.keyboard.press('Escape')
+                      page.wait_for_timeout(150)
+                      close=page.get_by_role('button',name=re.compile('^close
+              assert complete,'inventory not proven complete'
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: last-chance-san-antonio
+          path: |
+            last-chance-san-antonio.json
+            last-chance-details.json
+          if-no-files-found: warn
+          retention-days: 2
+,re.I))
+                      if close.count():close.first.click(timeout=1000)
+                  except Exception as e:print('DETAIL_MISS',lot,type(e).__name__)
+              Path('last-chance-details.json').write_text(json.dumps(detail,indent=2))
               browser.close()
               assert complete,'inventory not proven complete'
           PY
