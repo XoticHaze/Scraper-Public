@@ -17,48 +17,96 @@ jobs:
       - run: |
           python -m pip install playwright==1.55.0
           python -m playwright install chromium
-      - name: Observe native unauthenticated Last Chance page
+      - name: Inspect native search schema and warehouse selection
         run: |
           python - <<'PY'
           import json, re
           from datetime import datetime, timezone
-          from urllib.parse import urlsplit
+          from urllib.parse import urlsplit, parse_qs
           from playwright.sync_api import sync_playwright
-          safe = {'lot_id','lot_number','auction_number','product_name','title','name','condition','retail_price','auction_location','location_name','price','current_price','brand','model','model_number','upc','is_last_chance','last_chance_price','status'}
-          rows, trace = {}, set()
-          def walk(obj):
-              if isinstance(obj, dict):
-                  loc = str(obj.get('auction_location') or obj.get('location_name') or '').strip().lower()
-                  if loc == 'san antonio' and (obj.get('product_name') or obj.get('title') or obj.get('name')) and (obj.get('lot_id') or obj.get('lot_number')):
-                      row = {k:v for k,v in obj.items() if k in safe and isinstance(v,(int,float,bool,str)) and (not isinstance(v,str) or len(v)<300)}
-                      key = str((row.get('auction_number'),row.get('lot_number'),row.get('lot_id')))
-                      rows[key] = row
-                  for v in obj.values():
-                      if isinstance(v,(dict,list)): walk(v)
+          host='api.macdiscount.com'
+          endpoint='/map-bid/last-chance-deals/search'
+          payloads=[]
+          warehouses=[]
+          def emit(label,obj):
+              print(label,json.dumps(obj,ensure_ascii=True,default=str))
+          def shape(obj,depth=0):
+              if depth>4:return type(obj).__name__
+              if isinstance(obj,dict):return {str(k):shape(v,depth+1) for k,v in list(obj.items())[:75]}
+              if isinstance(obj,list):return {'length':len(obj),'sample':shape(obj[0],depth+1) if obj else None}
+              return type(obj).__name__
+          def objects(obj):
+              if isinstance(obj,dict):
+                  yield obj
+                  for v in obj.values():yield from objects(v)
               elif isinstance(obj,list):
-                  for v in obj: walk(v)
+                  for v in obj:yield from objects(v)
+          def norm(k):return re.sub('[^a-z0-9]','',str(k).lower())
+          safe={'id','lotid','lotnumber','auctionid','auctionnumber','inventoryid','productname','producttitle','title','name','condition','conditionname','retailprice','auctionlocation','locationname','locationid','buildingid','buildingname','warehouseid','warehousename','price','currentprice','brand','model','modelnumber','upc','islastchance','lastchanceprice','status','description','slug','itemid'}
+          reqsafe={'location','locations','locationid','locationids','building','buildings','buildingid','buildingids','warehouseid','warehouseids','page','pagenumber','pagesize','limit','offset','skip','take','sort','sortby','search','query','q','filter','filters','category','categoryid'}
+          def clean(obj,allowed):
+              return {k:v for k,v in obj.items() if norm(k) in allowed and (isinstance(v,(int,float,bool)) or isinstance(v,str) and len(v)<400 or isinstance(v,list) and len(v)<100 and all(isinstance(i,(int,float,str)) and len(str(i))<100 for i in v))}
+          def locmatched(obj):
+              return any(re.search(r'\bsan antonio\b',str(v),re.I) for k,v in obj.items() if norm(k) in {'name','locationname','buildingname','warehousename','auctionlocation','city','label','title'} and isinstance(v,str))
           with sync_playwright() as p:
               browser=p.chromium.launch(headless=True)
               context=browser.new_context(locale='en-US',timezone_id='America/Chicago')
               page=context.new_page()
               def inspect(response):
                   u=urlsplit(response.url)
-                  if response.request.resource_type not in ('fetch','xhr'): return
-                  trace.add((u.hostname,u.path,response.status))
-                  try:
-                      if 'json' in response.headers.get('content-type',''):
-                          walk(response.json())
-                  except Exception: pass
+                  if u.hostname!=host or u.path not in (endpoint,'/locations','/buildings'):return
+                  try: data=response.json()
+                  except Exception:
+                      emit('API_NON_JSON',{'path':u.path,'status':response.status});return
+                  if u.path!=endpoint:
+                      warehouses.extend(objects(data))
+                      emit('WAREHOUSE_SCHEMA',{'path':u.path,'shape':shape(data)})
+                      return
+                  request=response.request
+                  query={k:v for k,v in parse_qs(u.query).items() if norm(k) in reqsafe}
+                  try: body=request.post_data_json
+                  except Exception:body=None
+                  emit('NATIVE_REQUEST',{'method':request.method,'query':query,'body_shape':shape(body),'public_body':clean(body,reqsafe) if isinstance(body,dict) else None})
+                  emit('SEARCH_SCHEMA',{'status':response.status,'shape':shape(data)})
+                  payloads.append(data)
               page.on('response',inspect)
-              status=page.goto('https://www.mac.bid/last-chance-deals',wait_until='domcontentloaded',timeout=30000)
-              page.wait_for_timeout(10000)
-              for _ in range(5):
-                  page.mouse.wheel(0,1600)
-                  page.wait_for_timeout(800)
-              print('OBSERVED_UTC',datetime.now(timezone.utc).isoformat(),'HTTP',status.status if status else None)
-              print('PUBLIC_ENDPOINTS',json.dumps(sorted(trace,key=str)[:80]))
-              print('SAN_ANTONIO_CANDIDATES_UNVERIFIED',len(rows))
-              for row in list(rows.values())[:150]: print('CANDIDATE',json.dumps(row,ensure_ascii=True))
-              print('NOTE: candidates are not confirmed Last Chance offers until native eligibility and visible purchase price are verified; zero does not establish empty inventory.')
+              response=page.goto('https://www.mac.bid/last-chance-deals',wait_until='domcontentloaded',timeout=30000)
+              page.wait_for_timeout(8000)
+              controls=page.get_by_text(re.compile('san antonio',re.I),exact=False)
+              emit('SAN_ANTONIO_CONTROL_COUNT',controls.count())
+              for i in range(min(controls.count(),10)):
+                  el=controls.nth(i)
+                  try:
+                      tag=el.evaluate('(e)=>({tag:e.tagName,role:e.getAttribute("role"),text:e.innerText?.slice(0,100)})')
+                      emit('MATCHED_CONTROL',tag)
+                      if tag['tag'] in ('BUTTON','LABEL','OPTION') or tag['role'] in ('option','checkbox'):
+                          if el.is_visible() and re.fullmatch(r'\s*San Antonio\s*',tag.get('text') or '',re.I):
+                              el.click(timeout=2000);page.wait_for_timeout(3000);break
+                  except Exception:pass
+              for _ in range(3):
+                  page.mouse.wheel(0,1400);page.wait_for_timeout(700)
+              matched=[clean(o,safe|{'city','label'}) for o in warehouses if locmatched(o)]
+              emit('SAN_ANTONIO_WAREHOUSE_MAP',matched[:40])
+              ids={str(v) for o in matched for k,v in o.items() if norm(k) in {'id','locationid','buildingid','warehouseid'}}
+              emit('SAN_ANTONIO_IDS',sorted(ids))
+              def in_scope(o):
+                  for k,v in o.items():
+                      n=norm(k)
+                      if n in {'locationid','buildingid','warehouseid'} and str(v) in ids:return True
+                      if n in {'auctionlocation','locationname','buildingname','warehousename','location','building','warehouse'}:
+                          if isinstance(v,str) and re.fullmatch(r'\s*San Antonio\s*',v,re.I):return True
+                          if isinstance(v,dict) and (locmatched(v) or str(v.get('id')) in ids):return True
+                  return False
+              results={}
+              for data in payloads:
+                  for o in objects(data):
+                      keys={norm(k) for k in o}
+                      if not in_scope(o):continue
+                      if not keys.intersection({'lotid','lotnumber','itemid','inventoryid','productname','producttitle'}):continue
+                      row=clean(o,safe)
+                      if row:results[json.dumps(row,sort_keys=True)]=row
+              emit('SAN_ANTONIO_CANDIDATE_COUNT',len(results))
+              for row in list(results.values())[:250]:emit('SAN_ANTONIO_CANDIDATE',row)
+              emit('OBSERVATION',{'utc':datetime.now(timezone.utc).isoformat(),'http':response.status if response else None,'search_responses':len(payloads),'candidate_scope':'diagnostic only; verify native offer eligibility'})
               browser.close()
           PY
