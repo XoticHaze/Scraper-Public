@@ -112,19 +112,7 @@ jobs:
                       if found:print('DETAIL',lot,json.dumps(found));detail.append({'lot':lot,'fields':found})
                       page.keyboard.press('Escape')
                       page.wait_for_timeout(150)
-                      close=page.get_by_role('button',name=re.compile('^close
-              assert complete,'inventory not proven complete'
-          PY
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: last-chance-san-antonio
-          path: |
-            last-chance-san-antonio.json
-            last-chance-details.json
-          if-no-files-found: warn
-          retention-days: 2
-,re.I))
+                      close=page.get_by_role('button',name=re.compile('^close$',re.I))
                       if close.count():close.first.click(timeout=1000)
                   except Exception as e:print('DETAIL_MISS',lot,type(e).__name__)
               Path('last-chance-details.json').write_text(json.dumps(detail,indent=2))
@@ -135,6 +123,8 @@ jobs:
         if: always()
         with:
           name: last-chance-san-antonio
-          path: last-chance-san-antonio.json
+          path: |
+            last-chance-san-antonio.json
+            last-chance-details.json
           if-no-files-found: warn
           retention-days: 2
