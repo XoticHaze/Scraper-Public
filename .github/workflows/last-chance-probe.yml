@@ -46,6 +46,14 @@ jobs:
               page.route('**/map-bid/last-chance-deals/search?*',select_building)
               page.goto('https://www.mac.bid/last-chance-deals',wait_until='domcontentloaded',timeout=30000)
               page.wait_for_timeout(5000)
+              for label in ['Got it','I understand']:
+                  b=page.get_by_role('button',name=label,exact=True)
+                  if b.count():
+                      try:b.first.click(timeout=3000)
+                      except Exception:pass
+              page.wait_for_timeout(5000)
+              print('AFTER_DISMISS',page.locator('body').inner_text()[:1800])
+              print('VISIBLE_LINKS',json.dumps([{'text':a.inner_text()[:100],'href':a.get_attribute('href')} for a in page.locator('a:visible').all()[:30]]))
               def get(path):
                   r=context.request.get(base+path,headers={'Origin':'https://www.mac.bid','Referer':'https://www.mac.bid/'},timeout=30000)
                   print('HTTP',path,r.status)
@@ -92,7 +100,10 @@ jobs:
                           if isinstance(obj,dict):print('DETAIL_KEYS',list(obj)[:60])
                       except Exception:pass
               page.on('response',observe)
-              print('UI_TEXT',page.locator('body').inner_text()[:1800])
+              print('UI_TEXT',page.locator('body').inner_text()[:3000])
+              print('CARD_LINK_COUNT',page.locator('a[href*="/lot/"]').count())
+              print('IMG_COUNT',page.locator('img').count())
+
               for lot in wanted:
                   row=next((r for r in active if r['lot_number']==lot),None)
                   if not row:continue
