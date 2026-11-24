@@ -23,6 +23,8 @@ jobs:
           import json
           from datetime import datetime, timezone
           from pathlib import Path
+          from zoneinfo import ZoneInfo
+          from collections import Counter
           from playwright.sync_api import sync_playwright
           base='https://api.macdiscount.com'
           with sync_playwright() as p:
@@ -56,11 +58,16 @@ jobs:
               complete=data.get('has_more') is False and data.get('count')==len(clean)
               active=[]
               for r in clean:
-                  try: expires=datetime.fromisoformat(r['expires_at'].replace('Z','+00:00'))
-                  except (KeyError,ValueError,TypeError):continue
-                  if expires.tzinfo is None:continue
-                  if r.get('is_sold')==0 and float(r.get('price',0))==2.99 and expires>now:active.append(r)
-              summary={'observed_at':now.isoformat(),'warehouse':'San Antonio','building_id':29,'reported_count':data.get('count'),'received':len(clean),'has_more':data.get('has_more'),'complete':complete,'active':len(active),'native_page_observed':bool(native)}
+                  try:
+                      expires=datetime.fromisoformat(r['expires_at'].replace('Z','+00:00'))
+                      interpretations=[expires] if expires.tzinfo else [expires.replace(tzinfo=timezone.utc),expires.replace(tzinfo=ZoneInfo('America/Chicago'))]
+                      future=[x>now for x in interpretations]
+                      state='unexpired' if all(future) else 'expired' if not any(future) else 'timezone_uncertain'
+                  except (KeyError,ValueError,TypeError,AttributeError):
+                      state='invalid_expiry'
+                  r['expiry_status']=state
+                  if r.get('is_sold')==0 and float(r.get('price',0))==2.99 and state=='unexpired':active.append(r)
+              summary={'observed_at':now.isoformat(),'warehouse':'San Antonio','building_id':29,'reported_count':data.get('count'),'received':len(clean),'has_more':data.get('has_more'),'complete':complete,'active':len(active),'expiry_status_counts':dict(Counter(r['expiry_status'] for r in clean)),'expiry_policy':'Conservative: naive values must be future under UTC and America/Chicago; source timezone not established','native_page_observed':bool(native)}
               print('INVENTORY_SUMMARY',json.dumps(summary))
               for r in active:
                   compact={k:v for k,v in r.items() if k not in ('stock_image','inventory_images','inventory_id','id')}
