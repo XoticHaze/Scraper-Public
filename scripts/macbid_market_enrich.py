@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.request
 from urllib.parse import urlparse, unquote
@@ -8,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from deal_engine.grouping import product_identity
+from deal_engine.valuation import summarize_market_value
+from deal_engine.public_artifact_state import prior_public_artifacts, read_public_artifact_json
 from deal_engine.hunts import match_profiles
 from deal_engine.market_enrichment import (
     candidate_priority_score,
@@ -79,6 +82,35 @@ def _load_previous(url: str, *, timeout: int, max_bytes: int) -> dict[str, Any] 
         return None
 
 
+def _previous_state(config: dict[str, Any], *, timeout: int) -> tuple[dict[str, Any] | None, str]:
+    bound = int(config.get("max_previous_bytes") or 30_000_000)
+    previous = _load_previous(str(config.get("live_previous_url") or ""), timeout=timeout, max_bytes=bound)
+    if previous is not None and not isinstance(previous.get("valuations"), list):
+        previous = None
+    if os.environ.get("GITHUB_REPOSITORY") == "XoticHaze/Scraper-Public":
+        try:
+            artifacts = prior_public_artifacts("macbid-deal-engine")
+            for artifact in artifacts[:3]:
+                published = str((previous or {}).get("runtime_enrichment", {}).get("generated_at") or "")
+                if previous is not None and published and str(artifact.get("created_at") or "")[:16] <= published[:16]:
+                    break
+                try:
+                    recovered = read_public_artifact_json(artifact, name="macbid-deal-engine", max_bytes=bound)
+                    if recovered.get("schema") != "macbid-market-values-v1" or not isinstance(recovered.get("valuations"), list):
+                        continue
+                    if previous is None or str(recovered.get("runtime_enrichment", {}).get("generated_at") or "") > published:
+                        print("MARKET_PREVIOUS=ARTIFACT run=" + str(artifact["workflow_run"]["id"]))
+                        return recovered, "prior_public_artifact"
+                    break
+                except Exception as exc:
+                    print("MARKET_ARTIFACT=MISS reason=" + type(exc).__name__)
+        except Exception as exc:
+            print("MARKET_ARTIFACT=UNAVAILABLE reason=" + type(exc).__name__)
+        if previous is None and config.get("require_previous_state", True):
+            raise RuntimeError("No prior public valuation state available; refusing to reset accumulated evidence")
+    return previous, "pages" if previous is not None else "canonical_only"
+
+
 def _record_token(record: dict[str, Any]) -> str:
     identity = str(record.get("identity") or "")
     if ":" in identity:
@@ -112,6 +144,8 @@ def _candidate_rows(
     existing: set[str],
     limit: int,
     profile_priority: dict[str, list[str]] | None = None,
+    profile_attempts: dict[str, float] | None = None,
+    coverage: dict[str, int] | None = None,
 ) -> list[dict[str, Any]]:
     ranked: list[tuple[float, dict[str, Any]]] = []
     seen: set[str] = set()
@@ -147,21 +181,31 @@ def _candidate_rows(
     # Reserve one slot for rotating non-primary hunts, without displacing the pilot.
     if limit <= 0:
         return []
-    primary = set((profile_priority or {}).get("primary") or [])
     pilot = set((profile_priority or {}).get("pilot") or [])
     # Guarantee a bounded pilot allocation, while leaving most capacity for other hunts.
     pilot_rows = [row for _, row in ranked if pilot.intersection(row["_candidate_profiles"])]
     selected = pilot_rows[:min(3, max(1, limit // 4))]
     selected_ids = {row["_candidate_identity"] for row in selected}
+    represented = {p for row in selected for p in row["_candidate_profiles"]}
+    pool_counts = {str(p["id"]): 0 for p in profiles}
+    for _, row in ranked:
+        for pid in row["_candidate_profiles"]:
+            pool_counts[pid] = pool_counts.get(pid, 0) + 1
+    if coverage is not None:
+        coverage.update(pool_counts)
+    # Use persistent attempt dates, not a wall-clock modulo that can starve hunts.
+    fair_slots = min(4, max(0, limit - len(selected)), limit // 3)
+    for _ in range(fair_slots):
+        options = [row for _, row in ranked if row["_candidate_identity"] not in selected_ids]
+        targets = {pid for row in options for pid in row["_candidate_profiles"] if pid not in represented and pid not in pilot}
+        if not targets:
+            break
+        target = min(targets, key=lambda p: ((profile_attempts or {}).get(p, 0), pool_counts.get(p, 0), p))
+        row = next(row for row in options if target in row["_candidate_profiles"])
+        selected.append(row)
+        selected_ids.add(row["_candidate_identity"])
+        represented.update(row["_candidate_profiles"])
     selected += [row for _, row in ranked if row["_candidate_identity"] not in selected_ids][:limit - len(selected)]
-    if limit >= 2 and len(ranked) > limit:
-        selected_ids = {row["_candidate_identity"] for row in selected}
-        alternatives = [row for _, row in ranked if row["_candidate_identity"] not in selected_ids and row["_candidate_profiles"] and not primary.intersection(row["_candidate_profiles"])]
-        if alternatives:
-            profile_ids = sorted({p for row in alternatives for p in row["_candidate_profiles"]})
-            target = profile_ids[int(time.time() // 1800) % len(profile_ids)]
-            if len(selected) > min(3, max(1, limit // 4)):
-                selected[-1] = next(row for row in alternatives if target in row["_candidate_profiles"])
     return selected
 
 
@@ -231,6 +275,7 @@ def _refresh_existing(
     attempted = 0
     refreshed = 0
     active = active_identities or set()
+    allowed_domains = {source_domain(str(p.get('url_template') or '')) for p in providers}
     records = sorted(market.get("valuations") or [], key=lambda r: (str(r.get("identity")) not in active, str(r.get("last_refresh_attempt_at") or ""), str(r.get("identity") or "")))
     for record in records:
         token = _record_token(record)
@@ -243,8 +288,8 @@ def _refresh_existing(
             url = str(old.get("url") or "")
             if not url:
                 continue
-            # eBay explicitly prohibits unauthorized automated page access.
-            if source_domain(url) == "ebay.com" or source_domain(url).endswith(".ebay.com"):
+            # Refresh only registered new-price sources, never merchant or secondary-market pages.
+            if str(old.get('condition') or '').lower() != 'new' or source_domain(url) not in allowed_domains or not url.startswith('https://'):
                 continue
             today = time.strftime("%Y-%m-%d", time.gmtime())
             if str(old.get("observed_at") or "") == today:
@@ -311,11 +356,7 @@ def main() -> int:
 
     timeout = int(config.get("request_timeout_seconds") or 7)
     max_bytes = int(config.get("max_response_bytes") or 3_000_000)
-    previous = _load_previous(
-        str(config.get("live_previous_url") or ""),
-        timeout=timeout,
-        max_bytes=max_bytes,
-    )
+    previous, previous_source = _previous_state(config, timeout=timeout)
     market = merged_market_records(canonical, previous)
     providers = list(config.get("providers") or [])
 
@@ -335,14 +376,22 @@ def main() -> int:
     }
     retry_after_hours = int(config.get("retry_after_hours") or 24)
     cooldown = _recent_attempts(market, retry_after_hours)
+    attempts = dict(market.get('enrichment_attempts') or {})
+    profile_attempts = {}
+    for row in attempts.values():
+        for pid in row.get('profiles', []):
+            profile_attempts[pid] = max(profile_attempts.get(pid, 0), float(row.get('attempted_epoch') or 0))
+    eligible_counts = {}
+    # Identity-only and stale records may be retried without losing manual metadata.
+    current_records = {k for k, row in records.items() if summarize_market_value(row, as_of=time.strftime('%Y-%m-%d', time.gmtime())).get('current_source_count')}
     candidates = _candidate_rows(
         report,
         list(hunt_doc.get("profiles") or []),
-        set(records) | cooldown,
+        current_records | cooldown,
         int(config.get("max_candidates_per_run") or 16),
         profile_priority=dict(config.get("profile_priority") or {}),
+        profile_attempts=profile_attempts, coverage=eligible_counts,
     )
-    attempts = dict(market.get("enrichment_attempts") or {})
 
     searched = 0
     promoted = 0
@@ -393,6 +442,7 @@ def main() -> int:
             },
             "observations": [],
         }
+        record = {**record, **records.get(identity, {})}
         for observation in observations:
             merge_current_observation(record, observation)
         update_confidence(record)
@@ -414,6 +464,8 @@ def main() -> int:
         "provider_misses": searched - observations_added,
         "refresh_misses": refresh_attempted - refreshed,
         "previous_runtime_loaded": previous is not None,
+        "previous_runtime_source": previous_source,
+        "eligible_candidate_profiles": eligible_counts,
         "candidate_profiles": {str(profile["id"]): sum(str(profile["id"]) in c["_candidate_profiles"] for c in candidates) for profile in (hunt_doc.get("profiles") or [])},
     }
 

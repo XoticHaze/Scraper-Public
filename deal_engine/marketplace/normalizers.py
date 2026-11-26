@@ -53,7 +53,7 @@ def ebay_risk(item, *, expected_model_ids=()):
     critical = []
     seller = item.get("seller") or {}
     score = seller.get("feedbackScore")
-    positive = seller.get("positiveFeedbackPercent")
+    positive = seller.get("feedbackPercentage", seller.get("positiveFeedbackPercent"))
     try:
         if score is None or int(score) < 30:
             warnings.append("seller_history_insufficient")
@@ -118,16 +118,31 @@ def normalize_ebay_item(item, *, observed_at=None, expected_model_ids=()):
         if isinstance(option, dict):
             cost = option.get("shippingCost") or {}
             amount = _money(cost.get("value")) if isinstance(cost, dict) else None
-            if amount is not None or (isinstance(cost, dict) and str(cost.get("value")) in {"0", "0.0", "0.00"}):
+            if isinstance(cost, dict) and cost.get("currency") == "USD" and (amount is not None or str(cost.get("value")) in {"0", "0.0", "0.00"}):
                 shipping.append(float(cost["value"]))
+    terms = item.get("returnTerms") or {}
+    period = terms.get("returnPeriod") or {}
+    raw_days = period.get("value") if str(period.get("unit") or "").upper() in {"DAY", "DAYS"} else None
+    try:
+        return_days = int(raw_days) if not isinstance(raw_days, bool) and raw_days is not None and 0 < int(raw_days) <= 365 else None
+    except (ValueError, TypeError, OverflowError):
+        return_days = None
+    availability_states = [str(a.get("estimatedAvailabilityStatus") or "").upper() for a in (item.get("estimatedAvailabilities") or []) if isinstance(a, dict)]
+    availability = "in_stock" if availability_states and all(v == "IN_STOCK" for v in availability_states) else "out_of_stock" if availability_states and all(v == "OUT_OF_STOCK" for v in availability_states) else "unknown"
     return {
         "schema": API_SCHEMA, "source": "ebay", "offer_id": "ebay:" + item_id,
-        "product_identity": {"gtin": item.get("gtin"), "model_values": _aspect(item, "Model")},
+        "product_identity": {"gtin": item.get("gtin"), "model_values": _aspect(item, "Model") + _aspect(item, "Model Number") + _aspect(item, "MPN"), "brand_values": _aspect(item, "Brand")},
         "title": title, "price": price, "currency": "USD", "condition": item.get("condition"),
         "seller": {"name": seller.get("username"), "feedback_score": seller.get("feedbackScore"),
-                   "positive_feedback_pct": seller.get("positiveFeedbackPercent"), "type": "third_party"},
+                   "positive_feedback_pct": seller.get("feedbackPercentage", seller.get("positiveFeedbackPercent")), "type": "third_party"},
         "url": url, "image_url": _safe_link(image.get("imageUrl"), {"i.ebayimg.com", "i1.ebayimg.com"}) if isinstance(image, dict) else None,
         "shipping_min": min(shipping) if shipping else None,
+        "buying_options": [v for v in (item.get("buyingOptions") or []) if isinstance(v, str)],
+        "availability": availability,
+        "returns_accepted": terms.get("returnsAccepted") if isinstance(terms.get("returnsAccepted"), bool) else None,
+        "return_days": return_days if terms.get("returnsAccepted") is True else None,
+        "return_shipping_payer": terms.get("returnShippingCostPayer"),
+        "condition_id": item.get("conditionId"),
         "all_in_status": "incomplete_shipping_tax_unknown",
         "end_at": item.get("itemEndDate"), "observed_at": _ts(observed_at), "risk": risk,
         "provenance": "ebay_browse_item_api", "live_verified": False,
@@ -157,7 +172,7 @@ def normalize_bestbuy_products(payload, *, observed_at=None):
             continue
         rows.append({
             "schema": API_SCHEMA, "source": "bestbuy", "offer_id": "bestbuy:new:" + sku,
-            "product_identity": {"bestbuy_sku": sku, "upc": item.get("upc"), "model": item.get("modelNumber")},
+            "product_identity": {"bestbuy_sku": sku, "upc": item.get("upc"), "model": item.get("modelNumber"), "brand": item.get("manufacturer")},
             "title": item["name"], "price": price, "currency": "USD", "condition": "new",
             "seller": {"name": "Best Buy", "type": "retailer_direct"},
             "url": _safe_link(item.get("url"), {"www.bestbuy.com", "bestbuy.com", "api.bestbuy.com"}) or "https://www.bestbuy.com/site/searchpage.jsp",

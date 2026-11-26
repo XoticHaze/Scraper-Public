@@ -4,6 +4,8 @@ from datetime import date, datetime
 from statistics import mean, median
 from math import isfinite, floor
 from typing import Any
+from urllib.parse import urlparse
+from deal_engine.market_enrichment import reject_price_outliers
 
 SECONDARY_CONDITIONS = {"open_box", "used", "refurbished", "certified_refurbished"}
 
@@ -106,8 +108,14 @@ def summarize_market_value(record: dict[str, Any], *, as_of=None, fresh_days=7, 
     current = [row for row in current if row.get("availability") not in {"out_of_stock", "sold", "unavailable"}
                and row.get("observation_kind") != "historical_sale"]
     current = [row for row in current if str(row.get("condition") or "").strip().lower() in (SECONDARY_CONDITIONS | {"new"}) and (p := _number(row.get("price"))) is not None and isfinite(p) and p > 0]
+    # Compare outliers only within the same condition cohort and freshness window.
+    current = [row for condition in sorted(SECONDARY_CONDITIONS | {'new'})
+               for row in reject_price_outliers([r for r in current if str(r.get('condition') or '').strip().lower() == condition])]
     current_new = price_stats(current, {"new"})
     open_box_used = price_stats(current, SECONDARY_CONDITIONS)
+    current_domains = {(urlparse(str(row.get("url") or "")).hostname or "").lower().removeprefix("www.") for row in current}
+    current_domains.discard("")
+    confidence = "high" if len(current_domains) >= 2 else "medium" if current_domains else "unknown"
     history = record.get("price_history") if isinstance(record.get("price_history"), dict) else None
     sources = [
         {
@@ -123,7 +131,7 @@ def summarize_market_value(record: dict[str, Any], *, as_of=None, fresh_days=7, 
     return {
         "status": str(record.get("status") or "verified_external"),
         "identity_confidence": str(record.get("identity_confidence") or "unknown"),
-        "price_confidence": str(record.get("price_confidence") or "unknown"),
+        "price_confidence": confidence,
         "observed_at": max((str(row.get("observed_at") or "") for row in current), default=None) if as_of is not None else record.get("observed_at"),
         "current_source_count": len(current),
         "model": record.get("model"),

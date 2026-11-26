@@ -1,6 +1,6 @@
 {
   "schema": "macbid-market-enrichment-v1",
-  "version": 5,
+  "version": 6,
   "enabled": true,
   "live_previous_url": "https://xotichaze.github.io/Scraper-Public/market-values.json",
   "max_candidates_per_run": 12,
@@ -91,5 +91,7 @@
       "solar-batteries"
     ],
     "note": "MAC.BID energy discovery is panel/controller/inverter-first. Battery storage remains opportunistic because local inventory is expected to be sparse."
-  }
+  },
+  "max_previous_bytes": 30000000,
+  "require_previous_state": true
 }

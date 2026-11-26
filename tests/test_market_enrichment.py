@@ -198,3 +198,41 @@ def test_catalog_discovery_has_no_stated_retail_gate_when_disabled():
     query = catalog_filter(["San Antonio"], ["LIKE NEW"], None, False, 100)
     assert "retail_price" not in query
     assert "auction_location" in query and "condition" in query and "is_pallet:=false" in query
+
+
+def test_fair_slots_are_driven_by_prior_attempts_across_primary_hunts():
+    from scripts.macbid_market_enrich import _candidate_rows
+    profiles = [{"id": f"hunt-{i}", "kind": "semantic", "required_any": [f"category{i}"]} for i in range(9)]
+    lots = [{"upc": f"B0AAA{i:05d}", "product_name": f"category{i}", "deal_score": 100-i} for i in range(9)]
+    coverage = {}
+    rows = _candidate_rows({"inventory": lots}, profiles, set(), 6,
+                           {"primary": [p["id"] for p in profiles]},
+                           profile_attempts={"hunt-0": 100, "hunt-1": 100, "hunt-2": 100,
+                                             "hunt-3": 100, "hunt-4": 100, "hunt-5": 100},
+                           coverage=coverage)
+    assert len(rows) == 6
+    assert {"hunt-6", "hunt-7"}.issubset({p for row in rows for p in row["_candidate_profiles"]})
+    assert sum(coverage.values()) == 9
+
+
+def test_observations_preserve_distinct_conditions_at_same_url():
+    from deal_engine.market_enrichment import merge_current_observation, update_confidence
+    row = {"observations": [{"url": "https://example.com/a", "condition": "new", "price": 400},
+                             {"url": "https://example.com/b", "condition": "new", "price": 390}]}
+    merge_current_observation(row, {"url": "https://example.com/a", "condition": "used", "price": 60})
+    update_confidence(row)
+    assert {r["price"] for r in row["observations"]} == {400, 390, 60}
+
+
+def test_prior_artifact_recovery_does_not_reset_accumulated_prices(monkeypatch):
+    from scripts import macbid_market_enrich as m
+    monkeypatch.setenv("GITHUB_REPOSITORY", "XoticHaze/Scraper-Public")
+    monkeypatch.setattr(m, "_load_previous", lambda *a, **kw: None)
+    monkeypatch.setattr(m, "prior_public_artifacts", lambda name: [{"workflow_run": {"id": 7}}])
+    recovered = {"schema": "macbid-market-values-v1", "valuations": [{"identity": "upc:B0TEST0001"}]}
+    monkeypatch.setattr(m, "read_public_artifact_json", lambda *a, **kw: recovered)
+    assert m._previous_state({}, timeout=1) == (recovered, "prior_public_artifact")
+    monkeypatch.setattr(m, "prior_public_artifacts", lambda name: [])
+    import pytest
+    with pytest.raises(RuntimeError, match="refusing to reset"):
+        m._previous_state({}, timeout=1)

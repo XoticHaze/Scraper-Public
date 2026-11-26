@@ -253,14 +253,14 @@ def merge_current_observation(
     current = [
         row
         for row in (record.get("observations") or [])
-        if str(row.get("url") or "") != url
+        if (str(row.get("url") or ""), str(row.get("condition") or "")) != (url, str(observation.get("condition") or ""))
     ]
     current.append(observation)
     record["observations"] = current
 
     history = list(record.get("observation_history") or [])
     history.append(observation)
-    dedup: dict[tuple[str, str, float], dict[str, Any]] = {}
+    dedup: dict[tuple[str, str, str, float], dict[str, Any]] = {}
     for row in history:
         price = _number(row.get("price"))
         if price is None:
@@ -268,6 +268,7 @@ def merge_current_observation(
         key = (
             str(row.get("url") or ""),
             str(row.get("observed_at") or ""),
+            str(row.get("condition") or ""),
             round(price, 2),
         )
         dedup[key] = row
@@ -289,7 +290,8 @@ def reject_price_outliers(observations: list[dict[str, Any]]) -> list[dict[str, 
 
 
 def update_confidence(record: dict[str, Any]) -> None:
-    filtered = reject_price_outliers(list(record.get("observations") or []))
+    # Keep distinct condition cohorts and raw valid evidence; never discard a cheap used offer because new prices are higher.
+    filtered = [row for row in (record.get("observations") or []) if _number(row.get("price")) is not None]
     record["observations"] = filtered
     domains = {
         source_domain(str(row.get("url") or ""))

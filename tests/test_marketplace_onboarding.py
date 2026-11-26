@@ -32,6 +32,24 @@ class MarketplaceOnboardingTests(unittest.TestCase):
         self.assertIn("seller_no_returns", row["risk"]["warnings"])
         self.assertEqual(row["seller"]["positive_feedback_pct"], "99.8")
 
+    def test_ebay_protected_offer_evidence_remains_non_authoritative(self):
+        item = self.ebay()
+        item["seller"] = {"username": "example", "feedbackScore": 5000, "feedbackPercentage": "99.8"}
+        item["localizedAspects"] = [{"name":"Brand","value":"Example"}, {"name":"MPN","value":"MODEL-123"}]
+        item["returnTerms"] = {"returnsAccepted": True, "returnPeriod": {"unit":"DAY","value":30}}
+        item["estimatedAvailabilities"] = [{"estimatedAvailabilityStatus":"IN_STOCK"}]
+        item["buyingOptions"] = ["FIXED_PRICE"]
+        item["shippingOptions"] = [{"shippingCost":{"value":"1","currency":"EUR"}},
+                                   {"shippingCost":{"value":"6.50","currency":"USD"}}]
+        row = normalize_ebay_item(item, observed_at=STAMP)
+        self.assertEqual(row["seller"]["positive_feedback_pct"], "99.8")
+        self.assertEqual(row["shipping_min"], 6.5)
+        self.assertEqual(row["return_days"], 30)
+        self.assertEqual(row["availability"], "in_stock")
+        self.assertEqual(row["product_identity"]["model_values"], ["MODEL-123"])
+        self.assertFalse(row["live_verified"])
+        self.assertEqual(row["all_in_status"], "incomplete_shipping_tax_unknown")
+
     def test_ebay_good_feedback_does_not_verify_authenticity(self):
         item = self.ebay()
         item["localizedAspects"] = [{"name": "Model", "value": "A3055"}]
