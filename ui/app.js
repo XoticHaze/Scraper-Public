@@ -371,6 +371,14 @@ function historicalAcquisitionMarkup(product, lot) {
   return `<div class="verify-box"><strong>Historical acquisition evidence</strong>${rows}${links ? `<p class="muted">Recent verified hammer prices (source links)</p>${links}` : ""}<p class="muted">Same exact identity, location and condition only. Older selected and recovered scopes are descriptive, not prospective training evidence. ${Number(coverage.complete_days || 0)} hourly-covered UTC days in retained scope; at least 30 consecutive hourly-covered days and 20 comparable prior verified sales required for chronological evaluation. No sale probability or expected wait inferred.</p></div>`;
 }
 
+
+function modelEvidenceMarkup(product) {
+  const e = product.model_evidence;
+  if (!e) return '';
+  const links = (e.sources || []).filter(s => /^https:\/\//i.test(s.url || '')).map(s => `<a href="${escapeHtml(s.url)}" target="_blank" rel="noreferrer">${escapeHtml(s.label)}</a>`).join(' · ');
+  return `<div class="verify-box"><strong>Model evidence · ${escapeHtml(e.brand)} ${escapeHtml(e.model)}</strong><div class="cost-row"><span>Water feed</span><strong>${escapeHtml(e.water_feed)}</strong></div><div class="cost-row"><span>Ice type / rated output</span><strong>${escapeHtml(e.ice_type || 'Unknown')} / ${e.rated_lb_day == null ? 'Unknown' : escapeHtml(e.rated_lb_day) + ' lb/day'}</strong></div><div class="cost-row"><span>Recommended inlet pressure</span><strong>${e.recommended_psi == null ? 'Not established' : escapeHtml(e.recommended_psi) + ' PSI'}</strong></div><p class="muted">${escapeHtml(e.status)} · ${escapeHtml(e.identity_basis)}. ${escapeHtml(e.note)}</p>${links ? `<div class="research-sources">${links}</div>` : ''}</div>`;
+}
+
 function compatibilityMarkup(product) {
   const compatibility = product.compatibility || {};
   const status = compatibility.status || 'unknown';
@@ -503,6 +511,7 @@ function openDetails(row) {
       ${localProtectedQuoteMarkup()}
       ${observedBidMarkup(lot)}
       ${historicalAcquisitionMarkup(product, lot)}
+      ${modelEvidenceMarkup(product)}
       ${compatibilityMarkup(product)}
       <div class="plan-box">
         <strong>Your plan · browser-local</strong>

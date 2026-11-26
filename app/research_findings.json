@@ -1,7 +1,7 @@
 {
   "schema": "macbid-research-findings-v1",
-  "version": 1,
-  "updated_at": "2026-09-09",
+  "version": 2,
+  "updated_at": "2026-11-26",
   "findings": [
     {
       "identity": "upc:796435814533",
@@ -9,7 +9,10 @@
       "model": "Optoma UHD35STx",
       "note": "Exact UPC resolves to a true 4K UHD short-throw gaming projector: 3840x2160, 3,600 lumens, lamp light source. Verify lamp hours, optics, remote and completeness before setting a final max bid.",
       "sources": [
-        {"label": "Optoma official", "url": "https://www.optomausa.com/product/uhd35stx"}
+        {
+          "label": "Optoma official",
+          "url": "https://www.optomausa.com/product/uhd35stx"
+        }
       ]
     },
     {
@@ -17,9 +20,14 @@
       "status": "NOT NATIVE 4K",
       "model": "VOPLLS G3 Google TV Projector",
       "note": "Model resolution shows native 1920x1080 with 3840x2160 input/support. Useful budget smart projector candidate, but it should not rank in the native-4K hunt beside the Optoma.",
-      "suppress_hunts": ["4k-projectors"],
+      "suppress_hunts": [
+        "4k-projectors"
+      ],
       "sources": [
-        {"label": "Model specifications", "url": "https://www.u-buy.com.au/product/QPGE1VBI8-voplls-google-tv-netflix-smart-projector-with-wifi-and-bluetooth-proyector-voice-control-1200-ansi-projector-4k-support-dolby-audio-1080p"}
+        {
+          "label": "Model specifications",
+          "url": "https://www.u-buy.com.au/product/QPGE1VBI8-voplls-google-tv-netflix-smart-projector-with-wifi-and-bluetooth-proyector-voice-control-1200-ansi-projector-4k-support-dolby-audio-1080p"
+        }
       ]
     },
     {
@@ -28,7 +36,10 @@
       "model": "LG UltraGear 45GX900A-B",
       "note": "Identity resolves to a 45-inch 800R curved OLED WQHD 240Hz gaming monitor. High-value fit for the large gaming-monitor lane, but panel damage, burn-in and missing-stand risk deserve a larger open-box discount.",
       "sources": [
-        {"label": "LG official", "url": "https://www.lg.com/us/monitors/lg-45gx900a-b-gaming-monitor"}
+        {
+          "label": "LG official",
+          "url": "https://www.lg.com/us/monitors/lg-45gx900a-b-gaming-monitor"
+        }
       ]
     },
     {
@@ -36,9 +47,14 @@
       "status": "CURVED · NOT LARGE",
       "model": "Samsung Odyssey G55C 32-inch",
       "note": "Verified as the 32-inch Odyssey G55C, 2560x1440, 165Hz, 1000R curved. Keep it in Curved Monitors, but suppress it from the 34-inch-plus Large Gaming Monitor intent.",
-      "suppress_hunts": ["large-gaming-monitors"],
+      "suppress_hunts": [
+        "large-gaming-monitors"
+      ],
       "sources": [
-        {"label": "Current model reference", "url": "https://slickdeals.net/f/19981761-199-99-32-samsung-odyssey-g55c-2560x1440-165hz-1ms-curved-gaming-monitor-at-amazon"}
+        {
+          "label": "Current model reference",
+          "url": "https://slickdeals.net/f/19981761-199-99-32-samsung-odyssey-g55c-2560x1440-165hz-1ms-curved-gaming-monitor-at-amazon"
+        }
       ]
     },
     {
@@ -46,9 +62,14 @@
       "status": "PREMIUM TECH · NOT LARGE",
       "model": "Samsung Odyssey OLED G8 G81SF 27-inch",
       "note": "Verified as a 27-inch 4K QD-OLED, 240Hz G81SF. Very interesting tech candidate, but it does not satisfy the large-monitor size intent and is therefore suppressed from that lane.",
-      "suppress_hunts": ["large-gaming-monitors"],
+      "suppress_hunts": [
+        "large-gaming-monitors"
+      ],
       "sources": [
-        {"label": "Model specifications", "url": "https://www.desertcart.us/products/717882148-samsung-27-inch-odyssey-qd-oled-g8-g81sf-4k-240hz-gaming-monitor-0-03ms-response-time-displayhdr-true-black-400-amd-freesync-premium-pro-ergonomic-stand-ls27fg810snxza-2025"}
+        {
+          "label": "Model specifications",
+          "url": "https://www.desertcart.us/products/717882148-samsung-27-inch-odyssey-qd-oled-g8-g81sf-4k-240hz-gaming-monitor-0-03ms-response-time-displayhdr-true-black-400-amd-freesync-premium-pro-ergonomic-stand-ls27fg810snxza-2025"
+        }
       ]
     },
     {
@@ -56,9 +77,14 @@
       "status": "CURVED · NOT LARGE",
       "model": "Dell S2722DGM 27-inch",
       "note": "ASIN resolves to the 27-inch S2722DGM QHD 165Hz curved gaming monitor. Keep it in Curved Monitors, but it does not satisfy the 34-inch-plus large-monitor preference.",
-      "suppress_hunts": ["large-gaming-monitors"],
+      "suppress_hunts": [
+        "large-gaming-monitors"
+      ],
       "sources": [
-        {"label": "Dell model reference", "url": "https://www.dell.com/en-us/shop/dell-27-curved-gaming-monitor-s2722dgm/apd/210-azzp/monitors-monitor-accessories"}
+        {
+          "label": "Dell model reference",
+          "url": "https://www.dell.com/en-us/shop/dell-27-curved-gaming-monitor-s2722dgm/apd/210-azzp/monitors-monitor-accessories"
+        }
       ]
     },
     {
@@ -67,7 +93,10 @@
       "model": "Klipsch The Three Plus",
       "note": "The ASIN resolves to Klipsch The Three Plus (model 1064667), not the One II named in the MAC.BID title. Treat the ASIN/model identity as the stronger pricing reference and verify the physical label/photo before bidding.",
       "sources": [
-        {"label": "The Three Plus model reference", "url": "https://device.report/klipsch/1064667"}
+        {
+          "label": "The Three Plus model reference",
+          "url": "https://device.report/klipsch/1064667"
+        }
       ]
     },
     {
@@ -76,8 +105,14 @@
       "model": "TP-Link Tapo C210 family / 2-pack listing",
       "note": "The Tapo C210 family supports local RTSP/ONVIF, making it a strong Home Assistant candidate through the ONVIF integration. Confirm exact pack/model, factory reset and local-stream availability on the auction units.",
       "sources": [
-        {"label": "Tapo C210", "url": "https://www.tapo.com/us/product/smart-camera/tapo-c210/"},
-        {"label": "Home Assistant ONVIF", "url": "https://www.home-assistant.io/integrations/onvif/"}
+        {
+          "label": "Tapo C210",
+          "url": "https://www.tapo.com/us/product/smart-camera/tapo-c210/"
+        },
+        {
+          "label": "Home Assistant ONVIF",
+          "url": "https://www.home-assistant.io/integrations/onvif/"
+        }
       ]
     },
     {
@@ -86,8 +121,14 @@
       "model": "Aqara Smart Lock U300",
       "note": "U300 is a Matter-over-Thread smart lock and is a strong Home Assistant fit through Matter. Verify factory reset, Thread/Matter commissioning state and hardware completeness before bidding.",
       "sources": [
-        {"label": "Aqara U300", "url": "https://us.aqara.com/products/smart-lock-u300"},
-        {"label": "Home Assistant Matter", "url": "https://www.home-assistant.io/integrations/matter/"}
+        {
+          "label": "Aqara U300",
+          "url": "https://us.aqara.com/products/smart-lock-u300"
+        },
+        {
+          "label": "Home Assistant Matter",
+          "url": "https://www.home-assistant.io/integrations/matter/"
+        }
       ]
     },
     {
@@ -96,7 +137,10 @@
       "model": "Schlage Connect Smart Deadbolt",
       "note": "Schlage Connect exists in multiple radio variants. Confirm the exact Z-Wave/Zigbee model from label/model number before calling it HAOS-compatible; a Z-Wave variant is the preferred local fit.",
       "sources": [
-        {"label": "Schlage Connect support", "url": "https://www.schlage.com/en/home/support/faqs/schlage-connect.html"}
+        {
+          "label": "Schlage Connect support",
+          "url": "https://www.schlage.com/en/home/support/faqs/schlage-connect.html"
+        }
       ]
     },
     {
@@ -112,6 +156,120 @@
       "model": "CRAFTSMAN Portable Table Saw",
       "note": "Good tool/resale-shaped candidate because it can combine useful personal value, local pickup economics and low competition. Exact model, included fence/guard/blade hardware and real market value still need verification.",
       "sources": []
+    }
+  ],
+  "model_evidence": [
+    {
+      "brand": "Gevi",
+      "model": "IMNA0",
+      "watch": true,
+      "ice_type": "nugget",
+      "rated_lb_day": 30,
+      "water_feed": "Variant confirmation required",
+      "status": "VERIFY AUTO-REFILL VARIANT",
+      "note": "Manufacturer offers direct-water refill configurations. Confirm the exact auto-refill variant and inlet hardware; minimum and maximum inlet pressure remain unverified. No RO compatibility or physical condition established.",
+      "sources": [
+        {
+          "label": "Manufacturer support",
+          "url": "https://gevi.com/pages/support-for-IMNA0"
+        },
+        {
+          "label": "Manufacturer product",
+          "url": "https://gevi.com/products/countertop-nugget-ice-maker-and-machine-for-home"
+        }
+      ]
+    },
+    {
+      "brand": "Gevi",
+      "model": "IMNB0",
+      "watch": true,
+      "ice_type": "nugget",
+      "rated_lb_day": null,
+      "water_feed": "Auto or manual variant",
+      "status": "VERIFY AUTO-REFILL VARIANT",
+      "note": "Both refill configurations are offered. Model family alone is insufficient to establish the fitted inlet or pressure requirements.",
+      "sources": [
+        {
+          "label": "Manufacturer support",
+          "url": "https://gevi.com/pages/support-for-IMNB0"
+        },
+        {
+          "label": "Manufacturer variant options",
+          "url": "https://gevi.com/products/gevi-household-countertop-nugget-ice-maker-with-viewing-window"
+        }
+      ]
+    },
+    {
+      "brand": "Avalon",
+      "model": "A-ICE2",
+      "watch": true,
+      "ice_type": "nugget",
+      "rated_lb_day": 38,
+      "water_feed": "Direct line; supplied regulator",
+      "status": "DIRECT FEED DOCUMENTED",
+      "note": "Installation guide describes connection to a cold-water line and use of a pressure regulator. Numeric minimum and maximum pressures were not established. Check regulator, filters, tubing and operating condition; RO supply must be evaluated separately.",
+      "sources": [
+        {
+          "label": "Manufacturer product and installation guide",
+          "url": "https://www.avalonh2o.com/products/avalon-a-ice2"
+        },
+        {
+          "label": "Manufacturer user guide",
+          "url": "https://www.avalonh2o.com/cdn/shop/files/A-ICE_2.pdf?v=14359965874503301712"
+        }
+      ]
+    },
+    {
+      "brand": "Whynter",
+      "model": "IMC-491DC",
+      "identities": [
+        "upc:850956003668"
+      ],
+      "watch": true,
+      "ice_type": "bullet",
+      "rated_lb_day": 49,
+      "water_feed": "Manual or direct line",
+      "recommended_psi": 58,
+      "status": "DIRECT FEED DOCUMENTED",
+      "note": "Manufacturer manual recommends 58 PSI, not a stated minimum. No permanent drain required; maintenance drain is present. Basket does not maintain frozen ice. Verify unit, pressure under flow, inlet hardware and leaks; RO fit is not established.",
+      "sources": [
+        {
+          "label": "Manufacturer specifications and manual",
+          "url": "https://whynter.com/product/imc-491dc/"
+        }
+      ]
+    },
+    {
+      "brand": "Aeitto",
+      "model": "CB22C",
+      "watch": true,
+      "water_feed": "Unverified",
+      "status": "EXACT MODEL EVIDENCE NEEDED",
+      "note": "Manufacturer evidence for exact inlet variant, pressure range and ice output has not been established. Do not inherit specifications from visually similar Aeitto models.",
+      "sources": []
+    },
+    {
+      "brand": "SenCre",
+      "model": "BXZ002",
+      "watch": true,
+      "water_feed": "Unverified",
+      "status": "EXACT MODEL EVIDENCE NEEDED",
+      "note": "Exact manufacturer documentation and pressure range remain unverified. Do not infer direct feed from title or family alone.",
+      "sources": []
+    },
+    {
+      "brand": "Gevi",
+      "model": "GIMN-1102",
+      "watch": false,
+      "water_feed": "Unverified",
+      "status": "RECALL CHECK REQUIRED",
+      "note": "CPSC recall covers affected units of this model manufactured before June 1, 2022. Confirm manufacture date and official remedy; do not treat an affected unrepaired unit as purchase-ready.",
+      "sources": [
+        {
+          "label": "CPSC recall notice",
+          "url": "https://www.cpsc.gov/Recalls/2024/Countertop-Nugget-Ice-Makers-Recalled-Due-to-Laceration-Hazard-Sold-Exclusively-through-Amazon-Distributed-by-Far-Success-Trading"
+        }
+      ]
     }
   ]
 }

@@ -80,7 +80,7 @@
     return researched + semantic * 10 + marketVerified + marketDiscount - Number(lot.unique_bidders || 0) * 2;
   };
   const researchMarkup = (product) => {
-    const finding = researchMap.get(product.identity);
+    const finding = researchMap.get(product.identity) || product.model_evidence;
     if (!finding) return '';
     const sourceLinks = (finding.sources || []).map((source) => {
       const url = safeUrl(source.url);
@@ -177,6 +177,17 @@
     grid.className = 'finds-grid';
     if (!products.length) grid.innerHTML = '<div class="empty-lane">No current candidates in this snapshot.</div>';
     else products.slice(0, 8).forEach((product) => grid.append(card(product, profileId)));
+    if (profileId === 'ice-makers-exact-direct-refill') {
+      const evidence = document.createElement('div');
+      evidence.id = 'ice-model-evidence';
+      evidence.className = 'research-note';
+      const rows = (catalog.model_watch_evidence || []).map(e => {
+        const links = (e.sources || []).map(s => {const url = safeUrl(s.url); return url ? `<a href="${esc(url)}" target="_blank" rel="noreferrer">${esc(s.label)}</a>` : '';}).filter(Boolean).join(' · ');
+        return `<div class="research-note"><strong>${esc(e.brand)} ${esc(e.model)} · ${esc(e.status)}</strong><p>${esc(e.water_feed)} · ${esc(e.note)}</p>${links}</div>`;
+      }).join('');
+      evidence.innerHTML = '<h3>Model watch evidence (not current inventory)</h3>' + rows;
+      section.append(evidence);
+    }
     section.append(grid);
     root.append(section);
   }
