@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import time
 import urllib.request
+from urllib.parse import urlparse, unquote
 from pathlib import Path
 from typing import Any
 
@@ -97,7 +98,7 @@ def _candidate_product(lot: dict[str, Any]) -> dict[str, Any]:
 
 
 def _candidate_token(lot: dict[str, Any]) -> str | None:
-    for value in (lot.get("upc"), lot.get("model_number"), lot.get("model")):
+    for value in (lot.get("upc"), lot.get("asin"), lot.get("model_number"), lot.get("model")):
         token = str(value or "").strip()
         if identity_kind(token) in {"asin", "gtin"}:
             return token
@@ -138,11 +139,29 @@ def _candidate_rows(
             )
             if pool_index == 1 and not matches:
                 score += 10.0
-            ranked.append((score, {**lot, "_candidate_identity": identity, "_candidate_token": token}))
+            ranked.append((score, {**lot, "_candidate_identity": identity, "_candidate_token": token, "_candidate_profiles": sorted(matches)}))
             seen.add(identity)
 
     ranked.sort(key=lambda pair: pair[0], reverse=True)
-    return [row for _, row in ranked[:limit]]
+    # Reserve one slot for rotating non-primary hunts, without displacing the pilot.
+    if limit <= 0:
+        return []
+    primary = set((profile_priority or {}).get("primary") or [])
+    pilot = set((profile_priority or {}).get("pilot") or [])
+    # Guarantee a bounded pilot allocation, while leaving most capacity for other hunts.
+    pilot_rows = [row for _, row in ranked if pilot.intersection(row["_candidate_profiles"])]
+    selected = pilot_rows[:min(3, max(1, limit // 4))]
+    selected_ids = {row["_candidate_identity"] for row in selected}
+    selected += [row for _, row in ranked if row["_candidate_identity"] not in selected_ids][:limit - len(selected)]
+    if limit >= 2 and len(ranked) > limit:
+        selected_ids = {row["_candidate_identity"] for row in selected}
+        alternatives = [row for _, row in ranked if row["_candidate_identity"] not in selected_ids and row["_candidate_profiles"] and not primary.intersection(row["_candidate_profiles"])]
+        if alternatives:
+            profile_ids = sorted({p for row in alternatives for p in row["_candidate_profiles"]})
+            target = profile_ids[int(time.time() // 1800) % len(profile_ids)]
+            if len(selected) > min(3, max(1, limit // 4)):
+                selected[-1] = next(row for row in alternatives if target in row["_candidate_profiles"])
+    return selected
 
 
 def _provider_url(provider: dict[str, Any], token: str) -> str:
@@ -152,6 +171,10 @@ def _provider_url(provider: dict[str, Any], token: str) -> str:
 def _provider_supports(provider: dict[str, Any], token: str) -> bool:
     kind = identity_kind(token)
     return kind is not None and kind in set(provider.get("identity_kinds") or [])
+
+
+def _exact_path_token(url: str, token: str) -> bool:
+    return token.lower() in {unquote(part).lower() for part in urlparse(url).path.split("/") if part}
 
 
 def _extract_observation(
@@ -167,8 +190,7 @@ def _extract_observation(
         return None
     final_url, html = fetched
     identity_in_url = bool(provider.get("identity_in_url")) and (
-        normalize_identity(token) in normalize_identity(final_url)
-        or normalize_identity(token) in normalize_identity(url)
+        _exact_path_token(final_url, token)
     )
     if provider.get("identity_in_url") and not identity_in_url:
         print(f"MARKET_IDENTITY=REDIRECT_REJECT provider={provider.get('id')} token={token}")
@@ -338,6 +360,7 @@ def main() -> int:
             "attempted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "attempted_epoch": int(time.time()),
             "successful": bool(observations),
+            "profiles": candidate["_candidate_profiles"],
             "providers": [
                 str(provider.get("id"))
                 for provider in providers
@@ -378,6 +401,10 @@ def main() -> int:
         "provider_searches": searched,
         "promoted": promoted,
         "observations_added": observations_added,
+        "provider_misses": searched - observations_added,
+        "refresh_misses": refresh_attempted - refreshed,
+        "previous_runtime_loaded": previous is not None,
+        "candidate_profiles": {str(profile["id"]): sum(str(profile["id"]) in c["_candidate_profiles"] for c in candidates) for profile in (hunt_doc.get("profiles") or [])},
     }
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)

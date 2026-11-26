@@ -1,6 +1,6 @@
 {
   "schema": "macbid-market-enrichment-v1",
-  "version": 3,
+  "version": 5,
   "enabled": true,
   "live_previous_url": "https://xotichaze.github.io/Scraper-Public/market-values.json",
   "max_candidates_per_run": 12,
@@ -46,6 +46,9 @@
   "retry_after_hours": 24,
   "profile_priority": {
     "primary": [
+      "ice-makers-exact-direct-refill",
+      "ice-makers",
+      "refrigerators-ice-maker",
       "4k-projectors",
       "curved-monitors",
       "large-gaming-monitors",
@@ -70,6 +73,11 @@
     ],
     "fallback": [
       "resale-watch"
+    ],
+    "pilot": [
+      "ice-makers-exact-direct-refill",
+      "ice-makers",
+      "refrigerators-ice-maker"
     ]
   },
   "energy_priority": {

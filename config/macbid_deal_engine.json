@@ -35,5 +35,6 @@
     "https://www.mac.bid/search?q=smart%20lock"
   ],
   "live_catalog_fallback_url": "https://xotichaze.github.io/Scraper-Public/catalog.json",
-  "live_catalog_fallback_max_age_seconds": 10800
+  "live_catalog_fallback_max_age_seconds": 10800,
+  "enforce_stated_retail_floor": false
 }

@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from playwright.sync_api import Request, sync_playwright
 
 from deal_engine.catalog_fallback import fallback_catalog_is_usable, inventory_from_ui_catalog
 from deal_engine.scoring import score_lot
@@ -160,7 +159,7 @@ def list_filter(field: str, values: list[str]) -> str:
 def catalog_filter(
     locations: list[str],
     conditions: list[str],
-    min_retail: float,
+    min_retail: float | None,
     include_pallets: bool,
     now_epoch: int,
 ) -> str:
@@ -169,8 +168,9 @@ def catalog_filter(
         f"expected_closing_utc:>{now_epoch}",
         list_filter("auction_location", locations),
         list_filter("condition", conditions),
-        f"retail_price:>={min_retail:g}",
     ]
+    if min_retail is not None:
+        parts.append(f"retail_price:>={min_retail:g}")
     if not include_pallets:
         parts.append("is_pallet:=false")
     return " && ".join(parts)
@@ -193,6 +193,8 @@ def exact_close_key(lot: dict[str, Any]) -> float:
 
 
 def main() -> int:
+    from playwright.sync_api import Request, sync_playwright
+
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     locations = [str(v) for v in config["locations"]]
     bootstrap_location_url = str(config.get("bootstrap_location_url") or "https://www.mac.bid/")
@@ -330,7 +332,7 @@ def main() -> int:
             selected_search["filter_by"] = catalog_filter(
                 locations,
                 preferred_condition_list,
-                min_retail,
+                min_retail if config.get("enforce_stated_retail_floor", False) else None,
                 include_pallets,
                 now_epoch,
             )
@@ -429,7 +431,7 @@ def main() -> int:
             reason = "excluded_condition"
         elif condition not in preferred_conditions:
             reason = "non_preferred_condition"
-        elif retail_num is None or retail_num < min_retail:
+        elif config.get("enforce_stated_retail_floor", False) and (retail_num is None or retail_num < min_retail):
             reason = "low_or_missing_stated_retail"
 
         if reason:
