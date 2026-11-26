@@ -120,3 +120,21 @@ def test_stale_external_value_does_not_issue_max_bid():
     assert derived["market_value_authoritative"] is False
     assert derived["max_all_in"] is None
     assert derived["verified_max_bid"] is None
+
+
+def test_protected_offer_comparison_requires_exact_live_and_complete_costs():
+    from deal_engine.valuation import compare_protected_offers
+    product = {"brand": "Aeitto", "model": "CB22C"}
+    offer = {"brand": "Aeitto", "model": "CB22C", "condition": "open_box", "price": 100,
+             "shipping": 10, "mandatory_fees": 0, "currency": "USD", "live_verified": True,
+             "seller_verified": True, "return_days": 30, "availability": "in_stock",
+             "observed_at": "2026-11-26", "url": "https://example.com/offer", "policy_url": "https://example.com/policy"}
+    kwargs = dict(as_of="2026-11-26", sales_tax_rate=.0825, premium_rate=.15, lot_fee=3)
+    result = compare_protected_offers(product, [offer, dict(offer, price=1, availability="out_of_stock"),
+                                      dict(offer, price=2, model="CB22D")], **kwargs)
+    assert len(result["offers"]) == 2
+    assert result["best_protected_offer"]["price"] == 100
+    assert result["max_auction_all_in"] == 59.54
+    for change in ({"live_verified": False}, {"shipping": None}, {"return_days": None},
+                   {"observed_at": "2026-11-23"}, {"observed_at": "2026-11-27"}):
+        assert compare_protected_offers(product, [dict(offer, **change)], **kwargs)["max_auction_all_in"] is None

@@ -166,5 +166,43 @@
       "risk_note": "Identity corrected from MAC.BID title; pricing still needs exact current observations.",
       "observations": []
     }
+  ],
+  "protected_offers": [
+    {
+      "brand": "Aeitto",
+      "model": "CB22C",
+      "source_label": "VIP Outlet",
+      "url": "https://vipoutlet.com/collections/category-home-appliances-major-appliances/products/aeitto-cb22c-nugget-ice-maker-countertop-55-lbs-day-chewable-ice-maker-rapid-ice-release-in-5-mins-auto-water-refill-self-cleaning-stainless-steel-housing-ice-machine",
+      "condition": "new",
+      "price": 118,
+      "shipping": 0,
+      "mandatory_fees": null,
+      "currency": "USD",
+      "availability": "cached_in_stock",
+      "live_verified": false,
+      "seller_verified": false,
+      "return_days": null,
+      "warranty_days": null,
+      "observed_at": "2026-11-26",
+      "evidence_note": "Cached retailer page showed damaged box, free shipping and add to cart; checkout and item-specific return eligibility not verified."
+    },
+    {
+      "brand": "Aeitto",
+      "model": "CB22C",
+      "source_label": "eBay / VIP Outlet",
+      "url": "https://www.ebay.com/itm/127918364055",
+      "condition": "open_box",
+      "price": 130,
+      "shipping": 0,
+      "mandatory_fees": null,
+      "currency": "USD",
+      "availability": "out_of_stock",
+      "live_verified": false,
+      "seller_verified": false,
+      "return_days": 30,
+      "warranty_days": null,
+      "observed_at": "2026-11-26",
+      "evidence_note": "Cached listing explicitly out of stock; not a current alternative."
+    }
   ]
 }

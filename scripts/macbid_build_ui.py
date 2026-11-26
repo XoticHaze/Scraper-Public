@@ -10,7 +10,7 @@ from typing import Any
 from deal_engine.compatibility import compatibility_allows_hunt, evaluate_compatibility
 from deal_engine.grouping import product_identity
 from deal_engine.hunts import match_profiles
-from deal_engine.valuation import derive_market_valuation, summarize_market_value
+from deal_engine.valuation import derive_market_valuation, summarize_market_value, compare_protected_offers
 from scripts.vehicle_price_history import build_and_write
 
 REPORT = Path("results/macbid-deal-engine.json")
@@ -208,6 +208,14 @@ def main() -> int:
                     float(current_new["median"]) * float(market_defaults.get("open_box_fallback_ratio", 0.75)),
                     2,
                 )
+
+        protected = compare_protected_offers(product, market_doc.get("protected_offers") or [],
+            as_of=time.strftime("%Y-%m-%d", time.gmtime(final_epoch)),
+            sales_tax_rate=float(policy.get("sales_tax_rate", 0.0)),
+            premium_rate=float(policy.get("buyer_premium_rate", 0.15)),
+            lot_fee=float(policy.get("lot_fee", 3.0)))
+        if protected["offers"]:
+            product["protected_offer_comparison"] = protected
 
         best_value_lot = max(
             lots,

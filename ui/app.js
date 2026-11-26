@@ -249,6 +249,14 @@ function renderCard(row) {
   return node;
 }
 
+function protectedOfferMarkup(product) {
+  const comparison = product.protected_offer_comparison;
+  if (!comparison?.offers?.length) return '';
+  const rows = comparison.offers.filter(o => /^https:\/\//i.test(o.url || '')).map(o =>
+    `<div class="cost-row"><a href="${escapeHtml(o.url)}" target="_blank" rel="noreferrer">${escapeHtml(o.source_label || 'External offer')}</a><strong>${money(o.price)} · ${escapeHtml(o.availability || 'unknown')}</strong></div><p class="muted">${escapeHtml(o.condition || 'unknown condition')} · Shipping ${money(o.shipping)} · Fees ${money(o.mandatory_fees)} · Est. delivered ${money(o.estimated_delivered_total)} · Returns ${o.return_days ?? 'unknown'} days · Warranty ${o.warranty_days ?? 'unknown'} days · ${o.eligible ? 'Protected comparator' : 'Not verified for bidding'} · ${escapeHtml(o.evidence_note || '')}</p>`).join('');
+  return `<div class="verify-box"><strong>Protected purchase alternatives</strong>${rows}<div class="cost-row"><span>50% delivered-cost auction ceiling</span><strong>${money(comparison.max_auction_all_in)}</strong></div><div class="cost-row"><span>Max hammer before additional risk adjustments</span><strong>${money(comparison.max_auction_hammer)}</strong></div><p class="muted">No ceiling from cached, unavailable or incomplete offers. Estimated tax; verify checkout and condition.</p></div>`;
+}
+
 function verifiedMarkup(product, lot) {
   const status = product.market_price_status || lot.market_price_status || 'unverified';
   const market = product.market_value || {};
@@ -420,6 +428,7 @@ function openDetails(row) {
       </div>
       <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. MAC.BID stated retail is reference-only and does not establish savings or a purchase ceiling.</p>
       ${verifiedMarkup(product, lot)}
+      ${protectedOfferMarkup(product)}
       ${compatibilityMarkup(product)}
       <div class="plan-box">
         <strong>Your plan · browser-local</strong>

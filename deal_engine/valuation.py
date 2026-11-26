@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from statistics import mean, median
+from math import isfinite, floor
 from typing import Any
 
 SECONDARY_CONDITIONS = {"open_box", "used", "refurbished", "certified_refurbished"}
@@ -220,3 +221,44 @@ def derive_market_valuation(
         "verified_discount_pct": round(discount_pct, 1) if discount_pct is not None else None,
         "verified_savings": _round_money(savings),
     }
+
+
+def compare_protected_offers(product: dict[str, Any], offers: list[dict[str, Any]], *,
+                             as_of: str, sales_tax_rate: float, premium_rate: float,
+                             lot_fee: float) -> dict[str, Any]:
+    """Compare exact, delivered alternatives; cached and unavailable offers are context only."""
+    def norm(value):
+        return str(value or "").strip().casefold()
+    def cost(value):
+        n = _number(value)
+        return n if n is not None and isfinite(n) and n >= 0 else None
+    rows = []
+    for offer in offers:
+        exact_id = bool(offer.get("identity") and offer["identity"] == product.get("identity"))
+        exact_model = bool(norm(product.get("brand")) and norm(product.get("model"))
+                           and norm(offer.get("brand")) == norm(product["brand"])
+                           and norm(offer.get("model")) == norm(product["model"]))
+        if not (exact_id or exact_model):
+            continue
+        price, shipping, fees = (cost(offer.get(k)) for k in ("price", "shipping", "mandatory_fees"))
+        delivered = round((price + shipping + fees) * (1 + sales_tax_rate), 2) if None not in (price, shipping, fees) else None
+        freshness = market_freshness(offer.get("observed_at"), as_of=as_of, fresh_days=1, stale_after_days=1)
+        return_days = cost(offer.get("return_days"))
+        eligible = bool(delivered is not None and price > 0 and offer.get("live_verified") is True
+                        and offer.get("availability") == "in_stock" and offer.get("seller_verified") is True
+                        and return_days and freshness["freshness"] == "fresh"
+                        and str(offer.get("observed_at", ""))[:10] <= as_of[:10]
+                        and offer.get("condition") in {"new", "open_box", "used", "refurbished", "certified_refurbished"}
+                        and offer.get("currency") == "USD"
+                        and str(offer.get("url", "")).startswith("https://")
+                        and str(offer.get("policy_url", "")).startswith("https://"))
+        rows.append({**{k: offer.get(k) for k in ("source_label", "url", "policy_url", "condition", "price",
+                    "shipping", "mandatory_fees", "return_days", "warranty_days", "availability", "observed_at",
+                    "evidence_note")}, "estimated_delivered_total": delivered, "eligible": eligible})
+    eligible_rows = [r for r in rows if r["eligible"]]
+    best = min(eligible_rows, key=lambda r: r["estimated_delivered_total"]) if eligible_rows else None
+    # The 50% threshold is a maximum, not a claim that an untested auction item is worth it.
+    ceiling = floor(best["estimated_delivered_total"] * 50) / 100 if best else None
+    hammer = floor(max(0, (ceiling / (1 + sales_tax_rate) - lot_fee) / (1 + premium_rate)) * 100) / 100 if ceiling is not None else None
+    return {"offers": rows, "best_protected_offer": best, "max_auction_all_in": ceiling,
+            "max_auction_hammer": hammer, "tax_basis": "estimated local tax on price, shipping and mandatory fees"}
