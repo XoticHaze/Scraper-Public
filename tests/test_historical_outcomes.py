@@ -44,3 +44,28 @@ def test_snapshot_observed_open_dedupe_and_fallback():
     assert "account_email" not in out["observations"][0]
     report["scan"]["degraded_inventory_source"] = True
     assert build_snapshot(report, catalog)["observations"] == []
+
+
+def test_walk_forward_never_uses_future_verifications_or_missing_coverage():
+    from deal_engine.historical_outcomes import walk_forward_sold_prices
+    day = 86400
+    base = day * 100
+    def row(i, observed, closed, known, price):
+        return {"auction_id": str(i), "lot_number": "A", "identity": "upc:ABC",
+                "auction_location": "San Antonio", "condition": "LIKE NEW",
+                "training_eligible": True, "status": "closed_sold_verified",
+                "reconciliation_level": "lot_detail_reconciled", "source_url": "https://www.mac.bid/past-auctions/1",
+                "prediction_epoch_utc": observed, "closed_epoch_utc": closed,
+                "verified_epoch_utc": known, "final_hammer": price}
+    rows = [row(i, base+i, base+day+i, base+day+i+1, 50) for i in range(20)]
+    cutoff = base + 40*day
+    rows.append(row(100, cutoff, cutoff+day, cutoff+day+1, 80))
+    rows.append(row(101, base, base+day, cutoff+day, 10000))
+    coverage = [base+i*day for i in range(10, 40)]
+    result = walk_forward_sold_prices(rows, complete_scan_epochs=coverage)
+    assert result["evaluated_cases"] == 1
+    assert result["cases"][0]["training_samples"] == 20
+    assert result["mean_absolute_error"] == 30
+    assert walk_forward_sold_prices(rows, complete_scan_epochs=[])["evaluated_cases"] == 0
+    with pytest.raises(ValueError):
+        walk_forward_sold_prices(rows, complete_scan_epochs=coverage, minimum_samples=1)
