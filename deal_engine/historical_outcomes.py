@@ -75,6 +75,8 @@ def walk_forward_sold_prices(rows: list[dict[str, Any]], *, complete_scan_epochs
     not proof that every closing outcome has been reconciled.
     """
     from statistics import median
+    from bisect import bisect_left
+    from collections import defaultdict
     if minimum_samples < 20 or minimum_days < 30:
         raise ValueError("minimum evidence thresholds cannot be weakened")
     def epoch(value):
@@ -97,24 +99,39 @@ def walk_forward_sold_prices(rows: list[dict[str, Any]], *, complete_scan_epochs
         if key in eligible and eligible[key] != row:
             raise ValueError("conflicting duplicate outcome")
         eligible[key] = row
+    by_cohort = defaultdict(list)
+    def cohort_key(row):
+        return tuple(row.get(k) for k in ("identity", "auction_location", "condition", "scope_id"))
+    for key, row in eligible.items():
+        by_cohort[cohort_key(row)].append((row["verified_epoch_utc"], key, row))
+    for group in by_cohort.values():
+        group.sort(key=lambda entry: entry[0])
+    index = {key: ([x[0] for x in group], group) for key, group in by_cohort.items()}
     cases = []
+    covered_all = {e // 86400 for e in complete_scan_epochs if epoch(e)}
     for key, target in sorted(eligible.items(), key=lambda item: item[1]["prediction_epoch_utc"]):
         cutoff = target["prediction_epoch_utc"]
-        cohort = tuple(target[k] for k in ("identity", "auction_location", "condition"))
-        covered = {e // 86400 for e in complete_scan_epochs if epoch(e) and e < cutoff}
+        cohort = cohort_key(target)
+        covered = covered_all
         last_full_day = cutoff // 86400 - 1
         if not all(day in covered for day in range(last_full_day - minimum_days + 1, last_full_day + 1)):
             continue
-        prior = [r["final_hammer"] for k, r in eligible.items()
-                 if k != key and tuple(r[f] for f in ("identity", "auction_location", "condition")) == cohort
-                 and r["verified_epoch_utc"] < cutoff and r["closed_epoch_utc"] < cutoff
+        timestamps, group = index[cohort]
+        prior = [r["final_hammer"] for _, k, r in group[:bisect_left(timestamps, cutoff)]
+                 if k != key and r["closed_epoch_utc"] < cutoff
                  and (not target.get("inventory_id") or r.get("inventory_id") != target["inventory_id"])]
         if len(prior) < minimum_samples:
             continue
         predicted = float(median(prior))
+        observed_hammer = target.get("observed_hammer")
+        naive_error = abs(float(observed_hammer) - target["final_hammer"]) if isinstance(observed_hammer, (int, float)) and not isinstance(observed_hammer, bool) and math.isfinite(observed_hammer) and observed_hammer >= 0 else None
         cases.append({"auction_id": key[0], "lot_number": key[1], "prediction_epoch_utc": cutoff,
                       "training_samples": len(prior), "predicted_hammer": predicted,
-                      "actual_hammer": target["final_hammer"], "absolute_error": abs(predicted-target["final_hammer"])})
+                      "actual_hammer": target["final_hammer"], "absolute_error": abs(predicted-target["final_hammer"]), "observed_bid_baseline_error": naive_error})
+    paired = [x for x in cases if x["observed_bid_baseline_error"] is not None]
     return {"eligible_outcomes": len(eligible), "evaluated_cases": len(cases),
+            "paired_baseline_cases": len(paired),
+            "paired_model_mae": round(sum(x["absolute_error"] for x in paired)/len(paired), 2) if paired else None,
+            "observed_bid_baseline_mae": round(sum(x["observed_bid_baseline_error"] for x in paired)/len(paired), 2) if paired else None,
             "mean_absolute_error": round(sum(x["absolute_error"] for x in cases)/len(cases), 2) if cases else None,
             "cases": cases, "sale_probability": None, "coverage_scope": "caller-supplied same-scope complete scans"}

@@ -1,0 +1,254 @@
+{
+  "schema": "macbid-recovered-pilot-pending-v1",
+  "coverage": "Selected title-matched ice-maker candidates from checksum-verified public archives; no closing outcome inferred. Legacy $40 stated-retail inventory scope.",
+  "sources": [
+    14986643023,
+    15023263797,
+    15086933967,
+    15091573926
+  ],
+  "pending": [
+    {
+      "auction_id": "102463",
+      "auction_number": "SAA2611-24-A1",
+      "lot_number": "3412Z",
+      "lot_id": 68447777,
+      "inventory_id": "94196994",
+      "upc": "B0H7BJQZKY",
+      "condition": "OPEN BOX",
+      "current_bid": 13,
+      "retail_price": 199.99,
+      "source_epoch_utc": 1795574930,
+      "expected_closing_utc": 1795575336,
+      "first_missing_epoch_utc": 1795611479,
+      "identity": "upc:B0H7BJQZKY",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-24-A1/lot/3412Z"
+    },
+    {
+      "auction_id": "102463",
+      "auction_number": "SAA2611-24-A1",
+      "lot_number": "3631Z",
+      "lot_id": 68450947,
+      "inventory_id": "94201480",
+      "upc": "B0H7BJQZKY",
+      "condition": "LIKE NEW",
+      "current_bid": 31,
+      "retail_price": 199.99,
+      "source_epoch_utc": 1795574930,
+      "expected_closing_utc": 1795575352,
+      "first_missing_epoch_utc": 1795611479,
+      "identity": "upc:B0H7BJQZKY",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-24-A1/lot/3631Z"
+    },
+    {
+      "auction_id": "102641",
+      "auction_number": "SAA2611-25-A1",
+      "lot_number": "4965A",
+      "lot_id": 68587709,
+      "inventory_id": "94395229",
+      "upc": "B0GK14G1ZT",
+      "condition": "LIKE NEW",
+      "current_bid": 53,
+      "retail_price": 299.99,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795656554,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0GK14G1ZT",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-25-A1/lot/4965A"
+    },
+    {
+      "auction_id": "102641",
+      "auction_number": "SAA2611-25-A1",
+      "lot_number": "1637A",
+      "lot_id": 68528404,
+      "inventory_id": "94202226",
+      "upc": "B0HGQ62JSQ",
+      "condition": "OPEN BOX",
+      "current_bid": 83,
+      "retail_price": 349.99,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795656592,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0HGQ62JSQ",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-25-A1/lot/1637A"
+    },
+    {
+      "auction_id": "102641",
+      "auction_number": "SAA2611-25-A1",
+      "lot_number": "5150A",
+      "lot_id": 68590319,
+      "inventory_id": "94398944",
+      "upc": "B0G8YXF8CT",
+      "condition": "OPEN BOX",
+      "current_bid": 31,
+      "retail_price": 399.99,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795656964,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0G8YXF8CT",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-25-A1/lot/5150A"
+    },
+    {
+      "auction_id": "102641",
+      "auction_number": "SAA2611-25-A1",
+      "lot_number": "4897A",
+      "lot_id": 68586763,
+      "inventory_id": "94393900",
+      "upc": "B0H7W5ZW82",
+      "condition": "LIKE NEW",
+      "current_bid": 19,
+      "retail_price": 299.9,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795657191,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0H7W5ZW82",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-25-A1/lot/4897A"
+    },
+    {
+      "auction_id": "103159",
+      "auction_number": "SAB2611-25-A1",
+      "lot_number": "3864F",
+      "lot_id": 68886484,
+      "inventory_id": "94817377",
+      "upc": "B0D1B1DJ5X",
+      "condition": "OPEN BOX",
+      "current_bid": 100,
+      "retail_price": 669.09,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795658035,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0D1B1DJ5X",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAB2611-25-A1/lot/3864F"
+    },
+    {
+      "auction_id": "102641",
+      "auction_number": "SAA2611-25-A1",
+      "lot_number": "2668Z",
+      "lot_id": 68434161,
+      "inventory_id": "94177324",
+      "upc": "B0HJ7W2JHH",
+      "condition": "LIKE NEW",
+      "current_bid": 16,
+      "retail_price": 99,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795662332,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0HJ7W2JHH",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-25-A1/lot/2668Z"
+    },
+    {
+      "auction_id": "102641",
+      "auction_number": "SAA2611-25-A1",
+      "lot_number": "5060A",
+      "lot_id": 68588997,
+      "inventory_id": "94397085",
+      "upc": "B0HJ7W2JHH",
+      "condition": "LIKE NEW",
+      "current_bid": 4,
+      "retail_price": 99,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795662772,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0HJ7W2JHH",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-25-A1/lot/5060A"
+    },
+    {
+      "auction_id": "102641",
+      "auction_number": "SAA2611-25-A1",
+      "lot_number": "5105A",
+      "lot_id": 68589613,
+      "inventory_id": "94397974",
+      "upc": "B0HJ7W2JHH",
+      "condition": "OPEN BOX",
+      "current_bid": 3,
+      "retail_price": 99,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795662785,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0HJ7W2JHH",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-25-A1/lot/5105A"
+    },
+    {
+      "auction_id": "102641",
+      "auction_number": "SAA2611-25-A1",
+      "lot_number": "1889Z",
+      "lot_id": 68425648,
+      "inventory_id": "94165445",
+      "upc": "B0FJWYVS31",
+      "condition": "OPEN BOX",
+      "current_bid": 4,
+      "retail_price": 59.97,
+      "source_epoch_utc": 1795646049,
+      "expected_closing_utc": 1795665400,
+      "first_missing_epoch_utc": 1795667149,
+      "identity": "upc:B0FJWYVS31",
+      "auction_location": "San Antonio",
+      "hunt_ids": [
+        "ice-makers"
+      ],
+      "status": "missing_unresolved",
+      "scope_id": "recovered-legacy-retail-floor-40",
+      "macbid_url": "https://www.mac.bid/auction/SAA2611-25-A1/lot/1889Z"
+    }
+  ]
+}

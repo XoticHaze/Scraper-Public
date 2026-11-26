@@ -59,6 +59,8 @@
       button.title = (profile.verification || []).length
         ? `Verification: ${(profile.verification || []).join(', ')}`
         : profile.label;
+      const history = profile.history_coverage;
+      if (history) button.title += ` · history: ${Number(history.verified_sold || 0)} verified sold, ${Number(history.unresolved || 0)} unresolved`;
       const coverage = profile.market_coverage;
       button.textContent = `${profile.label} · ${Number(profile.count).toLocaleString()}${coverage ? ` · ${Number(coverage.verified_external || 0)} priced` : ""}`;
       button.addEventListener('click', () => setHunt(state.hunt === profile.id ? '' : profile.id));
