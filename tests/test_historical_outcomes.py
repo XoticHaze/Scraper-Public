@@ -197,3 +197,25 @@ def test_expanded_seed_and_selection():
     assert any("ice-makers" not in r["hunt_ids"] for r in selected)
     state["pending"]=[]
     assert not make_state(state,current,now=now,expanded_seed=rows)["pending"]
+
+
+def test_replay_deduplicates_relisted_inventory_and_compares_legacy_proxy():
+    from deal_engine.historical_outcomes import walk_forward_sold_prices
+    day=86400
+    base=100*day
+    cutoff=base+40*day
+    def row(i, observed, known, price, inv, msrp):
+        return {"auction_id":str(i),"lot_number":"A","identity":"upc:ABC",
+            "auction_location":"San Antonio","condition":"LIKE NEW","scope_id":"scope",
+            "training_eligible":True,"status":"closed_sold_verified",
+            "reconciliation_level":"lot_detail_reconciled","source_url":"https://www.mac.bid/past-auctions/1",
+            "prediction_epoch_utc":observed,"closed_epoch_utc":observed+100,
+            "verified_epoch_utc":known,"final_hammer":price,"inventory_id":inv,"legacy_msrp":msrp}
+    prior=[row(i,base+i,base+200+i,50,str(i),100) for i in range(20)]
+    duplicate=row(99,base+300,base+500,50,"1",100)
+    target=row(100,cutoff,cutoff+200,80,"target",200)
+    coverage=[base+i*day+h*3600 for i in range(10,40) for h in range(24)]
+    out=walk_forward_sold_prices(prior+[duplicate,target],complete_scan_epochs=coverage)
+    assert out["evaluated_cases"]==1 and out["cases"][0]["training_samples"]==20
+    assert out["legacy_msrp_baseline_mae"]==20 and out["legacy_paired_model_mae"]==30
+    assert walk_forward_sold_prices(prior[:-1]+[duplicate,target],complete_scan_epochs=coverage)["evaluated_cases"]==0
