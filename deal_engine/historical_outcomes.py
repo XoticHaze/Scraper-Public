@@ -138,22 +138,41 @@ def walk_forward_sold_prices(rows: list[dict[str, Any]], *, complete_scan_epochs
         if not all(day in covered for day in range(last_full_day - minimum_days + 1, last_full_day + 1)):
             continue
         timestamps, group = index[cohort]
-        prior = [r["final_hammer"] for _, k, r in group[:bisect_left(timestamps, cutoff)]
-                 if k != key and r["closed_epoch_utc"] < cutoff
-                 and (not target.get("inventory_id") or r.get("inventory_id") != target["inventory_id"])]
+        prior_rows = {}
+        for _, k, r in group[:bisect_left(timestamps, cutoff)]:
+            if k == key or r["closed_epoch_utc"] >= cutoff or (target.get("inventory_id") and r.get("inventory_id") == target["inventory_id"]):
+                continue
+            # Latest independently verified sale per underlying inventory item.
+            # A relisted lot cannot inflate the sample count.
+            inv = str(r.get("inventory_id") or "")
+            prior_rows[("inventory", inv) if inv else ("lot", *k)] = r
+        prior = [r["final_hammer"] for r in prior_rows.values()]
         if len(prior) < minimum_samples:
             continue
         predicted = float(median(prior))
         low, high = quantile(prior, .25), quantile(prior, .75)
         observed_hammer = target.get("observed_hammer")
         naive_error = abs(float(observed_hammer) - target["final_hammer"]) if isinstance(observed_hammer, (int, float)) and not isinstance(observed_hammer, bool) and math.isfinite(observed_hammer) and observed_hammer >= 0 else None
+        def valid_price(x):
+            return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and x > 0
+        ratios = [r["final_hammer"]/r["legacy_msrp"] for r in prior_rows.values()
+                  if valid_price(r.get("legacy_msrp"))]
+        legacy_price = target.get("legacy_msrp")
+        # This baseline tests the old MSRP proxy; it never supplies acquisition authority.
+        legacy_pred = float(median(ratios)*legacy_price) if len(ratios)>=minimum_samples and valid_price(legacy_price) else None
         cases.append({"auction_id": key[0], "lot_number": key[1], "prediction_epoch_utc": cutoff,
                       "training_samples": len(prior), "predicted_hammer": predicted,
                       "actual_hammer": target["final_hammer"], "absolute_error": abs(predicted-target["final_hammer"]), "observed_bid_baseline_error": naive_error,
+                      "legacy_msrp_baseline_error": abs(legacy_pred-target["final_hammer"]) if legacy_pred is not None else None,
+                      "legacy_msrp_baseline_prediction":legacy_pred,
                       "predicted_p25":low,"predicted_p75":high,
                       "inside_p25_p75":low <= target["final_hammer"] <= high})
     paired = [x for x in cases if x["observed_bid_baseline_error"] is not None]
-    return {"eligible_outcomes": len(eligible), "evaluated_cases": len(cases),
+    legacy_paired = [x for x in cases if x["legacy_msrp_baseline_error"] is not None]
+    return {"legacy_msrp_baseline_cases":len(legacy_paired),
+            "legacy_msrp_baseline_mae":round(sum(x["legacy_msrp_baseline_error"] for x in legacy_paired)/len(legacy_paired),2) if legacy_paired else None,
+            "legacy_paired_model_mae":round(sum(x["absolute_error"] for x in legacy_paired)/len(legacy_paired),2) if legacy_paired else None,
+            "eligible_outcomes": len(eligible), "evaluated_cases": len(cases),
             "paired_baseline_cases": len(paired),
             "paired_model_mae": round(sum(x["absolute_error"] for x in paired)/len(paired), 2) if paired else None,
             "observed_bid_baseline_mae": round(sum(x["observed_bid_baseline_error"] for x in paired)/len(paired), 2) if paired else None,
