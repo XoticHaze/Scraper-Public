@@ -300,6 +300,21 @@ function verifiedMarkup(product, lot) {
   </div>`;
 }
 
+function historicalAcquisitionMarkup(product, lot) {
+  const coverage = state.catalog?.historical_acquisition || {};
+  const group = (product.historical_acquisition?.cohorts || []).find(c => c.location === lot.auction_location && c.condition === lot.condition);
+  const live = group?.prospective || {};
+  const sample = group?.selected_historical_sample || {};
+  const rows = [
+    ['Comparable verified closes', Number(live.verified_sold || 0)],
+    ['Comparable confirmed unsold', Number(live.verified_unsold || 0)],
+    ['Comparable unresolved', Number(live.unresolved || 0)],
+    ['Observed all-in median (current fee estimate)', live.verified_sold ? money(live.estimated_all_in_p50) : 'Insufficient evidence'],
+    ['Selected older sample / sold', Number(sample.verified_sold || 0)]
+  ].map(([label,value]) => `<div class="cost-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`).join('');
+  return `<div class="verify-box"><strong>Historical acquisition evidence</strong>${rows}<p class="muted">Same exact identity, location and condition only. Selected older sample is not representative. ${Number(coverage.complete_days || 0)} complete scan days in retained scope; at least 30 days and 20 comparable prior verified sales required for chronological evaluation. No sale probability or expected wait inferred.</p></div>`;
+}
+
 function compatibilityMarkup(product) {
   const compatibility = product.compatibility || {};
   const status = compatibility.status || 'unknown';
@@ -429,6 +444,7 @@ function openDetails(row) {
       <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. MAC.BID stated retail is reference-only and does not establish savings or a purchase ceiling.</p>
       ${verifiedMarkup(product, lot)}
       ${protectedOfferMarkup(product)}
+      ${historicalAcquisitionMarkup(product, lot)}
       ${compatibilityMarkup(product)}
       <div class="plan-box">
         <strong>Your plan · browser-local</strong>
@@ -545,6 +561,8 @@ async function loadCatalog() {
   const verified = Number(state.catalog.market_value_count || 0);
   const stale = Number(state.catalog.stale_market_value_count || 0);
   $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · ${verified} market-verified${stale ? ` · ${stale} stale` : ''} · ${Number(state.catalog.unverified_market_value_count ?? Math.max(0, state.catalog.product_count - verified - stale))} unverified · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
+  const historical = state.catalog.historical_acquisition;
+  if (historical) $('#catalog-meta').textContent += ` · history: ${Number(historical.complete_scan_count || 0)} complete scans · ${Number(historical.prospective?.verified_sold || 0)} verified closes`;
   render();
 }
 
