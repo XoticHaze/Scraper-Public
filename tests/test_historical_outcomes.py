@@ -94,6 +94,11 @@ def test_exact_public_result_reconciliation_and_time_order():
     assert outcome["closed_epoch_utc"] == int(datetime(2026,1,30,2,16,59,tzinfo=timezone.utc).timestamp())
     assert reconcile_detail(row, listing, href=href, detail_text=detail.replace("B0FM3PD49H","B0WRONG000"), verified_epoch_utc=verified, scope_id="scope") is None
     assert reconcile_detail(row, listing, href=href, detail_text=detail.replace("$50.00","$51.00"), verified_epoch_utc=verified, scope_id="scope") is None
+    diagnostic={}
+    assert reconcile_detail(dict(row,inventory_id="12345678"), listing, href=href,
+        detail_text=detail.replace("66737071","12345678"), verified_epoch_utc=verified, scope_id="scope", diagnostic=diagnostic) is None
+    assert diagnostic["public_detail_id"]=="12345678" and diagnostic["matches_inventory_id"] is True
+    assert diagnostic["reason"]=="lot_id_mismatch"
     assert reconcile_detail(dict(row, source_epoch_utc=verified), listing, href=href, detail_text=detail, verified_epoch_utc=verified, scope_id="scope") is None
 
 def test_pending_only_same_complete_scope_and_no_inferred_outcomes():

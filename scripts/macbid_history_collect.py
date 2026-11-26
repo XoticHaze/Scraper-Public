@@ -306,6 +306,10 @@ def collect(state):
                         counts["detail_unverified"] += 1
                         row["last_attempt_status"] = diagnostic.get("reason", "detail_unverified")
                         reason = row["last_attempt_status"]
+                        if reason == "lot_id_mismatch":
+                            row["detail_identity_evidence"] = {**diagnostic, "source_url":href, "observed_epoch_utc":checked}
+                            if diagnostic.get("matches_inventory_id"):
+                                counts["detail_id_matches_inventory"] = counts.get("detail_id_matches_inventory",0)+1
                         counts[reason] = counts.get(reason, 0) + 1
                 except Exception:
                     stop = True

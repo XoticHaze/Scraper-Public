@@ -46,7 +46,15 @@ def reconcile_detail(row, listing, *, href, detail_text, verified_epoch_utc, sco
     if not re.search(r"Lot Number:\s*" + re.escape(str(row.get("auction_number"))) +
                      r"\s*/\s*" + re.escape(str(row.get("lot_number"))) + r"\b", detail_text, re.I):
         return reject("lot_number_mismatch")
-    if not re.search(r"Mac\.Bid ID:\s*" + re.escape(str(row.get("lot_id"))) + r"\b", detail_text, re.I):
+    # Preserve only the public numeric identifier, not raw page/account text.
+    reported = re.search(r"Mac\.Bid ID:\s*([0-9][0-9,]{0,20})\b", detail_text, re.I)
+    public_detail_id = reported.group(1).replace(",", "") if reported else None
+    if public_detail_id != str(row.get("lot_id")):
+        if diagnostic is not None:
+            diagnostic["public_detail_id"] = public_detail_id
+            diagnostic["source_lot_id"] = str(row.get("lot_id") or "")
+            diagnostic["source_inventory_id"] = str(row.get("inventory_id") or "")
+            diagnostic["matches_inventory_id"] = bool(public_detail_id and public_detail_id == str(row.get("inventory_id")))
         return reject("lot_id_mismatch")
     token = str(row.get("upc") or row.get("asin") or "").strip().upper()
     if not re.fullmatch(r"[A-Z0-9]{8,14}", token):
