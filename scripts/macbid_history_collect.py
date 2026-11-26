@@ -27,7 +27,7 @@ MAX_AGE = 90 * 86400
 MAX_AUCTIONS = 3
 MAX_DETAIL = 12
 
-def previous_state():
+def previous_state(current):
     """Read only a prior public main-branch workflow's own state artifact."""
     repo = os.environ.get("GITHUB_REPOSITORY")
     if repo != "XoticHaze/Scraper-Public":
@@ -54,14 +54,56 @@ def previous_state():
             if doc.get("schema") != "macbid-public-history-state-v1":
                 raise RuntimeError("unknown prior state schema")
             return doc
+    # Bootstrap from the already deployed 90-day observation artifact if it has
+    # identical discovery scope. Older snapshots have no per-row source epoch.
+    raw = subprocess.check_output(["gh", "api", f"repos/{repo}/actions/artifacts?name=macbid-public-observations&per_page=20"],
+                                  text=True, timeout=30)
+    for artifact in json.loads(raw).get("artifacts", []):
+        run = artifact.get("workflow_run") or {}
+        rid = str(run.get("id") or "")
+        if artifact.get("name") != "macbid-public-observations" or artifact.get("expired") or run.get("head_branch") != "main" or not rid.isdigit() or rid == os.environ.get("GITHUB_RUN_ID"):
+            continue
+        if artifact.get("size_in_bytes",0) > 25_000_000:
+            raise RuntimeError("prior observation exceeds bound")
+        with tempfile.TemporaryDirectory() as tmp:
+            subprocess.run(["gh","run","download",rid,"--repo",repo,"--name","macbid-public-observations","--dir",tmp],
+                           check=True,timeout=60,capture_output=True)
+            path=Path(tmp)/SNAPSHOT.name
+            if not path.exists() or path.stat().st_size > 80_000_000:
+                raise RuntimeError("invalid prior observation artifact")
+            prior=json.loads(path.read_text())
+        if prior.get("schema")!="macbid-public-observation-v1" or not prior.get("coverage_complete"):
+            continue
+        epoch=prior.get("source_epoch_utc")
+        if not isinstance(epoch,int) or epoch>=current.get("source_epoch_utc",0):
+            continue
+        prior_scope=prior.get("scope")
+        if prior_scope is None:
+            prior_scope={"filter":re.sub(r"expected_closing_utc:>\d+", "expected_closing_utc:>SCAN_EPOCH",str(prior.get("filter_by") or "")),
+                "locations":sorted({row["auction_location"] for row in prior.get("observations",[]) if row.get("auction_location")})}
+        if prior_scope != current.get("scope"):
+            continue
+        prior["scope"]=prior_scope
+        prior["scope_id"]=current["scope_id"]
+        for row in prior.get("observations",[]):
+            row["source_epoch_utc"]=epoch
+        return {"pending":[],"outcomes":[],"coverage_epochs":{prior["scope_id"]:[epoch]},"latest_complete":prior,
+                "bootstrapped_from_observation_run":rid}
     return {"pending": [], "outcomes": [], "coverage_epochs": {}, "latest_complete": None}
 
-def make_state(old, current, *, now):
+def make_state(old, current, *, now, recovered_seed=None):
     latest = old.get("latest_complete") or {}
     pending = {lot_key(row): row for row in old.get("pending", []) if
                row.get("source_epoch_utc", 0) >= now - MAX_AGE}
     outcomes = {lot_key(row): row for row in old.get("outcomes", []) if
                 row.get("verified_epoch_utc", 0) >= now - MAX_AGE}
+    seed_loaded = bool(old.get("recovered_seed_loaded"))
+    if not seed_loaded and recovered_seed is not None:
+        for row in recovered_seed.get("pending", []):
+            key = lot_key(row)
+            if all(key) and key not in outcomes and row.get("scope_id") == "recovered-legacy-retail-floor-40" and row.get("source_epoch_utc",0) >= now-MAX_AGE:
+                pending.setdefault(key, row)
+        seed_loaded=True
     for row in pending_closed_candidates(latest, current):
         key = lot_key(row)
         if key not in outcomes:
@@ -83,7 +125,8 @@ def make_state(old, current, *, now):
             "latest_complete": latest, "pending": ordered[:MAX_ROWS],
             "outcomes": list(outcomes.values())[-MAX_ROWS:], "coverage_epochs": coverage,
             "pending_overflow_count": int(old.get("pending_overflow_count") or 0) + overflow,
-            "collector_status": "not_attempted"}
+            "collector_status": "not_attempted", "recovered_seed_loaded": seed_loaded,
+            "bootstrapped_from_observation_run": old.get("bootstrapped_from_observation_run")}
 
 def collect(state):
     from playwright.sync_api import sync_playwright
@@ -174,8 +217,9 @@ def collect(state):
 
 def main():
     current = json.loads(SNAPSHOT.read_text())
-    old = previous_state()
-    state = make_state(old, current, now=int(time.time()))
+    old = previous_state(current)
+    seed = json.loads(Path("data/macbid_recovered_pilot_pending.json").read_text())
+    state = make_state(old, current, now=int(time.time()), recovered_seed=seed)
     # Do not query closing outcomes from a degraded scan.
     if current.get("coverage_complete"):
         collect(state)

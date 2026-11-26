@@ -123,3 +123,18 @@ def test_history_publication_keeps_seed_separate_and_forecast_withheld():
     cohort=result["products"][0]["historical_acquisition"]["cohorts"][0]
     assert cohort["selected_historical_sample"]["verified_sold"] == 2
     assert cohort["prospective"]["verified_sold"] == 0
+
+
+def test_recovered_pilot_is_not_mixed_with_current_scope_and_is_loaded_once():
+    from scripts.macbid_history_collect import make_state
+    seed=json.loads(Path("data/macbid_recovered_pilot_pending.json").read_text())
+    assert len(seed["pending"]) == 11
+    now=1795678809
+    current={"scope_id":"new","coverage_complete":True,"source_epoch_utc":now,"observations":[]}
+    out=make_state({},current,now=now,recovered_seed=seed)
+    assert len(out["pending"]) == 11
+    assert all(row["scope_id"]=="recovered-legacy-retail-floor-40" for row in out["pending"])
+    assert out["coverage_epochs"]=={"new":[now]}
+    assert not out["outcomes"]
+    out["pending"]=[]
+    assert not make_state(out,current,now=now,recovered_seed=seed)["pending"]

@@ -28,6 +28,7 @@ def enrich_history(catalog, state, seed):
     pending = [row for row in state.get("pending",[]) if scope and row.get("scope_id")==scope]
     scans = state.get("coverage_epochs",{}).get(scope,[])
     seed_rows = seed.get("outcomes",[])
+    legacy = [row for row in state.get("outcomes",[])+state.get("pending",[]) if row.get("scope_id")=="recovered-legacy-retail-floor-40"]
     cohorts = defaultdict(list)
     for row in outcomes + pending:
         key = (canonical(row.get("identity")), row.get("auction_location"), row.get("condition"))
@@ -65,6 +66,7 @@ def enrich_history(catalog, state, seed):
         "pending_overflow_count":state.get("pending_overflow_count",0),
         "prospective":summary(outcomes+pending,fee),
         "selected_historical_sample":summary(seed_rows,fee),
+        "recovered_legacy_scope":summary(legacy,fee),
         "walk_forward":{k:v for k,v in replay.items() if k != "cases"},
         "minimum_training_samples":20,"minimum_complete_days":30,
         "fee_scenario":fee,"forecast_status":"evaluated" if replay["evaluated_cases"] else "insufficient_evidence",
