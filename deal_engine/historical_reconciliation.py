@@ -90,6 +90,42 @@ def reconcile_detail(row, listing, *, href, detail_text, verified_epoch_utc, sco
             "observed_hammer": row.get("current_bid"), "legacy_msrp": row.get("retail_price"),
             "legacy_msrp_score": row.get("legacy_msrp_score")}
 
+def detail_only_evidence(row, *, href, detail_text, verified_epoch_utc, scope_id):
+    """An exact public detail can document a close, but cannot replace listing corroboration.
+
+    Keep this evidence on the pending row. It is not a training outcome and
+    must not silently be counted as an independently reconciled sale.
+    """
+    close = re.search(r"Auction Closed\s+" + TIME_RE, detail_text, re.I)
+    if not close:
+        return None
+    unsold = bool(re.search(r"\bLot Not Sold\b", detail_text, re.I))
+    sold = bool(re.search(r"\bWinner saved\b", detail_text, re.I))
+    if unsold == sold:
+        return None
+    hammer = None
+    if sold:
+        # Require the explicit displayed winner price adjacent to the retail
+        # comparison and winner label, not an arbitrary dollar amount.
+        block = re.search(r"(?m)^\s*\$" + MONEY + r"\s*\n\s*\$" + MONEY +
+                          r"\s*\n\s*Winner saved\b", detail_text, re.I)
+        if not block:
+            return None
+        hammer = float(block[1].replace(",", ""))
+        if not 0 < hammer < 1_000_000:
+            return None
+    listing = {"status": "closed_unsold_verified" if unsold else "closed_sold_verified",
+               "final_hammer": hammer, "date": close[1], "time": close[2]}
+    result = reconcile_detail(row, listing, href=href, detail_text=detail_text,
+                              verified_epoch_utc=verified_epoch_utc, scope_id=scope_id)
+    if not result:
+        return None
+    return {"source_url": href, "status": "detail_only_unsold" if unsold else "detail_only_sold",
+            "reported_hammer": hammer, "closed_epoch_utc": result["closed_epoch_utc"],
+            "verified_epoch_utc": verified_epoch_utc, "reconciliation_level": "lot_detail_only",
+            "training_eligible": False}
+
+
 def pending_closed_candidates(previous, current):
     """Missing from a complete matching scan is only a candidate for reconciliation."""
     if not (previous.get("coverage_complete") and current.get("coverage_complete")

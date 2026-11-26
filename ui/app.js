@@ -356,7 +356,7 @@ function historicalAcquisitionMarkup(product, lot) {
     ['Observed all-in median (current fee estimate)', live.verified_sold ? money(live.estimated_all_in_p50) : 'Insufficient evidence'],
     ['Selected older sample / sold', Number(sample.verified_sold || 0)]
   ].map(([label,value]) => `<div class="cost-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`).join('');
-  return `<div class="verify-box"><strong>Historical acquisition evidence</strong>${rows}<p class="muted">Same exact identity, location and condition only. Selected older sample is not representative. ${Number(coverage.complete_days || 0)} complete scan days in retained scope; at least 30 days and 20 comparable prior verified sales required for chronological evaluation. No sale probability or expected wait inferred.</p></div>`;
+  return `<div class="verify-box"><strong>Historical acquisition evidence</strong>${rows}<p class="muted">Same exact identity, location and condition only. Selected older sample is not representative. ${Number(coverage.complete_days || 0)} hourly-covered UTC days in retained scope; at least 30 consecutive hourly-covered days and 20 comparable prior verified sales required for chronological evaluation. No sale probability or expected wait inferred.</p></div>`;
 }
 
 function compatibilityMarkup(product) {
@@ -608,7 +608,7 @@ async function loadCatalog() {
   const stale = Number(state.catalog.stale_market_value_count || 0);
   $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · ${verified} market-verified${stale ? ` · ${stale} stale` : ''} · ${Number(state.catalog.unverified_market_value_count ?? Math.max(0, state.catalog.product_count - verified - stale))} unverified · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
   const historical = state.catalog.historical_acquisition;
-  if (historical) $('#catalog-meta').textContent += ` · history: ${Number(historical.complete_scan_count || 0)} complete scans · ${Number(historical.prospective?.verified_sold || 0)} verified closes`;
+  if (historical) $('#catalog-meta').textContent += ` · history: ${Number(historical.complete_scan_count || 0)} complete scans · ${Number(historical.complete_days || 0)} hourly-covered days · ${Number(historical.prospective?.verified_sold || 0)} verified closes`;
   render();
 }
 

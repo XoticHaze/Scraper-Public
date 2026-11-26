@@ -101,15 +101,16 @@
     });
   }
 
-  function nextScheduleText() {
+  function nextScheduleText(ageMinutes) {
+    if (ageMinutes >= 90) return 'Scheduled refresh overdue';
     const now = new Date();
     const current = now.getMinutes();
     let delta;
     if (current < 17) delta = 17 - current;
     else if (current < 47) delta = 47 - current;
     else delta = 60 - current + 17;
-    if (delta <= 1) return 'Auto refresh due now';
-    return `Next auto refresh ~${delta}m`;
+    if (delta <= 1) return 'Scheduled slot due · not guaranteed';
+    return `Next scheduled slot ~${delta}m · not guaranteed`;
   }
 
   function freshness(ageMinutes) {
@@ -155,7 +156,7 @@
     document.querySelector('#snapshot-age').textContent = degraded
       ? `Source data ${ageMinutes}m old`
       : ageMinutes < 1 ? 'Updated just now' : `Updated ${ageMinutes}m ago`;
-    document.querySelector('#next-refresh').textContent = nextScheduleText();
+    document.querySelector('#next-refresh').textContent = nextScheduleText(ageMinutes);
     const profile = window.MacbidBrowserState?.getProfile?.() || {};
     const localLocation = window.MacbidBrowserState?.locationLabel?.() || '';
     const conditions = (profile.preferred_conditions || []).length

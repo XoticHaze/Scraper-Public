@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import defaultdict
 import json
 from pathlib import Path
-from deal_engine.historical_outcomes import summarize_outcomes, walk_forward_sold_prices
+from deal_engine.historical_outcomes import summarize_outcomes, walk_forward_sold_prices, scan_coverage
 
 CATALOG = Path("site/catalog.json")
 STATE = Path("results/macbid-public-history-state.json")
@@ -59,11 +59,15 @@ def enrich_history(catalog, state, seed):
           "verified_unsold":sum(row.get("status")=="closed_unsold_verified" for row in rows),
           "unresolved":sum(row.get("status")=="missing_unresolved" for row in rows)}
     replay = walk_forward_sold_prices(outcomes, complete_scan_epochs=scans)
+    coverage = scan_coverage(scans, as_of=catalog.get("generated_epoch_utc"))
     catalog["historical_acquisition"] = {
         "schema":"macbid-public-history-summary-v1",
         "collector_status":state.get("collector_status","state_unavailable"),
-        "scope_id":scope,"complete_scan_count":len(scans),"complete_days":len({e//86400 for e in scans}),
+        "scope_id":scope,"complete_scan_count":len(scans),"complete_days":coverage["qualified_days"],
+        "observed_days":coverage["observed_days"],"coverage":coverage,
         "pending_overflow_count":state.get("pending_overflow_count",0),
+        "collector_attempt_counts":state.get("collector_attempt_counts",{}),
+        "pending_detail_only_count":sum(bool(row.get("detail_evidence")) for row in state.get("pending",[])),
         "prospective":summary(outcomes+pending,fee),
         "selected_historical_sample":summary(seed_rows,fee),
         "recovered_legacy_scope":summary(legacy,fee),
