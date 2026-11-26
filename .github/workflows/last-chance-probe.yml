@@ -168,3 +168,53 @@ jobs:
             last-chance-details.json
           if-no-files-found: warn
           retention-days: 2
+
+  regular-auctions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: f286492edc0ac54248e8aca5f3caacfeed48a1a8
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install chromium
+          PYTHONPATH=. python scripts/macbid_deal_engine.py
+      - name: Summarize public auction candidates
+        run: |
+          python - <<'PY'
+          import json,re,time,datetime
+          from zoneinfo import ZoneInfo
+          from pathlib import Path
+          d=json.loads(Path('results/macbid-deal-engine.json').read_text())
+          print('REGULAR_SCAN',json.dumps(d['scan']))
+          now=time.time()
+          tz=ZoneInfo('America/Chicago')
+          today=datetime.datetime.fromtimestamp(now,tz).date()
+          rows=[r for r in d['inventory'] if r.get('auction_location')=='San Antonio' and float(r.get('expected_closing_utc') or 0)>now]
+          tonight=[r for r in rows if datetime.datetime.fromtimestamp(float(r['expected_closing_utc']),tz).date()==today]
+          print('REGULAR_COUNTS',len(rows),len(tonight))
+          keys=['product_name','title','condition','retail_price','current_bid','estimated_post_tax_total','expected_closing_utc','lot_number','auction_number','auction_id','macbid_url','upc','model','unique_bidders','category','deal_score']
+          def emit(tag,rs):
+              seen=set()
+              for r in rs:
+                  k=(r.get('upc') or r.get('product_name') or r.get('title'),r.get('lot_number'))
+                  if k in seen:continue
+                  seen.add(k)
+                  print(tag,json.dumps({k:r.get(k) for k in keys},ensure_ascii=True))
+          rx=re.compile(r'zigbee|matter|z-wave|homekit|aqara|doorbell|camera|router|wi-fi 6|wifi 6|projector|3d printer|airpods|solar|inverter|power station|ups |battery backup|dishwasher|motorized|motorised|lichtdim|no.drill|tension|smart lock|monitor|tablet|robot vacuum|nugget ice',re.I)
+          sorted_rows=sorted(tonight,key=lambda r:float(r.get('deal_score') or 0),reverse=True)
+          emit('TONIGHT_DEAL',sorted_rows[:75])
+          emit('TECH_DEAL',[r for r in sorted_rows if rx.search(str(r.get('product_name') or r.get('title')) )][:90])
+          emit('UPCOMING_DEAL',[r for r in sorted(rows,key=lambda r:(float(r['expected_closing_utc']),-float(r.get('deal_score') or 0))) if r not in tonight and rx.search(str(r.get('product_name') or r.get('title')))][:35])
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: regular-auction-inventory
+          path: results/macbid-deal-engine.json
+          retention-days: 2
