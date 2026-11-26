@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 16,
+  "version": 17,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -1651,6 +1651,123 @@
       "verification": [
         "exact_model",
         "verified_market_price"
+      ]
+    },
+    {
+      "id": "ice-makers",
+      "label": "Ice Makers · Direct Water Line Priority",
+      "kind": "semantic",
+      "required_any": [
+        "ice maker",
+        "icemaker",
+        "ice machine",
+        "nugget ice"
+      ],
+      "boost_any": [
+        "direct water connection",
+        "direct water line",
+        "automatic water refill",
+        "auto water refill",
+        "water inlet",
+        "plumbed",
+        "gevi",
+        "imna0",
+        "imnb0",
+        "imc-491dc",
+        "nim030ss00",
+        "a-ice2",
+        "nugget ice",
+        "clear ice"
+      ],
+      "exclude_any": [
+        "ice maker replacement",
+        "replacement ice maker",
+        "ice maker kit",
+        "ice maker filter",
+        "ice maker cleaner",
+        "ice maker tubing",
+        "ice scoop",
+        "ice tray",
+        "knee ice machine",
+        "cold therapy",
+        "ice maker cover"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "automatic_pressurized_water_refill",
+        "inlet_tubing_od",
+        "minimum_inlet_pressure",
+        "maximum_inlet_pressure",
+        "ro_water_compatibility",
+        "ice_type",
+        "ice_quality",
+        "daily_output",
+        "ice_storage_refrigerated",
+        "drain_requirement",
+        "consumer_rating",
+        "review_count",
+        "review_recency",
+        "rating_source_quality",
+        "recall_status",
+        "reliability_and_leak_reports",
+        "cleaning_access",
+        "operational_condition"
+      ]
+    },
+    {
+      "id": "refrigerators-ice-maker",
+      "label": "Full-size Refrigerators · Installed Ice Maker",
+      "kind": "semantic",
+      "required_any": [
+        "refrigerator",
+        "fridge"
+      ],
+      "boost_any": [
+        "ice maker",
+        "icemaker",
+        "ice dispenser",
+        "water dispenser",
+        "french door",
+        "side by side",
+        "bottom freezer",
+        "top freezer"
+      ],
+      "exclude_any": [
+        "mini fridge",
+        "compact refrigerator",
+        "beverage refrigerator",
+        "wine refrigerator",
+        "wine cooler",
+        "car refrigerator",
+        "refrigerator gasket",
+        "refrigerator door gasket",
+        "refrigerator glass shelf",
+        "refrigerator filter",
+        "refrigerator replacement",
+        "refrigerator handle",
+        "refrigerator organizer",
+        "refrigerator lock",
+        "refrigerator cover",
+        "portable refrigerator",
+        "commercial beverage refrigerator"
+      ],
+      "minimum_signal_score": 2,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "installed_working_ice_maker",
+        "water_inlet",
+        "minimum_inlet_pressure",
+        "ro_water_compatibility",
+        "dimensions",
+        "energy_use",
+        "consumer_rating",
+        "review_count",
+        "recall_status",
+        "cooling_and_ice_maker_condition",
+        "pickup_transport"
       ]
     }
   ]
