@@ -42,7 +42,7 @@
 
   function installQuickBar() {
     if (document.querySelector('.quick-bar')) return;
-    const profiles = (state.catalog?.hunt_profiles || []).filter((profile) => Number(profile.count || 0) > 0);
+    const profiles = (state.catalog?.hunt_profiles || []).filter((profile) => Number(profile.count || 0) > 0 || Number(profile.recovered_legacy_history?.sample_lots || 0) > 0);
     if (!profiles.length) return;
     const bar = document.createElement('div');
     bar.className = 'quick-bar';
@@ -61,6 +61,8 @@
         : profile.label;
       const history = profile.history_coverage;
       if (history) button.title += ` · history: ${Number(history.verified_sold || 0)} verified sold, ${Number(history.unresolved || 0)} unresolved`;
+      const legacy = profile.recovered_legacy_history;
+      if (legacy) button.title += ` · legacy: ${Number(legacy.verified_sold || 0)} verified sold, ${Number(legacy.unresolved || 0)} unresolved`;
       const coverage = profile.market_coverage;
       button.textContent = `${profile.label} · ${Number(profile.count).toLocaleString()}${coverage ? ` · ${Number(coverage.verified_external || 0)} priced` : ""}`;
       button.addEventListener('click', () => setHunt(state.hunt === profile.id ? '' : profile.id));

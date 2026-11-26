@@ -41,6 +41,8 @@ def main():
         page.wait_for_selector(".card", timeout=30000)
         assert page.evaluate("state.catalog.generated_epoch_utc") == args.epoch, "UI loaded different generation"
         assert "market-verified" in page.locator("#catalog-meta").inner_text()
+        assert "legacy unresolved" in page.locator("#catalog-meta").inner_text()
+        assert "legacy sold" in page.locator("#catalog-meta").inner_text()
         if chosen:
             page.fill("#search", str(chosen["upc"]))
             card = page.locator(".card").filter(has_text=chosen["name"]).first
@@ -54,6 +56,8 @@ def main():
             assert verification.is_visible()
             assert verification.locator("a[href^='https://']").count() > 0
             assert page.locator("#detail-dialog").get_by_text("Historical acquisition evidence", exact=False).first.is_visible()
+            assert page.locator("#detail-dialog").get_by_text("Recovered legacy / unresolved",exact=True).is_visible()
+            assert page.locator("#detail-dialog").get_by_text("Protected purchase alternatives",exact=True).is_visible()
             quote = page.locator("#local-protected-quote")
             assert quote.is_visible()
             page.fill("#quote-total", "120")
@@ -69,6 +73,12 @@ def main():
             print(f"SERVED_MARKET_CARD=PASS identity={chosen['identity']} ice_pilot={'ice-makers' in (chosen.get('hunt_ids') or [])}")
         else:
             print("SERVED_MARKET_CARD=NO_CURRENT_VERIFIED_PRODUCT")
+        page.goto(f"{URL}finds.html?readback={args.epoch}",wait_until="domcontentloaded",timeout=30000)
+        page.wait_for_selector("#ice-makers",timeout=30000)
+        for profile in catalog.get("hunt_profiles",[]):
+            assert page.locator("#"+profile["id"]).count()==1, profile["id"]
+        assert "legacy" in page.locator("#ice-makers .finds-section-head").inner_text()
+        print("SERVED_ALL_HUNT_HISTORY=PASS profiles="+str(len(catalog["hunt_profiles"])))
         print(f"SERVED_CATALOG=PASS epoch={args.epoch} products={len(products)} lots={catalog['lot_count']} verified={catalog['market_value_count']}")
         browser.close()
 
