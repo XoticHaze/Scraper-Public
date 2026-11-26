@@ -344,6 +344,13 @@ function verifiedMarkup(product, lot) {
   </div>`;
 }
 
+function observedBidMarkup(lot) {
+  const observed=lot.observed_bid_history;
+  if (!observed || !observed.retained_points) return '';
+  const points=(observed.recent_points || []).map(([epoch,amount]) => `<div class="cost-row"><span>${escapeHtml(new Date(epoch*1000).toLocaleString())}</span><strong>${money(amount)}</strong></div>`).join('');
+  return `<div class="verify-box"><strong>Observed bid trajectory</strong><div class="cost-row"><span>First → latest captured bid</span><strong>${money(observed.first_observed_hammer)} → ${money(observed.latest_observed_hammer)}</strong></div><p class="muted">${Number(observed.retained_points)} retained actual observations${observed.display_is_sampled ? ' · showing a bounded sample' : ''}. These are snapshots, not a complete bid history or final sale price.</p>${points}</div>`;
+}
+
 function historicalAcquisitionMarkup(product, lot) {
   const coverage = state.catalog?.historical_acquisition || {};
   const group = (product.historical_acquisition?.cohorts || []).find(c => c.location === lot.auction_location && c.condition === lot.condition);
@@ -494,6 +501,7 @@ function openDetails(row) {
       ${verifiedMarkup(product, lot)}
       ${protectedOfferMarkup(product)}
       ${localProtectedQuoteMarkup()}
+      ${observedBidMarkup(lot)}
       ${historicalAcquisitionMarkup(product, lot)}
       ${compatibilityMarkup(product)}
       <div class="plan-box">
