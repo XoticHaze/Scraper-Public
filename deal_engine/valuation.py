@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from statistics import mean, median
-from math import isfinite, floor
+from math import isfinite, floor, ceil
 from typing import Any
 from urllib.parse import urlparse
 from deal_engine.market_enrichment import reject_price_outliers
@@ -244,44 +244,74 @@ def derive_market_valuation(
 
 def compare_protected_offers(product: dict[str, Any], offers: list[dict[str, Any]], *,
                              as_of: str, sales_tax_rate: float, premium_rate: float,
-                             lot_fee: float) -> dict[str, Any]:
-    """Compare exact, delivered alternatives; cached and unavailable offers are context only."""
+                             lot_fee: float, as_of_epoch: int | None = None,
+                             admitted_sources: dict[str, Any] | None = None,
+                             delivery_scope: str = "San Antonio, TX") -> dict[str, Any]:
+    """Exact delivered alternatives; general policy or cached price is not a checkout quote."""
     def norm(value):
         return str(value or "").strip().casefold()
     def cost(value):
         n = _number(value)
         return n if n is not None and isfinite(n) and n >= 0 else None
+    def timestamp(value):
+        try:
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            return dt.timestamp() if dt.tzinfo is not None else None
+        except (ValueError, TypeError, OverflowError):
+            return None
+    def safe_url(value):
+        try:
+            p=urlparse(str(value or ""))
+            return p.scheme=="https" and bool(p.hostname) and not p.username and not p.password and not p.query and not p.fragment
+        except ValueError:
+            return False
     rows = []
     for offer in offers:
-        exact_id = bool(offer.get("identity") and offer["identity"] == product.get("identity"))
-        exact_model = bool(norm(product.get("brand")) and norm(product.get("model"))
-                           and norm(offer.get("brand")) == norm(product["brand"])
-                           and norm(offer.get("model")) == norm(product["model"]))
+        identity, offer_id = norm(product.get("identity")), norm(offer.get("identity"))
+        brand, model = norm(product.get("brand")), norm(product.get("model"))
+        obrand, omodel = norm(offer.get("brand")), norm(offer.get("model"))
+        exact_id = bool(identity and identity == offer_id)
+        exact_model = bool(brand and model and brand == obrand and model == omodel)
         if not (exact_id or exact_model):
             continue
-        price, shipping, fees = (cost(offer.get(k)) for k in ("price", "shipping", "mandatory_fees"))
-        delivered = round((price + shipping + fees) * (1 + sales_tax_rate), 2) if None not in (price, shipping, fees) else None
-        freshness = market_freshness(offer.get("observed_at"), as_of=as_of, fresh_days=1, stale_after_days=1)
+        if (identity and offer_id and identity != offer_id) or (brand and obrand and brand != obrand) or (model and omodel and model != omodel):
+            continue
+        price, shipping, fees, tax = (cost(offer.get(k)) for k in ("price", "shipping", "mandatory_fees", "checkout_tax"))
+        estimated = round((price + shipping + fees) * (1 + sales_tax_rate), 2) if None not in (price, shipping, fees) else None
+        delivered = round(price + shipping + fees + tax, 2) if None not in (price, shipping, fees, tax) else None
+        observed = timestamp(offer.get("observed_at"))
+        policy = (admitted_sources or {}).get(offer.get("source_id"), {})
+        limit = cost(policy.get("max_age_hours"))
+        expires = timestamp(policy.get("expires_at"))
+        permitted = (policy.get("public_projection_allowed") is True
+                     and policy.get("collection_authorized") is True
+                     and policy.get("durable_retention_allowed") is True
+                     and expires is not None and as_of_epoch is not None
+                     and as_of_epoch < expires and limit is not None and 0 < limit <= 24
+                     and bool(policy.get("authorization_ref")))
+        fresh = bool(permitted and observed is not None and 0 <= as_of_epoch-observed <= limit*3600)
         return_days = cost(offer.get("return_days"))
         eligible = bool(delivered is not None and price > 0 and offer.get("live_verified") is True
                         and offer.get("availability") == "in_stock" and offer.get("seller_verified") is True
-                        and return_days and freshness["freshness"] == "fresh"
-                        and str(offer.get("observed_at", ""))[:10] <= as_of[:10]
+                        and offer.get("fixed_price") is True and offer.get("item_return_eligible") is True
+                        and offer.get("delivery_scope") == delivery_scope and offer.get("checkout_verified") is True
+                        and return_days and fresh
                         and offer.get("condition") in {"new", "open_box", "used", "refurbished", "certified_refurbished"}
                         and offer.get("currency") == "USD"
-                        and str(offer.get("url", "")).startswith("https://")
-                        and str(offer.get("policy_url", "")).startswith("https://"))
+                        and safe_url(offer.get("url")) and safe_url(offer.get("policy_url")))
         rows.append({**{k: offer.get(k) for k in ("source_label", "url", "policy_url", "condition", "price",
                     "shipping", "mandatory_fees", "return_days", "warranty_days", "availability", "observed_at",
-                    "evidence_note")}, "estimated_delivered_total": delivered, "eligible": eligible})
+                    "evidence_note")}, "estimated_delivered_total": estimated,
+                    "verified_delivered_total": delivered if eligible else None,
+                    "eligibility_status": "verified" if eligible else "context_only",
+                    "eligible": eligible})
     eligible_rows = [r for r in rows if r["eligible"]]
-    best = min(eligible_rows, key=lambda r: r["estimated_delivered_total"]) if eligible_rows else None
-    # The 50% threshold is a maximum, not a claim that an untested auction item is worth it.
-    ceiling = floor(best["estimated_delivered_total"] * 50) / 100 if best else None
+    best = min(eligible_rows, key=lambda r: r["verified_delivered_total"]) if eligible_rows else None
+    # Strictly greater than 50% off, in whole cents.
+    ceiling = max(0, ceil(best["verified_delivered_total"] * 50 - 1e-8) - 1) / 100 if best else None
     hammer = floor(max(0, (ceiling / (1 + sales_tax_rate) - lot_fee) / (1 + premium_rate)) * 100) / 100 if ceiling is not None else None
     return {"offers": rows, "best_protected_offer": best, "max_auction_all_in": ceiling,
-            "max_auction_hammer": hammer, "tax_basis": "estimated local tax on price, shipping and mandatory fees"}
-
+            "max_auction_hammer": hammer, "tax_basis": "verified checkout tax for comparator; estimated local auction tax"}
 
 def rebuild_market_views(report: dict[str, Any], *, active_inventory: list[dict[str, Any]]) -> None:
     """Final report and UI must share the same enriched lots, not separate MSRP rankings."""

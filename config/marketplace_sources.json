@@ -11,7 +11,17 @@
       "collector_enabled": false,
       "access": "application_token_and_production_eligibility_required",
       "next_step": "Configure approved application token in an admitted runtime; validate single-item item API before source refresh",
-      "url": "https://www.ebay.com"
+      "url": "https://www.ebay.com",
+      "comparator_authority": {
+        "collection_authorized": false,
+        "public_projection_allowed": false,
+        "durable_retention_allowed": false,
+        "authorization_ref": null,
+        "expires_at": null,
+        "max_age_hours": 24,
+        "status": "unadmitted",
+        "retention_note": "Production Browse API approval and explicit projection/retention rights required."
+      }
     },
     {
       "id": "bestbuy",
@@ -22,7 +32,17 @@
       "collector_enabled": false,
       "access": "developer_api_key_required",
       "next_step": "Provide authorized Best Buy API key in an admitted runtime; verify product + open box endpoints",
-      "url": "https://www.bestbuy.com"
+      "url": "https://www.bestbuy.com",
+      "comparator_authority": {
+        "collection_authorized": false,
+        "public_projection_allowed": false,
+        "durable_retention_allowed": false,
+        "authorization_ref": null,
+        "expires_at": null,
+        "max_age_hours": 24,
+        "status": "unadmitted",
+        "retention_note": "Provider temporary display-cache rights do not authorize durable public Git or historical archive. Separate expiring authorized surface required."
+      }
     },
     {
       "id": "gsa",
