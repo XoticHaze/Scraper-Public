@@ -78,7 +78,7 @@ def test_like_new_low_bid_scores_above_open_box_same_bid():
     assert like_new["deal_score"] > open_box["deal_score"]
 
 
-def test_low_retail_is_penalized():
+def test_low_retail_is_context_not_a_ranking_penalty():
     now = datetime(2026, 9, 9, 0, 0, tzinfo=timezone.utc)
     cheap = score_lot(
         {
@@ -92,4 +92,8 @@ def test_low_retail_is_penalized():
         low_value_retail_floor=40,
         now=now,
     )
-    assert "low stated retail" in cheap["reasons"]
+    expensive = score_lot({"condition": "LIKE NEW", "retail_price": 2000, "current_bid": 1,
+                          "unique_bidders": 0, "total_bids": 0, "expected_close_date": "2026-09-10T00:00:00Z"}, now=now)
+    assert cheap["deal_score"] == expensive["deal_score"]
+    assert cheap["legacy_msrp_score"] != expensive["legacy_msrp_score"]
+    assert "low stated retail (context only)" in cheap["reasons"]

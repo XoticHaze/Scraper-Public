@@ -10,7 +10,7 @@ from typing import Any
 from deal_engine.compatibility import compatibility_allows_hunt, evaluate_compatibility
 from deal_engine.grouping import product_identity
 from deal_engine.hunts import match_profiles
-from deal_engine.valuation import derive_market_valuation, summarize_market_value, compare_protected_offers
+from deal_engine.valuation import derive_market_valuation, summarize_market_value, compare_protected_offers, rebuild_market_views
 from scripts.vehicle_price_history import build_and_write
 
 REPORT = Path("results/macbid-deal-engine.json")
@@ -282,6 +282,9 @@ def main() -> int:
                 product["rated_wattage"] = max(wattages)
             for profile_id in matches:
                 profile_counts[profile_id] = profile_counts.get(profile_id, 0) + 1
+        for row in lots:
+            row["product_identity"] = product["identity"]
+            row["hunt_ids"] = list(product.get("hunt_ids") or [])
         product["lots"] = [compact_lot(row) for row in lots]
         products.append(product)
 
@@ -478,6 +481,10 @@ def main() -> int:
         print("UI_GSA=SOURCE_NOT_PROVIDED")
 
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
+    # The uploaded scan report is the same enriched inventory used in the UI.
+    rebuild_market_views(data, active_inventory=inventory)
+    data["market_publication"]["runtime_enrichment"] = market_doc.get("runtime_enrichment") or {}
+    REPORT.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     print(f"UI_PRODUCTS={len(products)}")
     print(f"UI_LOTS={len(inventory)}")

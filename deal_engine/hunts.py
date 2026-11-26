@@ -215,20 +215,17 @@ def match_profile(
         category_hits = _any(text, category_signals)
         if category_signals and not category_hits:
             return None
-        retail = float(lot.get("retail_price") or product.get("retail_price") or 0)
         bidders = int(lot.get("unique_bidders") or 0)
-        deal_score = float(lot.get("deal_score") or 0)
         condition = lot.get("condition")
         preferred = profile.get("preferred_conditions") or []
-        if retail < float(profile.get("minimum_stated_retail") or 0):
-            return None
         if bidders > int(profile.get("maximum_bidders") or 10**9):
-            return None
-        if deal_score < float(profile.get("minimum_deal_score") or -10**9):
             return None
         if preferred and condition not in preferred:
             return None
-        score = deal_score + min(retail / 50.0, 20) - bidders * 2
+        verified = lot.get("market_price_status") == "verified_external" and lot.get("market_value_authoritative") is True
+        discount = _number(lot.get("verified_discount_pct")) if verified else None
+        # Exact-market discount ranks verified items; unverified items remain discovery candidates.
+        score = (100 + discount if discount is not None else (16 if condition == "LIKE NEW" else 8)) - bidders * 2
         return {
             "score": round(score, 2),
             "signals": category_hits[:8],

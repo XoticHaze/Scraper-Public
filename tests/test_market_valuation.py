@@ -152,3 +152,16 @@ def test_freshness_is_per_observation_and_does_not_reuse_old_secondary_price():
     assert result["market_value_source_count"] == 1
     record["observations"] = record["observations"][1:]
     assert derive_market_valuation(record, condition="OPEN BOX", as_of="2026-11-26")["verified_max_bid"] is None
+
+
+def test_final_market_views_use_only_current_authoritative_value():
+    from deal_engine.valuation import rebuild_market_views
+    rows = [{"upc": "A", "deal_score": 1000, "market_price_status": "unverified"},
+            {"upc": "B", "market_price_status": "verified_external", "market_value_authoritative": True,
+             "verified_discount_pct": 50},
+            {"upc": "C", "market_price_status": "stale_external", "verified_discount_pct": 99}]
+    report = {"policy": {}}
+    rebuild_market_views(report, active_inventory=rows)
+    assert [r["upc"] for r in report["views"]["best_value"]] == ["B"]
+    assert {r["upc"] for r in report["views"]["verification_queue"]} == {"A", "C"}
+    assert report["market_publication"]["verified_lots"] == 1

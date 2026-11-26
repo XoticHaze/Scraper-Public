@@ -272,3 +272,34 @@ def compare_protected_offers(product: dict[str, Any], offers: list[dict[str, Any
     hammer = floor(max(0, (ceiling / (1 + sales_tax_rate) - lot_fee) / (1 + premium_rate)) * 100) / 100 if ceiling is not None else None
     return {"offers": rows, "best_protected_offer": best, "max_auction_all_in": ceiling,
             "max_auction_hammer": hammer, "tax_basis": "estimated local tax on price, shipping and mandatory fees"}
+
+
+def rebuild_market_views(report: dict[str, Any], *, active_inventory: list[dict[str, Any]]) -> None:
+    """Final report and UI must share the same enriched lots, not separate MSRP rankings."""
+    from deal_engine.grouping import collapse_ranked
+    limits = (report.get("policy") or {}).get("views") or {}
+    def close(row):
+        return _number(row.get("expected_closing_utc")) or float("inf")
+    def competition(row):
+        return int(row.get("unique_bidders") or 0), int(row.get("total_bids") or 0)
+    def verified(row):
+        return (row.get("market_price_status") == "verified_external"
+                and row.get("market_value_authoritative") is True
+                and _number(row.get("verified_discount_pct")) is not None)
+    def discovery(row):
+        return -float(row.get("deal_score") or 0), close(row), competition(row)
+    priced = [row for row in active_inventory if verified(row)]
+    unknown = [row for row in active_inventory if not verified(row)]
+    ranked = sorted(priced, key=lambda r: (-float(r["verified_discount_pct"]), competition(r), close(r)))
+    views = {
+        "ending_soon": sorted(active_inventory, key=lambda r: (close(r), competition(r))),
+        "best_value": ranked,
+        "low_competition": sorted(active_inventory, key=lambda r: (competition(r), close(r))),
+        "verification_queue": sorted(unknown, key=discovery),
+        "discovery_candidates": sorted(unknown, key=discovery),
+    }
+    report["views"] = {key: collapse_ranked(rows)[:int(limits.get(key, 100))] for key, rows in views.items()}
+    report["market_publication"] = {"schema": "macbid-market-joined-report-v1",
+        "verified_lots": len(priced), "discovery_lots": len(unknown),
+        "best_value_basis": "current exact external valuation only",
+        "discovery_basis": "condition, competition and closing time only"}
