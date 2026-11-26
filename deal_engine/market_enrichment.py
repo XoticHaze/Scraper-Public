@@ -360,6 +360,7 @@ def merged_market_records(
         "defaults": {**(previous.get("defaults") or {}), **(canonical.get("defaults") or {})},
         "enrichment_attempts": dict(previous.get("enrichment_attempts") or {}),
         "valuations": [],
+        "protected_offers": list(canonical.get("protected_offers") or []),
     }
     prev_map = {
         str(row.get("identity")): row

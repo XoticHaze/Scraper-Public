@@ -150,24 +150,26 @@ def score_lot(
         score -= 25
         reasons.append("non-preferred condition")
 
+    # Keep the historical MSRP baseline for comparison, never for discovery ranking.
+    legacy_msrp_adjustment = 0.0
     discount_pct = None
     savings = None
     comparison_total = all_in_total if all_in_total is not None else pre_tax_total
     if retail is not None and retail > 0 and comparison_total is not None:
         discount_pct = max(-1.0, min(1.0, 1.0 - (comparison_total / retail)))
         savings = retail - comparison_total
-        score += max(-20.0, min(42.0, discount_pct * 48.0))
+        legacy_msrp_adjustment += max(-20.0, min(42.0, discount_pct * 48.0))
         if savings > 0:
-            score += min(24.0, math.log1p(savings) * 4.0)
+            legacy_msrp_adjustment += min(24.0, math.log1p(savings) * 4.0)
         if retail < low_value_retail_floor:
-            score -= 12.0
-            reasons.append("low stated retail")
+            legacy_msrp_adjustment -= 12.0
+            reasons.append("low stated retail (context only)")
         if discount_pct >= 0.70:
             reasons.append("70%+ below stated retail estimated all-in")
         elif discount_pct >= 0.50:
             reasons.append("50%+ below stated retail estimated all-in")
     else:
-        score -= 8.0
+        legacy_msrp_adjustment -= 8.0
         reasons.append("missing usable retail/current bid")
 
     if bidders == 0:
@@ -206,6 +208,8 @@ def score_lot(
 
     return {
         "deal_score": round(score, 2),
+        "deal_score_basis": "condition_competition_close_discovery_only",
+        "legacy_msrp_score": round(score + legacy_msrp_adjustment, 2),
         "estimated_pre_tax_total": pre_tax_total,
         "estimated_sales_tax": estimated_tax,
         "estimated_post_tax_total": all_in_total,

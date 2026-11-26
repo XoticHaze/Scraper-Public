@@ -10,7 +10,7 @@ from typing import Any
 from deal_engine.compatibility import compatibility_allows_hunt, evaluate_compatibility
 from deal_engine.grouping import product_identity
 from deal_engine.hunts import match_profiles
-from deal_engine.valuation import derive_market_valuation, summarize_market_value
+from deal_engine.valuation import derive_market_valuation, summarize_market_value, compare_protected_offers, rebuild_market_views
 from scripts.vehicle_price_history import build_and_write
 
 REPORT = Path("results/macbid-deal-engine.json")
@@ -27,6 +27,8 @@ LOT_FIELDS = (
     "lot_id",
     "id",
     "auction_number",
+    "auction_id",
+    "inventory_id",
     "auction_title",
     "lot_number",
     "auction_location",
@@ -76,6 +78,7 @@ OPTIONAL_VERIFICATION_FIELDS = (
     "market_value_age_days",
     "market_value_freshness",
     "market_value_authoritative",
+    "protected_offer_cap_applied",
 )
 
 
@@ -148,6 +151,9 @@ def main() -> int:
     products: list[dict[str, Any]] = []
     for lots in grouped.values():
         lots.sort(key=lambda row: float(row.get("expected_closing_utc") or float("inf")))
+        for lot in lots:
+            for key in OPTIONAL_VERIFICATION_FIELDS:
+                lot.pop(key, None)
         product = product_metadata(lots)
 
         identity = str(product["identity"])
@@ -161,7 +167,7 @@ def main() -> int:
         for lot in lots:
             lot["market_price_status"] = "unverified"
         if valuation and str(valuation.get("status") or "").lower() == "verified_external":
-            market_summary = summarize_market_value(valuation)
+            market_summary = summarize_market_value(valuation, as_of=time.strftime("%Y-%m-%d", time.gmtime(final_epoch)), fresh_days=int(market_defaults.get("fresh_days", 7)), stale_after_days=int(market_defaults.get("stale_after_days", 30)))
             product["market_value"] = market_summary
             specs = market_summary.get("specs") or {}
             for key, value in specs.items():
@@ -183,7 +189,12 @@ def main() -> int:
                     fresh_days=int(market_defaults.get("fresh_days", 7)),
                     stale_after_days=int(market_defaults.get("stale_after_days", 30)),
                 )
-                lot.update({key: value for key, value in derived.items() if value is not None})
+                # Remove stale values carried by fallback or a prior scan.
+                for key, value in derived.items():
+                    if value is None:
+                        lot.pop(key, None)
+                    else:
+                        lot[key] = value
 
             current_new = market_summary.get("current_new") or {}
             representative = lots[0] if lots else {}
@@ -199,7 +210,7 @@ def main() -> int:
             product["market_value_confidence"] = market_summary.get("price_confidence")
             product["market_identity_confidence"] = market_summary.get("identity_confidence")
             product["market_value_observed_at"] = market_summary.get("observed_at")
-            product["market_value_source_count"] = market_summary.get("source_count")
+            product["market_value_source_count"] = market_summary.get("current_source_count")
             secondary = market_summary.get("open_box_used") or {}
             if secondary.get("median") is not None:
                 product["realistic_open_box_value"] = secondary.get("median")
@@ -208,6 +219,21 @@ def main() -> int:
                     float(current_new["median"]) * float(market_defaults.get("open_box_fallback_ratio", 0.75)),
                     2,
                 )
+
+        protected = compare_protected_offers(product, market_doc.get("protected_offers") or [],
+            as_of=time.strftime("%Y-%m-%d", time.gmtime(final_epoch)),
+            sales_tax_rate=float(policy.get("sales_tax_rate", 0.0)),
+            premium_rate=float(policy.get("buyer_premium_rate", 0.15)),
+            lot_fee=float(policy.get("lot_fee", 3.0)))
+        if protected["offers"]:
+            product["protected_offer_comparison"] = protected
+        if protected["best_protected_offer"]:
+            for lot in lots:
+                if lot.get("market_value_authoritative") and lot.get("max_all_in") is not None:
+                    lot["max_all_in"] = min(lot["max_all_in"], protected["max_auction_all_in"])
+                    lot["verified_max_bid"] = min(lot["verified_max_bid"], protected["max_auction_hammer"])
+                    lot["max_bid"] = lot["verified_max_bid"]
+                    lot["protected_offer_cap_applied"] = True
 
         best_value_lot = max(
             lots,
@@ -261,6 +287,9 @@ def main() -> int:
                 product["rated_wattage"] = max(wattages)
             for profile_id in matches:
                 profile_counts[profile_id] = profile_counts.get(profile_id, 0) + 1
+        for row in lots:
+            row["product_identity"] = product["identity"]
+            row["hunt_ids"] = list(product.get("hunt_ids") or [])
         product["lots"] = [compact_lot(row) for row in lots]
         products.append(product)
 
@@ -457,6 +486,10 @@ def main() -> int:
         print("UI_GSA=SOURCE_NOT_PROVIDED")
 
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
+    # The uploaded scan report is the same enriched inventory used in the UI.
+    rebuild_market_views(data, active_inventory=inventory)
+    data["market_publication"]["runtime_enrichment"] = market_doc.get("runtime_enrichment") or {}
+    REPORT.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     print(f"UI_PRODUCTS={len(products)}")
     print(f"UI_LOTS={len(inventory)}")
