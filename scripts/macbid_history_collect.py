@@ -137,6 +137,10 @@ def collect(state):
     # Oldest last-attempt first, then original source epoch; avoid retry starvation.
     order = lambda r: (r.get("last_attempt_epoch_utc", 0), r.get("source_epoch_utc", 0))
     selected = sorted(pilot, key=order)[:MAX_DETAIL//2] + sorted(general, key=order)[:MAX_DETAIL//2]
+    selected_keys = {lot_key(row) for row in selected}
+    selected += [row for row in sorted(eligible,key=order) if lot_key(row) not in selected_keys][:MAX_DETAIL-len(selected)]
+    state["collector_attempt_counts"] = {"selected": len(selected), "auction_pages": 0, "detail_pages": 0, "listing_missing": 0, "listing_unparsed": 0, "detail_unverified": 0, "source_unavailable": 0, "robots_disallowed": 0}
+    counts = state["collector_attempt_counts"]
     if not selected:
         state["collector_status"] = "no_due_candidates"
         return
@@ -166,28 +170,48 @@ def collect(state):
         for auction, rows in list(groups.items())[:MAX_AUCTIONS]:
             listing_url = f"https://www.mac.bid/past-auctions/{auction}"
             if not robots.can_fetch("*", listing_url):
+                counts["robots_disallowed"] += 1
                 state["collector_status"] = "robots_disallowed"
                 break
+            for row in rows:
+                row["last_attempt_epoch_utc"] = int(time.time())
+                row["last_attempt_status"] = "listing_requested"
+            counts["auction_pages"] += 1
             try:
                 resp = page.goto(listing_url, wait_until="domcontentloaded", timeout=15000)
                 if resp is None or resp.status in {401,403,429}:
                     state["collector_status"] = "source_access_restricted"
                     break
                 if not resp.ok or page.url != listing_url:
+                    counts["source_unavailable"] += 1
+                    for row in rows:
+                        row["last_attempt_status"] = "listing_http_or_redirect"
                     continue
                 page.locator("a[href*='/auction/']").first.wait_for(timeout=5000)
                 anchors = page.locator("a[href*='/auction/']").evaluate_all(
                     "(els) => els.map(e => ({href:e.href, text:e.innerText}))")
             except Exception:
+                counts["source_unavailable"] += 1
+                for row in rows:
+                    row["last_attempt_status"] = "listing_source_unavailable"
                 state["collector_status"] = "source_unavailable"
                 break
             for row in rows:
                 now = int(time.time())
                 row["last_attempt_epoch_utc"] = now
                 href = canonical_lot_url(row)
-                listing = next((p for a in anchors if (p := parse_closed_listing(row, href=a["href"], text=a["text"]))), None)
-                if listing is None or not robots.can_fetch("*", href):
+                matching = [a for a in anchors if a["href"] == href]
+                listing = next((p for a in matching if (p := parse_closed_listing(row, href=a["href"], text=a["text"]))), None)
+                if listing is None:
+                    reason = "listing_unparsed" if matching else "listing_missing"
+                    counts[reason] += 1
+                    row["last_attempt_status"] = reason
                     continue
+                if not robots.can_fetch("*", href):
+                    counts["robots_disallowed"] += 1
+                    row["last_attempt_status"] = "detail_robots_disallowed"
+                    continue
+                counts["detail_pages"] += 1
                 try:
                     resp = page.goto(href, wait_until="domcontentloaded", timeout=12000)
                     if resp is None or resp.status in {401,403,429}:
@@ -195,12 +219,17 @@ def collect(state):
                         state["collector_status"] = "source_access_restricted"
                         break
                     if not resp.ok or page.url != href:
+                        counts["source_unavailable"] += 1
+                        row["last_attempt_status"] = "detail_http_or_redirect"
                         continue
                     detail = page.locator("body").inner_text(timeout=5000)
                     result = reconcile_detail(row, listing, href=href, detail_text=detail,
                                               verified_epoch_utc=int(time.time()), scope_id=row["scope_id"])
                     if result:
                         resolved.append(result)
+                    else:
+                        counts["detail_unverified"] += 1
+                        row["last_attempt_status"] = "detail_unverified"
                 except Exception:
                     stop = True
                     state["collector_status"] = "source_unavailable"
@@ -226,6 +255,7 @@ def main():
     else:
         state["collector_status"] = "degraded_scan_no_collection"
     STATE.write_text(json.dumps(state, separators=(",", ":")))
+    print("PUBLIC_HISTORY_ATTEMPTS " + json.dumps(state.get("collector_attempt_counts") or {}, sort_keys=True))
     print(f"PUBLIC_HISTORY_STATE pending={len(state['pending'])} outcomes={len(state['outcomes'])} new={state.get('new_outcomes',0)} status={state['collector_status']} overflow={state['pending_overflow_count']}")
 
 if __name__ == "__main__":

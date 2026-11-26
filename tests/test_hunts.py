@@ -284,3 +284,22 @@ def test_dishwasher_hunt_retains_unverified_discovery_without_msrp_gate():
 def test_retired_bathroom_hunts_stay_retired():
     assert "compact-sinks" not in PROFILES
     assert "medicine-cabinet-mirrors" not in PROFILES
+
+
+def test_ice_maker_profiles_reject_observed_replacement_tray():
+    for key in ("ice-makers", "ice-makers-exact-direct-refill"):
+        assert not match_profile(PROFILES[key], product("DA97-11117A Ice Bucket Replacement for Samsung Ice Maker Tray"), lot())
+    assert match_profile(PROFILES["ice-makers"], product("SenCre Nugget Ice Maker"), lot())
+    assert match_profile(PROFILES["ice-makers-exact-direct-refill"], product("Gevi IMNA0 Nugget Ice Maker"), lot())
+
+
+def test_refrigerator_profile_rejects_observed_accessories():
+    profile = PROFILES["refrigerators-ice-maker"]
+    for title in ("BOYUZHE Silicone Fridge Mat", "Linda's Essentials Refrigerator Liners",
+                  "Seentech Refrigerator Evaporator Fan Motor", "Samsung Refrigerator Water Filter",
+                  "EveryDrop Refrigerator Ice & Water Filter", "Treeshome Refrigerator French Door Gaskets",
+                  "5304507201 Freezer Door Gasket", "LocknLock Aqua Fridge Water Jug",
+                  "SOXIFIT Cool Drawer"):
+        assert not match_profile(profile, product(title), lot()), title
+    assert match_profile(profile, product("Kenmore Refrigerator"), lot())
+    assert match_profile(profile, product("Galanz Refrigerator"), lot())

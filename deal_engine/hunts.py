@@ -133,6 +133,10 @@ def match_profile(
     kind = profile.get("kind", "semantic")
 
     if kind == "semantic":
+        # Explicit title-only accessory exclusions avoid description text that merely mentions included accessories.
+        title = str(product.get("name") or lot.get("product_name") or lot.get("title") or lot.get("name") or "").lower()
+        if _any(title, profile.get("exclude_title_any")):
+            return None
         retail_floor = profile.get("minimum_stated_retail")
         retail = _number(lot.get("retail_price") or product.get("retail_price"))
         # Auction retail is contextual, never an exclusion for semantic discovery.
