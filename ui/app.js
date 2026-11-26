@@ -20,6 +20,7 @@ const state = {
 };
 
 function money(value) {
+  if (value === null || value === undefined || value === "") return "—";
   const n = Number(value);
   return Number.isFinite(n) ? n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }) : '—';
 }
@@ -109,7 +110,8 @@ function marketValueRank(lot) {
   if (lot.market_price_status === 'verified_external' && number(lot.verified_discount_pct) !== null) {
     return 1000 + Number(lot.verified_discount_pct) - Number(lot.unique_bidders || 0) * 2;
   }
-  return Number(lot.deal_score || -9999);
+  // Unverified listings are discovery candidates, not MSRP-derived deals.
+  return -Number(lot.unique_bidders || 0) * 2;
 }
 
 function lotComparator(mode) {
@@ -414,11 +416,9 @@ function openDetails(row) {
         <div class="cost-row"><span>Estimated sales tax (${(taxRate * 100).toFixed(2)}%)</span><strong>${money(estimatedTax)}</strong></div>
         <div class="cost-row total"><span>Estimated all-in total</span><strong class="good">${money(allIn)}</strong></div>
         <div class="cost-row"><span>MAC.BID stated retail</span><strong>${money(lot.retail_price || product.retail_price)}</strong></div>
-        <div class="cost-row"><span>Stated-retail discount</span><strong class="good">${pct(lot.stated_retail_discount_pct)}</strong></div>
-        <div class="cost-row"><span>Stated-retail savings</span><strong class="good">${money(lot.stated_retail_savings)}</strong></div>
-        <div class="cost-row"><span>${lot.market_price_status === 'verified_external' ? 'Legacy MAC-retail ceiling' : 'Provisional max bid'}</span><strong>${money(lot.provisional_max_bid)}</strong></div>
+        <div class="cost-row"><span>Independent max bid</span><strong>${lot.market_value_authoritative ? money(lot.verified_max_bid) : "Not verified"}</strong></div>
       </div>
-      <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. When external market verification is present, its allocation ceiling supersedes the legacy MAC.BID-retail ceiling.</p>
+      <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. MAC.BID stated retail is reference-only and does not establish savings or a purchase ceiling.</p>
       ${verifiedMarkup(product, lot)}
       ${compatibilityMarkup(product)}
       <div class="plan-box">

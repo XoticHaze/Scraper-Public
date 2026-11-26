@@ -180,3 +180,21 @@ def test_runtime_merge_does_not_revert_fresher_observation():
     new = {"identity": old["identity"], "observations": [{"url": "https://example.com/item", "condition": "new", "price": 80, "observed_at": "2026-11-26"}]}
     merged = merged_market_records({"valuations": [old]}, {"valuations": [new]})
     assert merged["valuations"][0]["observations"][0]["price"] == 80
+
+
+
+def test_pilot_has_reserved_slots_without_rebuilding_hunts():
+    from scripts.macbid_market_enrich import _candidate_rows
+    profiles = [{"id": "other", "kind": "semantic", "required_any": ["projector"]}, {"id": "ice", "kind": "semantic", "required_any": ["ice maker"]}]
+    lots = [{"upc": f"B0AAA{i:05d}", "product_name": "projector", "deal_score": 90} for i in range(12)]
+    lots += [{"upc": f"B0BBB{i:05d}", "product_name": "ice maker", "deal_score": 1} for i in range(5)]
+    rows = _candidate_rows({"inventory": lots}, profiles, set(), 12, {"primary": ["other", "ice"], "pilot": ["ice"]})
+    assert len(rows) == 12
+    assert sum("ice" in row["_candidate_profiles"] for row in rows) >= 3
+
+
+def test_catalog_discovery_has_no_stated_retail_gate_when_disabled():
+    from scripts.macbid_deal_engine import catalog_filter
+    query = catalog_filter(["San Antonio"], ["LIKE NEW"], None, False, 100)
+    assert "retail_price" not in query
+    assert "auction_location" in query and "condition" in query and "is_pallet:=false" in query

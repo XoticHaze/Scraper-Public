@@ -20,17 +20,6 @@
 
   function setHunt(value) {
     const hunt = String(value || '').trim();
-    const minRetail = document.querySelector('#min-retail');
-    if (minRetail?.dataset.huntDefault === 'premium-dishwashers' && hunt !== 'premium-dishwashers') {
-      minRetail.value = '';
-      minRetail.dataset.huntDefault = '';
-      state.minRetail = null;
-    }
-    if (hunt === 'premium-dishwashers' && minRetail && !minRetail.value) {
-      minRetail.value = '800';
-      minRetail.dataset.huntDefault = 'premium-dishwashers';
-      state.minRetail = 800;
-    }
     state.hunt = hunt;
     const url = new URL(window.location.href);
     if (hunt) url.searchParams.set('hunt', hunt);
@@ -70,7 +59,8 @@
       button.title = (profile.verification || []).length
         ? `Verification: ${(profile.verification || []).join(', ')}`
         : profile.label;
-      button.textContent = `${profile.label} · ${Number(profile.count).toLocaleString()}`;
+      const coverage = profile.market_coverage;
+      button.textContent = `${profile.label} · ${Number(profile.count).toLocaleString()}${coverage ? ` · ${Number(coverage.verified_external || 0)} priced` : ""}`;
       button.addEventListener('click', () => setHunt(state.hunt === profile.id ? '' : profile.id));
       bar.append(button);
     }

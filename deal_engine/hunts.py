@@ -135,8 +135,7 @@ def match_profile(
     if kind == "semantic":
         retail_floor = profile.get("minimum_stated_retail")
         retail = _number(lot.get("retail_price") or product.get("retail_price"))
-        if retail_floor is not None and (retail is None or retail < float(retail_floor)):
-            return None
+        # Auction retail is contextual, never an exclusion for semantic discovery.
 
         min_width = profile.get("minimum_width_inches")
         max_width = profile.get("maximum_width_inches")
@@ -199,6 +198,7 @@ def match_profile(
         }
         if retail_floor is not None:
             result["retail_price"] = retail
+            result["stated_retail_floor_met"] = retail is not None and retail >= float(retail_floor)
         if matched_width is not None:
             result["width_inches"] = matched_width
         if matched_diagonal is not None:

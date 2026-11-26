@@ -147,13 +147,20 @@ def _candidate_rows(
     if limit <= 0:
         return []
     primary = set((profile_priority or {}).get("primary") or [])
-    selected = [row for _, row in ranked[:limit]]
+    pilot = set((profile_priority or {}).get("pilot") or [])
+    # Guarantee a bounded pilot allocation, while leaving most capacity for other hunts.
+    pilot_rows = [row for _, row in ranked if pilot.intersection(row["_candidate_profiles"])]
+    selected = pilot_rows[:min(3, max(1, limit // 4))]
+    selected_ids = {row["_candidate_identity"] for row in selected}
+    selected += [row for _, row in ranked if row["_candidate_identity"] not in selected_ids][:limit - len(selected)]
     if limit >= 2 and len(ranked) > limit:
-        alternatives = [row for _, row in ranked[limit:] if row["_candidate_profiles"] and not primary.intersection(row["_candidate_profiles"])]
+        selected_ids = {row["_candidate_identity"] for row in selected}
+        alternatives = [row for _, row in ranked if row["_candidate_identity"] not in selected_ids and row["_candidate_profiles"] and not primary.intersection(row["_candidate_profiles"])]
         if alternatives:
             profile_ids = sorted({p for row in alternatives for p in row["_candidate_profiles"]})
             target = profile_ids[int(time.time() // 1800) % len(profile_ids)]
-            selected[-1] = next(row for row in alternatives if target in row["_candidate_profiles"])
+            if len(selected) > min(3, max(1, limit // 4)):
+                selected[-1] = next(row for row in alternatives if target in row["_candidate_profiles"])
     return selected
 
 

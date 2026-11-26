@@ -1,6 +1,6 @@
 {
   "schema": "macbid-market-enrichment-v1",
-  "version": 4,
+  "version": 5,
   "enabled": true,
   "live_previous_url": "https://xotichaze.github.io/Scraper-Public/market-values.json",
   "max_candidates_per_run": 12,
@@ -73,6 +73,11 @@
     ],
     "fallback": [
       "resale-watch"
+    ],
+    "pilot": [
+      "ice-makers-exact-direct-refill",
+      "ice-makers",
+      "refrigerators-ice-maker"
     ]
   },
   "energy_priority": {
