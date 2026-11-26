@@ -40,8 +40,8 @@ def test_external_market_value_derives_realistic_value_and_allocation_ceiling():
         "observed_at": "2026-09-26",
         "allocation_ratio": 0.60,
         "observations": [
-            {"condition": "new", "price": 100, "source_label": "A", "url": "https://example.com/a"},
-            {"condition": "new", "price": 120, "source_label": "B", "url": "https://example.com/b"},
+            {"condition": "new", "price": 100, "source_label": "A", "url": "https://example.com/a", "observed_at": "2026-09-26"},
+            {"condition": "new", "price": 120, "source_label": "B", "url": "https://example.com/b", "observed_at": "2026-09-26"},
         ],
     }
     derived = derive_market_valuation(
@@ -69,9 +69,9 @@ def test_secondary_market_median_overrides_new_price_haircut():
         "allocation_ratio": 0.50,
         "observed_at": "2026-09-26",
         "observations": [
-            {"condition": "new", "price": 1000, "source_label": "New", "url": "https://example.com/new"},
-            {"condition": "open_box", "price": 700, "source_label": "Open", "url": "https://example.com/open"},
-            {"condition": "used", "price": 600, "source_label": "Used", "url": "https://example.com/used"},
+            {"condition": "new", "price": 1000, "source_label": "New", "url": "https://example.com/new", "observed_at": "2026-09-26"},
+            {"condition": "open_box", "price": 700, "source_label": "Open", "url": "https://example.com/open", "observed_at": "2026-09-26"},
+            {"condition": "used", "price": 600, "source_label": "Used", "url": "https://example.com/used", "observed_at": "2026-09-26"},
         ],
     }
     summary = summarize_market_value(record)
@@ -106,7 +106,7 @@ def test_stale_external_value_does_not_issue_max_bid():
         "observed_at": "2026-08-01",
         "allocation_ratio": 0.50,
         "observations": [
-            {"condition": "new", "price": 100, "source_label": "Old", "url": "https://example.com/old"},
+            {"condition": "new", "price": 100, "source_label": "Old", "url": "https://example.com/old", "observed_at": "2026-08-01"},
         ],
     }
     derived = derive_market_valuation(
@@ -138,3 +138,17 @@ def test_protected_offer_comparison_requires_exact_live_and_complete_costs():
     for change in ({"live_verified": False}, {"shipping": None}, {"return_days": None},
                    {"observed_at": "2026-11-23"}, {"observed_at": "2026-11-27"}):
         assert compare_protected_offers(product, [dict(offer, **change)], **kwargs)["max_auction_all_in"] is None
+
+
+def test_freshness_is_per_observation_and_does_not_reuse_old_secondary_price():
+    record = {"observed_at": "2026-11-26", "observations": [
+        {"condition": "new", "price": 100, "observed_at": "2026-11-26"},
+        {"condition": "open_box", "price": 999, "observed_at": "2026-09-01"},
+        {"condition": "new", "price": 999, "observed_at": "2026-11-27"},
+        {"condition": "new", "price": 999, "availability": "out_of_stock", "observed_at": "2026-11-26"}]}
+    result = derive_market_valuation(record, condition="OPEN BOX", as_of="2026-11-26")
+    assert result["verified_new_price"] == 100
+    assert result["market_reference_value"] == 75
+    assert result["market_value_source_count"] == 1
+    record["observations"] = record["observations"][1:]
+    assert derive_market_valuation(record, condition="OPEN BOX", as_of="2026-11-26")["verified_max_bid"] is None

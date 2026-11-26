@@ -35,7 +35,9 @@ def market_freshness(
     if observed is None or current is None:
         return {"age_days": None, "freshness": "unknown", "authoritative": False}
 
-    age_days = max(0, (current - observed).days)
+    if observed > current:
+        return {"age_days": None, "freshness": "unknown", "authoritative": False}
+    age_days = (current - observed).days
     if age_days <= int(fresh_days):
         freshness = "fresh"
     elif age_days <= int(stale_after_days):
@@ -67,7 +69,7 @@ def price_stats(observations: list[dict[str, Any]], conditions: set[str]) -> dic
     for row in observations:
         condition = str(row.get("condition") or "").strip().lower()
         price = _number(row.get("price"))
-        if condition in conditions and price is not None and price > 0:
+        if condition in conditions and price is not None and isfinite(price) and price > 0:
             prices.append(price)
     if not prices:
         return None
@@ -96,10 +98,15 @@ def reverse_max_bid(
     return round(max(0.0, bid), 2)
 
 
-def summarize_market_value(record: dict[str, Any]) -> dict[str, Any]:
+def summarize_market_value(record: dict[str, Any], *, as_of=None, fresh_days=7, stale_after_days=30) -> dict[str, Any]:
     observations = list(record.get("observations") or [])
-    current_new = price_stats(observations, {"new"})
-    open_box_used = price_stats(observations, SECONDARY_CONDITIONS)
+    current = [row for row in observations if as_of is None or market_freshness(
+        row.get("observed_at"), as_of=as_of, fresh_days=fresh_days,
+        stale_after_days=stale_after_days)["authoritative"]]
+    current = [row for row in current if row.get("availability") not in {"out_of_stock", "sold", "unavailable"}
+               and row.get("observation_kind") != "historical_sale"]
+    current_new = price_stats(current, {"new"})
+    open_box_used = price_stats(current, SECONDARY_CONDITIONS)
     history = record.get("price_history") if isinstance(record.get("price_history"), dict) else None
     sources = [
         {
@@ -116,7 +123,8 @@ def summarize_market_value(record: dict[str, Any]) -> dict[str, Any]:
         "status": str(record.get("status") or "verified_external"),
         "identity_confidence": str(record.get("identity_confidence") or "unknown"),
         "price_confidence": str(record.get("price_confidence") or "unknown"),
-        "observed_at": record.get("observed_at"),
+        "observed_at": max((str(row.get("observed_at") or "") for row in current), default=None) if as_of is not None else record.get("observed_at"),
+        "current_source_count": len(current),
         "model": record.get("model"),
         "current_new": current_new,
         "open_box_used": open_box_used,
@@ -149,13 +157,15 @@ def derive_market_valuation(
     MAC.BID stated retail is intentionally not an input. Exact external identity and
     price observations become authoritative when this record is present.
     """
-    summary = summarize_market_value(record)
+    summary = summarize_market_value(record, as_of=as_of or date.today().isoformat(), fresh_days=fresh_days, stale_after_days=stale_after_days)
     freshness = market_freshness(
-        summary.get("observed_at"),
+        summary.get("observed_at") or record.get("observed_at"),
         as_of=as_of,
         fresh_days=fresh_days,
         stale_after_days=stale_after_days,
     )
+    if not summary["current_source_count"]:
+        freshness["authoritative"] = False
     current_new = summary.get("current_new")
     secondary = summary.get("open_box_used")
     c = (condition or "").strip().upper()
@@ -193,7 +203,7 @@ def derive_market_valuation(
     all_in = _number(current_all_in)
     discount_pct = None
     savings = None
-    if reference_value and all_in is not None:
+    if freshness["authoritative"] and reference_value and all_in is not None:
         discount_pct = (1.0 - all_in / reference_value) * 100.0
         savings = reference_value - all_in
 
@@ -205,7 +215,7 @@ def derive_market_valuation(
         "market_value_confidence": summary.get("price_confidence"),
         "market_identity_confidence": summary.get("identity_confidence"),
         "market_value_observed_at": summary.get("observed_at"),
-        "market_value_source_count": summary.get("source_count"),
+        "market_value_source_count": summary.get("current_source_count"),
         "verified_new_price": current_new.get("median") if current_new else None,
         "current_new_average": current_new.get("average") if current_new else None,
         "current_new_low": current_new.get("low") if current_new else None,

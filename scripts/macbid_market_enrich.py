@@ -17,6 +17,7 @@ from deal_engine.market_enrichment import (
     normalize_identity,
     select_observation_price,
     update_confidence,
+    source_domain,
 )
 
 REPORT = Path("results/macbid-deal-engine.json")
@@ -189,6 +190,8 @@ def _extract_observation(
     if not fetched:
         return None
     final_url, html = fetched
+    if source_domain(final_url) != source_domain(url):
+        return None
     identity_in_url = bool(provider.get("identity_in_url")) and (
         _exact_path_token(final_url, token)
     )
@@ -223,10 +226,13 @@ def _refresh_existing(
     timeout: int,
     max_bytes: int,
     limit: int,
+    active_identities: set[str] | None = None,
 ) -> tuple[int, int]:
     attempted = 0
     refreshed = 0
-    for record in market.get("valuations") or []:
+    active = active_identities or set()
+    records = sorted(market.get("valuations") or [], key=lambda r: (str(r.get("identity")) not in active, str(r.get("last_refresh_attempt_at") or ""), str(r.get("identity") or "")))
+    for record in records:
         token = _record_token(record)
         if not token:
             continue
@@ -237,18 +243,21 @@ def _refresh_existing(
             url = str(old.get("url") or "")
             if not url:
                 continue
+            # eBay explicitly prohibits unauthorized automated page access.
+            if source_domain(url) == "ebay.com" or source_domain(url).endswith(".ebay.com"):
+                continue
             today = time.strftime("%Y-%m-%d", time.gmtime())
             if str(old.get("observed_at") or "") == today:
                 continue
             attempted += 1
+            record["last_refresh_attempt_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             fetched = _fetch_bytes(url, timeout=timeout, max_bytes=max_bytes)
             if not fetched:
                 continue
             final_url, html = fetched
-            exact_in_url = (
-                normalize_identity(token) in normalize_identity(final_url)
-                or (model and normalize_identity(model) in normalize_identity(final_url))
-            )
+            if source_domain(final_url) != source_domain(url):
+                continue
+            exact_in_url = _exact_path_token(final_url, token)
             price, extraction = select_observation_price(
                 html,
                 identity=token,
@@ -316,6 +325,7 @@ def main() -> int:
         timeout=timeout,
         max_bytes=max_bytes,
         limit=int(config.get("max_existing_sources_per_run") or 24),
+        active_identities={product_identity(lot) for lot in (report.get("inventory") or [])},
     )
 
     records = {

@@ -76,6 +76,7 @@ OPTIONAL_VERIFICATION_FIELDS = (
     "market_value_age_days",
     "market_value_freshness",
     "market_value_authoritative",
+    "protected_offer_cap_applied",
 )
 
 
@@ -161,7 +162,7 @@ def main() -> int:
         for lot in lots:
             lot["market_price_status"] = "unverified"
         if valuation and str(valuation.get("status") or "").lower() == "verified_external":
-            market_summary = summarize_market_value(valuation)
+            market_summary = summarize_market_value(valuation, as_of=time.strftime("%Y-%m-%d", time.gmtime(final_epoch)), fresh_days=int(market_defaults.get("fresh_days", 7)), stale_after_days=int(market_defaults.get("stale_after_days", 30)))
             product["market_value"] = market_summary
             specs = market_summary.get("specs") or {}
             for key, value in specs.items():
@@ -183,7 +184,12 @@ def main() -> int:
                     fresh_days=int(market_defaults.get("fresh_days", 7)),
                     stale_after_days=int(market_defaults.get("stale_after_days", 30)),
                 )
-                lot.update({key: value for key, value in derived.items() if value is not None})
+                # Remove stale values carried by fallback or a prior scan.
+                for key, value in derived.items():
+                    if value is None:
+                        lot.pop(key, None)
+                    else:
+                        lot[key] = value
 
             current_new = market_summary.get("current_new") or {}
             representative = lots[0] if lots else {}
@@ -216,6 +222,13 @@ def main() -> int:
             lot_fee=float(policy.get("lot_fee", 3.0)))
         if protected["offers"]:
             product["protected_offer_comparison"] = protected
+        if protected["best_protected_offer"]:
+            for lot in lots:
+                if lot.get("market_value_authoritative") and lot.get("max_all_in") is not None:
+                    lot["max_all_in"] = min(lot["max_all_in"], protected["max_auction_all_in"])
+                    lot["verified_max_bid"] = min(lot["verified_max_bid"], protected["max_auction_hammer"])
+                    lot["max_bid"] = lot["verified_max_bid"]
+                    lot["protected_offer_cap_applied"] = True
 
         best_value_lot = max(
             lots,

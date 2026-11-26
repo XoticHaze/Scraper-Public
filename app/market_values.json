@@ -181,10 +181,11 @@
       "availability": "cached_in_stock",
       "live_verified": false,
       "seller_verified": false,
-      "return_days": null,
-      "warranty_days": null,
+      "return_days": 30,
+      "warranty_days": 90,
       "observed_at": "2026-11-26",
-      "evidence_note": "Cached retailer page showed damaged box, free shipping and add to cart; checkout and item-specific return eligibility not verified."
+      "evidence_note": "Cached retailer listing; merchant general policy updated 2026-11-09 provides 30-day returns and 90-day operational warranty. Live stock, checkout cost and item-specific eligibility remain unverified.",
+      "policy_url": "https://help.vipoutlet.com/hc/en-us/articles/360045967392-What-are-VIP-Outlet-s-return-policies"
     },
     {
       "brand": "Aeitto",
