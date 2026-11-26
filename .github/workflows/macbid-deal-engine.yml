@@ -76,6 +76,8 @@ jobs:
           python scripts/macbid_postprocess.py
 
       - name: Refresh exact-ID external market values
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python scripts/macbid_market_enrich.py
