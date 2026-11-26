@@ -128,15 +128,24 @@ def test_protected_offer_comparison_requires_exact_live_and_complete_costs():
     offer = {"brand": "Aeitto", "model": "CB22C", "condition": "open_box", "price": 100,
              "shipping": 10, "mandatory_fees": 0, "currency": "USD", "live_verified": True,
              "seller_verified": True, "return_days": 30, "availability": "in_stock",
-             "observed_at": "2026-11-26", "url": "https://example.com/offer", "policy_url": "https://example.com/policy"}
-    kwargs = dict(as_of="2026-11-26", sales_tax_rate=.0825, premium_rate=.15, lot_fee=3)
+             "observed_at": "2026-11-26T12:00:00Z", "url": "https://example.com/offer", "policy_url": "https://example.com/policy",
+             "source_id":"test", "checkout_tax":9.08, "checkout_verified":True, "fixed_price":True,
+             "item_return_eligible":True, "delivery_scope":"San Antonio, TX"}
+    kwargs = dict(as_of="2026-11-26", as_of_epoch=1795698000, sales_tax_rate=.0825, premium_rate=.15, lot_fee=3,
+                  admitted_sources={"test":{"collection_authorized":True,"public_projection_allowed":True,
+                  "durable_retention_allowed":True,"authorization_ref":"test-only","max_age_hours":24,
+                  "expires_at":"2026-11-28T00:00:00Z"}})
     result = compare_protected_offers(product, [offer, dict(offer, price=1, availability="out_of_stock"),
                                       dict(offer, price=2, model="CB22D")], **kwargs)
     assert len(result["offers"]) == 2
     assert result["best_protected_offer"]["price"] == 100
-    assert result["max_auction_all_in"] == 59.54
+    assert result["max_auction_all_in"] == 59.53
     for change in ({"live_verified": False}, {"shipping": None}, {"return_days": None},
-                   {"observed_at": "2026-11-23"}, {"observed_at": "2026-11-27"}):
+                   {"observed_at": "2026-11-23"}, {"observed_at": "2026-11-27"}, {"checkout_tax":None},
+                   {"item_return_eligible":False}, {"fixed_price":False}, {"source_id":"unadmitted"},
+                   {"checkout_tax":True}, {"identity":"upc:contradictory","model":"CB22D"},
+                   {"url":"https://example.com/item?secret=bad"},
+                   {"delivery_scope":"unknown"}, {"observed_at":"2026-11-26T14:00:00Z"}):
         assert compare_protected_offers(product, [dict(offer, **change)], **kwargs)["max_auction_all_in"] is None
 
 

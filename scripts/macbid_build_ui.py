@@ -123,6 +123,8 @@ def main() -> int:
 
     hunt_doc = json.loads(APP_HUNTS.read_text(encoding="utf-8")) if APP_HUNTS.exists() else {"profiles": []}
     profiles = hunt_doc.get("profiles") or []
+    source_registry = json.loads(Path("config/marketplace_sources.json").read_text())
+    admitted_sources = {s["id"]: s.get("comparator_authority", {}) for s in source_registry.get("sources", [])}
     profile_counts = {str(profile["id"]): 0 for profile in profiles}
     finding_doc = json.loads(APP_FINDINGS.read_text(encoding="utf-8")) if APP_FINDINGS.exists() else {"findings": []}
     finding_map = {
@@ -221,7 +223,8 @@ def main() -> int:
                 )
 
         protected = compare_protected_offers(product, market_doc.get("protected_offers") or [],
-            as_of=time.strftime("%Y-%m-%d", time.gmtime(final_epoch)),
+            as_of=time.strftime("%Y-%m-%d", time.gmtime(final_epoch)), as_of_epoch=final_epoch,
+            admitted_sources=admitted_sources,
             sales_tax_rate=float(policy.get("sales_tax_rate", 0.0)),
             premium_rate=float(policy.get("buyer_premium_rate", 0.15)),
             lot_fee=float(policy.get("lot_fee", 3.0)))

@@ -62,7 +62,7 @@ def main():
             assert "No bid ceiling yet" in page.locator("#quote-result").inner_text()
             page.check("#quote-exact")
             result = page.locator("#quote-result").inner_text()
-            assert "$60.00" in result or "$60" in result
+            assert "$59.99" in result, result
             assert "Scenario maximum hammer" in result
             assert "independent valuation" in result
             print("SERVED_LOCAL_PROTECTED_QUOTE=PASS")
