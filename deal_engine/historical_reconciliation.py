@@ -49,7 +49,14 @@ def reconcile_detail(row, listing, *, href, detail_text, verified_epoch_utc, sco
     # Preserve only the public numeric identifier, not raw page/account text.
     reported = re.search(r"Mac\.Bid ID:\s*([0-9][0-9,]{0,20})\b", detail_text, re.I)
     public_detail_id = reported.group(1).replace(",", "") if reported else None
-    if public_detail_id != str(row.get("lot_id")):
+    source_lot_id = str(row.get("lot_id") or "")
+    source_inventory_id = str(row.get("inventory_id") or "")
+    # The live public page exposes inventory_id, not lot_id (12/12 exact
+    # cases, run 45826590781). Older fixtures may contain only the displayed ID.
+    # When both source identifiers exist, require the inventory ID, never an
+    # either/or fallback. All remaining independent identity and price checks stand.
+    expected_detail_id = source_inventory_id or source_lot_id
+    if not re.fullmatch(r"[0-9]{1,20}", expected_detail_id) or public_detail_id != expected_detail_id:
         if diagnostic is not None:
             diagnostic["public_detail_id"] = public_detail_id
             diagnostic["source_lot_id"] = str(row.get("lot_id") or "")
@@ -91,6 +98,8 @@ def reconcile_detail(row, listing, *, href, detail_text, verified_epoch_utc, sco
         return reject("invalid_lot_key")
     return {"auction_id": key[0], "auction_number": row["auction_number"], "lot_number": key[1],
             "lot_id": row["lot_id"], "inventory_id": row.get("inventory_id"),
+            "public_detail_id":public_detail_id,
+            "public_detail_id_kind":"inventory_id" if source_inventory_id else "legacy_displayed_id",
             "identity": row.get("identity"), "condition": condition,
             "auction_location": row["auction_location"], "hunt_ids": row.get("hunt_ids") or [],
             "source_url": f"https://www.mac.bid/past-auctions/{key[0]}",
@@ -98,7 +107,7 @@ def reconcile_detail(row, listing, *, href, detail_text, verified_epoch_utc, sco
             "closed_epoch_utc": close_end, "close_minute_start_utc": close_start, "close_time_precision": "minute",
             "verified_epoch_utc": verified_epoch_utc, "prediction_epoch_utc": observed,
             "reconciliation_level": "lot_detail_reconciled", "scope_id": scope_id,
-            "training_eligible": bool(row.get("identity") and scope_id),
+            "training_eligible": bool(row.get("identity") and scope_id and scope_id != "recovered-legacy-retail-floor-40" and source_inventory_id),
             "observed_hammer": row.get("current_bid"), "legacy_msrp": row.get("retail_price"),
             "legacy_msrp_score": row.get("legacy_msrp_score")}
 

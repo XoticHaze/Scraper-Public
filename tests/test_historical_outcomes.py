@@ -90,15 +90,25 @@ def test_exact_public_result_reconciliation_and_time_order():
     assert parse_closed_listing(row, href=href, text=text.replace("Won for $50","Current bid $50")) is None
     detail = "$50.00\n$199.99\nWinner saved 75.0% off retail price.\nAuction Closed 1/29/2026 at 8:16 PM\nCondition:\nLIKE NEW\nUPC:\nB0FM3PD49H\nLot Number:\nSAA2601-29-A1 / 1040N\nMac.Bid ID:\n66737071"
     outcome = reconcile_detail(row, listing, href=href, detail_text=detail, verified_epoch_utc=verified, scope_id="scope")
-    assert outcome["training_eligible"]
+    assert not outcome["training_eligible"]  # legacy fixture lacks independent inventory ID
     assert outcome["closed_epoch_utc"] == int(datetime(2026,1,30,2,16,59,tzinfo=timezone.utc).timestamp())
     assert reconcile_detail(row, listing, href=href, detail_text=detail.replace("B0FM3PD49H","B0WRONG000"), verified_epoch_utc=verified, scope_id="scope") is None
     assert reconcile_detail(row, listing, href=href, detail_text=detail.replace("$50.00","$51.00"), verified_epoch_utc=verified, scope_id="scope") is None
     diagnostic={}
-    assert reconcile_detail(dict(row,inventory_id="12345678"), listing, href=href,
-        detail_text=detail.replace("66737071","12345678"), verified_epoch_utc=verified, scope_id="scope", diagnostic=diagnostic) is None
-    assert diagnostic["public_detail_id"]=="12345678" and diagnostic["matches_inventory_id"] is True
+    inventory_row=dict(row,inventory_id="12345678")
+    inventory_detail=detail.replace("66737071","12345678")
+    matched=reconcile_detail(inventory_row,listing,href=href,detail_text=inventory_detail,
+        verified_epoch_utc=verified,scope_id="scope",diagnostic=diagnostic)
+    assert matched["public_detail_id_kind"]=="inventory_id" and matched["training_eligible"]
+    assert matched["lot_id"]==66737071 and matched["inventory_id"]=="12345678"
+    assert reconcile_detail(inventory_row,listing,href=href,detail_text=detail,
+        verified_epoch_utc=verified,scope_id="scope",diagnostic=diagnostic) is None
     assert diagnostic["reason"]=="lot_id_mismatch"
+    assert reconcile_detail(inventory_row,listing,href=href,detail_text=inventory_detail.replace("B0FM3PD49H","B0WRONG000"),
+        verified_epoch_utc=verified,scope_id="scope") is None
+    legacy=reconcile_detail(inventory_row,listing,href=href,detail_text=inventory_detail,
+        verified_epoch_utc=verified,scope_id="recovered-legacy-retail-floor-40")
+    assert legacy["status"]=="closed_sold_verified" and not legacy["training_eligible"]
     assert reconcile_detail(dict(row, source_epoch_utc=verified), listing, href=href, detail_text=detail, verified_epoch_utc=verified, scope_id="scope") is None
 
 def test_pending_only_same_complete_scope_and_no_inferred_outcomes():
