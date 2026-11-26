@@ -27,6 +27,8 @@ LOT_FIELDS = (
     "lot_id",
     "id",
     "auction_number",
+    "auction_id",
+    "inventory_id",
     "auction_title",
     "lot_number",
     "auction_location",
@@ -149,6 +151,9 @@ def main() -> int:
     products: list[dict[str, Any]] = []
     for lots in grouped.values():
         lots.sort(key=lambda row: float(row.get("expected_closing_utc") or float("inf")))
+        for lot in lots:
+            for key in OPTIONAL_VERIFICATION_FIELDS:
+                lot.pop(key, None)
         product = product_metadata(lots)
 
         identity = str(product["identity"])
@@ -205,7 +210,7 @@ def main() -> int:
             product["market_value_confidence"] = market_summary.get("price_confidence")
             product["market_identity_confidence"] = market_summary.get("identity_confidence")
             product["market_value_observed_at"] = market_summary.get("observed_at")
-            product["market_value_source_count"] = market_summary.get("source_count")
+            product["market_value_source_count"] = market_summary.get("current_source_count")
             secondary = market_summary.get("open_box_used") or {}
             if secondary.get("median") is not None:
                 product["realistic_open_box_value"] = secondary.get("median")

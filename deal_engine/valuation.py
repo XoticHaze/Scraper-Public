@@ -105,6 +105,7 @@ def summarize_market_value(record: dict[str, Any], *, as_of=None, fresh_days=7, 
         stale_after_days=stale_after_days)["authoritative"]]
     current = [row for row in current if row.get("availability") not in {"out_of_stock", "sold", "unavailable"}
                and row.get("observation_kind") != "historical_sale"]
+    current = [row for row in current if str(row.get("condition") or "").strip().lower() in (SECONDARY_CONDITIONS | {"new"}) and (p := _number(row.get("price"))) is not None and isfinite(p) and p > 0]
     current_new = price_stats(current, {"new"})
     open_box_used = price_stats(current, SECONDARY_CONDITIONS)
     history = record.get("price_history") if isinstance(record.get("price_history"), dict) else None
