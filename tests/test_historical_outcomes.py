@@ -241,3 +241,23 @@ def test_public_history_projection_exact_identity_only_and_source_links():
     assert rows and len(rows)<=5
     assert all(r["scope"]=="selected_sample" and r["lot_url"].startswith("https://www.mac.bid/auction/") for r in rows)
     assert recent_closes([dict(seed["outcomes"][0],lot_source_url="https://example.com/")]) == []
+
+
+def test_bid_trajectory_exact_identity_scope_dedupe_and_sparse_semantics():
+    from deal_engine.bid_history import update_bid_history,track_summary,aggregate_tracks
+    scope={"filter":"public","locations":["San Antonio"]}
+    row={"auction_id":"1","lot_number":"A","inventory_id":"2","identity":"upc:B0FM3PD49H",
+         "condition":"LIKE NEW","auction_location":"San Antonio","current_bid":0,"hunt_ids":["ice-makers"]}
+    def snap(e,r,complete=True):
+        return {"schema":"macbid-public-observation-v1","scope":scope,"coverage_complete":complete,
+                "source_epoch_utc":e,"observations":[r]}
+    kw=dict(scope_id="same",scope=scope,now=200)
+    state=update_bid_history({},[snap(100,row),snap(120,dict(row,current_bid=5)),snap(130,row,False)],**kw)
+    assert state["snapshot_epochs"]==[100,120] and state["observations_added"]==2
+    tr=state["tracks"]["1:A"]
+    assert track_summary(tr)["observed_hammer_change"]==5
+    assert aggregate_tracks([tr])["increased"]==1
+    assert update_bid_history(state,[snap(120,row)],**kw)==state
+    bad=update_bid_history(state,[snap(140,dict(row,inventory_id="3"))],**kw)
+    assert "1:A" in bad["conflicts"] and not bad["tracks"]
+    assert not update_bid_history(bad,[snap(160,row)],**kw)["tracks"]

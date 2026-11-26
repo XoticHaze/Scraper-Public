@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from deal_engine.historical_reconciliation import canonical_lot_url
 from deal_engine.market_enrichment import identity_kind
+from deal_engine.bid_history import aggregate_tracks, track_summary
+from deal_engine.historical_reconciliation import lot_key
 from deal_engine.historical_outcomes import summarize_outcomes, walk_forward_sold_prices, scan_coverage
 
 CATALOG = Path("site/catalog.json")
@@ -65,7 +67,14 @@ def enrich_history(catalog, state, seed):
             key = (canonical(row.get("identity")),row.get("auction_location"),row.get("condition"))
             if all(key):
                 seed_cohorts[key].append(row)
+    bid_history=state.get("bid_history") or {}
+    tracks=bid_history.get("tracks",{}) if bid_history.get("scope_id")==scope else {}
     for product in catalog.get("products",[]):
+        for lot in product.get("lots",[]):
+            track=tracks.get(":".join(lot_key(lot)))
+            expected=[str(lot.get("inventory_id") or ""),str(product.get("identity") or ""),str(lot.get("condition") or ""),str(lot.get("auction_location") or "")]
+            if track and track["identity_fields"]==expected:
+                lot["observed_bid_history"]=track_summary(track)
         identity = canonical(product.get("identity"))
         groups = []
         for location,condition in sorted({(lot.get("auction_location"),lot.get("condition")) for lot in product.get("lots",[]) if lot.get("auction_location") and lot.get("condition")}):
@@ -84,6 +93,7 @@ def enrich_history(catalog, state, seed):
         rows=[row for row in outcomes+pending if hid in (row.get("hunt_ids") or [])]
         recovered = [row for row in legacy if hid in (row.get("hunt_ids") or [])]
         profile["recovered_legacy_history"] = summary(recovered,fee)
+        profile["observed_bid_history"]=aggregate_tracks(r for r in tracks.values() if hid in r.get("hunt_ids",[]))
         profile["recent_verified_closes"] = recent_closes(rows+recovered)
         profile["history_coverage"]={"verified_sold":sum(row.get("status")=="closed_sold_verified" for row in rows),
           "verified_unsold":sum(row.get("status")=="closed_unsold_verified" for row in rows),
@@ -96,6 +106,9 @@ def enrich_history(catalog, state, seed):
         "scope_id":scope,"complete_scan_count":len(scans),"complete_days":coverage["qualified_days"],
         "observed_days":coverage["observed_days"],"coverage":coverage,
         "pending_overflow_count":state.get("pending_overflow_count",0),
+        "observed_bid_history":{**aggregate_tracks(tracks.values()),"snapshot_count":len(bid_history.get("snapshot_epochs",[])),
+            "point_drops":bid_history.get("point_drops",0),"track_drops":bid_history.get("track_drops",0),
+            "identity_conflicts":len(bid_history.get("conflicts",{})),"bootstrap_failures":bid_history.get("bootstrap_failures",0)},
         "collector_attempt_counts":state.get("collector_attempt_counts",{}),
         "pending_detail_only_count":sum(bool(row.get("detail_evidence")) for row in state.get("pending",[])),
         "prospective":summary(outcomes+pending,fee),

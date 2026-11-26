@@ -213,6 +213,8 @@
     const history = profile.history_coverage || {};
     const legacy = profile.recovered_legacy_history || {};
     const coverage = profile.market_coverage || {};
+    const bids=profile.observed_bid_history || {};
+    const bidNote = bids.repeated_lots ? ` · ${Number(bids.repeated_lots)} repeat-observed lots, ${Number(bids.increased)} bids increased` : "";
     const historyNote = ` · ${Number(coverage.verified_external || 0)} independently priced · prospective ${Number(history.verified_sold || 0)} sold / ${Number(history.unresolved || 0)} unresolved · legacy ${Number(legacy.verified_sold || 0)} sold / ${Number(legacy.unresolved || 0)} unresolved`;
     const resaleNote = id === 'resale-watch' ? ' · preliminary until real market value, liquidity, fees and net margin are verified' : '';
     addSection({
@@ -220,7 +222,7 @@
       label: profile.label,
       products,
       profileId: id,
-      subtitle: `Top current discovery candidates${profile.compatibility_gate === 'haos' ? ' · HAOS compatibility must clear before recommendation' : ''}${resaleNote}${historyNote}.`,
+      subtitle: `Top current discovery candidates${profile.compatibility_gate === 'haos' ? ' · HAOS compatibility must clear before recommendation' : ''}${resaleNote}${historyNote}${bidNote}.`,
       seeAll: `./?hunt=${encodeURIComponent(id)}`,
     });
   }

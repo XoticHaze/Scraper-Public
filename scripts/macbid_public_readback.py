@@ -58,6 +58,10 @@ def main():
             assert page.locator("#detail-dialog").get_by_text("Historical acquisition evidence", exact=False).first.is_visible()
             assert page.locator("#detail-dialog").get_by_text("Recovered legacy / unresolved",exact=True).is_visible()
             assert page.locator("#detail-dialog").get_by_text("Protected purchase alternatives",exact=True).is_visible()
+            selected_lot = next((l for l in chosen.get("lots",[]) if l.get("observed_bid_history")), None)
+            if selected_lot and all(l.get("observed_bid_history") for l in chosen.get("lots",[])):
+                assert page.locator("#detail-dialog").get_by_text("Observed bid trajectory",exact=True).is_visible()
+                print("SERVED_BID_TRAJECTORY=PASS")
             quote = page.locator("#local-protected-quote")
             assert quote.is_visible()
             page.fill("#quote-total", "120")

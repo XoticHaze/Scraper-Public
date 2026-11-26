@@ -20,6 +20,8 @@ from deal_engine.historical_reconciliation import (
 )
 
 from deal_engine.recovered_history import load_expanded_seed
+from deal_engine.bid_history import update_bid_history
+from deal_engine.public_artifact_state import prior_public_artifacts, read_public_artifact_json
 
 ARTIFACT = "macbid-public-history-state"
 STATE = Path("results/macbid-public-history-state.json")
@@ -328,17 +330,44 @@ def collect(state):
     state["outcomes"] = (state["outcomes"] + resolved)[-MAX_ROWS:]
     state["new_outcomes"] = len(resolved)
 
+def bootstrap_bid_snapshots(current, old):
+    # One-time bounded read of the already retained public observations, no source scraping.
+    if old.get("bid_history",{}).get("scope_id")==current.get("scope_id"):
+        return [],0
+    snapshots, failures = [],0
+    deadline=time.monotonic()+120
+    try:
+        for artifact in prior_public_artifacts("macbid-public-observations")[:12]:
+            if time.monotonic()>=deadline:
+                break
+            try:
+                snapshots.append(read_public_artifact_json(artifact,name="macbid-public-observations",max_bytes=30_000_000))
+            except Exception:
+                failures+=1
+    except Exception:
+        failures+=1
+    return snapshots,failures
+
 def main():
     current = json.loads(SNAPSHOT.read_text())
     old = previous_state(current)
     seed = json.loads(Path("data/macbid_recovered_pilot_pending.json").read_text())
     state = make_state(old, current, now=int(time.time()), recovered_seed=seed, expanded_seed=None if old.get("expanded_seed_loaded") else load_expanded_seed())
+    snapshots, failures = bootstrap_bid_snapshots(current,old) if current.get("coverage_complete") else ([],0)
+    if current.get("coverage_complete"):
+        state["bid_history"] = update_bid_history(old.get("bid_history") or {},snapshots+[old.get("latest_complete") or {},current],
+            scope_id=current["scope_id"],scope=current["scope"],now=state["generated_epoch_utc"])
+        state["bid_history"]["bootstrap_failures"] = failures + int((old.get("bid_history") or {}).get("bootstrap_failures",0))
+    elif old.get("bid_history"):
+        state["bid_history"]=old["bid_history"]
     # Do not query closing outcomes from a degraded scan.
     if current.get("coverage_complete"):
         collect(state)
     else:
         state["collector_status"] = "degraded_scan_no_collection"
     STATE.write_text(json.dumps(state, separators=(",", ":")))
+    bh=state.get("bid_history") or {}
+    print("PUBLIC_BID_HISTORY",json.dumps({"snapshots":len(bh.get("snapshot_epochs",[])),"tracks":len(bh.get("tracks",{})),"observations_added":bh.get("observations_added",0),"point_drops":bh.get("point_drops",0),"track_drops":bh.get("track_drops",0),"conflicts":len(bh.get("conflicts",{})),"bootstrap_failures":bh.get("bootstrap_failures",0)}))
     print("PUBLIC_HISTORY_ATTEMPTS " + json.dumps(state.get("collector_attempt_counts") or {}, sort_keys=True))
     print(f"PUBLIC_HISTORY_STATE pending={len(state['pending'])} outcomes={len(state['outcomes'])} new={state.get('new_outcomes',0)} status={state['collector_status']} overflow={state['pending_overflow_count']}")
 
