@@ -1724,6 +1724,14 @@
         "reliability_and_leak_reports",
         "cleaning_access",
         "operational_condition"
+      ],
+      "exclude_title_any": [
+        "ice bucket replacement",
+        "ice maker tray",
+        "replacement ice bucket",
+        "ice bin replacement",
+        "ice maker mold",
+        "ice maker motor"
       ]
     },
     {
@@ -1806,6 +1814,14 @@
         "exact_variant_auto_refill",
         "manufacturing_date_and_recall_remedy",
         "working_inlet_valve_and_no_leaks"
+      ],
+      "exclude_title_any": [
+        "ice bucket replacement",
+        "ice maker tray",
+        "replacement ice bucket",
+        "ice bin replacement",
+        "ice maker mold",
+        "ice maker motor"
       ]
     },
     {
@@ -1860,6 +1876,21 @@
         "recall_status",
         "cooling_and_ice_maker_condition",
         "pickup_transport"
+      ],
+      "exclude_title_any": [
+        "ice bucket replacement",
+        "ice maker tray",
+        "fridge mat",
+        "refrigerator liner",
+        "evaporator fan motor",
+        "refrigerator water filter",
+        "refrigerator ice & water filter",
+        "ice & water filter",
+        "refrigerator french door gasket",
+        "freezer door gasket",
+        "fridge water jug",
+        "cool drawer",
+        "refrigerator water dispenser replacement"
       ]
     }
   ]
