@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from playwright.sync_api import Request, sync_playwright
 
 from deal_engine.catalog_fallback import fallback_catalog_is_usable, inventory_from_ui_catalog
 from deal_engine.scoring import score_lot
@@ -194,6 +193,8 @@ def exact_close_key(lot: dict[str, Any]) -> float:
 
 
 def main() -> int:
+    from playwright.sync_api import Request, sync_playwright
+
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     locations = [str(v) for v in config["locations"]]
     bootstrap_location_url = str(config.get("bootstrap_location_url") or "https://www.mac.bid/")

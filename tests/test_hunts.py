@@ -256,7 +256,7 @@ def test_resale_only_profile_stays_retired():
     assert "resale-watch" not in PROFILES
 
 
-def test_dishwasher_hunt_uses_value_floor_not_premium_msrp_gate():
+def test_dishwasher_hunt_retains_unverified_discovery_without_msrp_gate():
     profile = PROFILES["premium-dishwashers"]
     assert match_profile(
         profile,
@@ -268,11 +268,12 @@ def test_dishwasher_hunt_uses_value_floor_not_premium_msrp_gate():
         product("Whirlpool Built-In Dishwasher"),
         lot(retail_price=799.99),
     )
-    assert not match_profile(
+    match = match_profile(
         profile,
         product("Budget Built-In Dishwasher"),
         lot(retail_price=399.99),
     )
+    assert match and match["stated_retail_floor_met"] is False
     assert not match_profile(
         profile,
         product("Dishwasher Installation Kit and Drain Hose"),
