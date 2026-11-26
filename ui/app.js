@@ -257,6 +257,50 @@ function protectedOfferMarkup(product) {
   return `<div class="verify-box"><strong>Protected purchase alternatives</strong>${rows}<div class="cost-row"><span>50% delivered-cost auction ceiling</span><strong>${money(comparison.max_auction_all_in)}</strong></div><div class="cost-row"><span>Max hammer before additional risk adjustments</span><strong>${money(comparison.max_auction_hammer)}</strong></div><p class="muted">No ceiling from cached, unavailable or incomplete offers. Estimated tax; verify checkout and condition.</p></div>`;
 }
 
+function localProtectedQuoteMarkup() {
+  return `<div class="plan-box" id="local-protected-quote">
+    <strong>Compare a returnable checkout quote · browser-local</strong>
+    <p class="muted">Use a current, exact-item alternative you have checked. Include shipping, tax and all mandatory fees in its delivered price. This scenario is not independently verified or published, and does not change your saved plan.</p>
+    <div class="plan-grid">
+      <label>Alternative delivered total ($)<input id="quote-total" type="number" min="0.01" step="0.01" placeholder="Full checkout total"></label>
+      <label>Auction protection / extra costs ($)<input id="quote-extra" type="number" min="0" step="0.01" placeholder="Enter 0 if none"></label>
+      <label>Return window (days)<input id="quote-returns" type="number" min="1" max="365" step="1" placeholder="Item-specific"></label>
+    </div>
+    <label class="plan-note"><input id="quote-exact" type="checkbox"> I confirmed exact model, condition, reputable seller, stock and return eligibility.</label>
+    <p class="muted">Auction protection is optional and item-specific. Enter the actual quoted amount including tax, plus transport/other incremental costs. Do not assume protection is available.</p>
+    <div id="quote-result" aria-live="polite" class="muted">Complete all fields to calculate a comparison.</div>
+  </div>`;
+}
+
+function wireLocalProtectedQuote(lot, premiumRate, fee, taxRate) {
+  const box = detailContent.querySelector('#local-protected-quote');
+  if (!box) return;
+  const get = id => box.querySelector('#' + id);
+  const update = () => {
+    const delivered = number(get('quote-total').value);
+    const extra = number(get('quote-extra').value);
+    const returns = number(get('quote-returns').value);
+    const out = get('quote-result');
+    if (!(delivered > 0) || extra === null || extra < 0 || !Number.isInteger(returns) || returns < 1 || returns > 365 || !get('quote-exact').checked) {
+      out.textContent = 'Complete all fields and confirm return eligibility and exact identity. No bid ceiling yet.';
+      return;
+    }
+    const max = Math.floor(delivered * 50) / 100;
+    const auctionOnly = Math.max(0, max - extra);
+    const hammer = Math.floor((auctionOnly / (1 + taxRate) - fee) / (1 + premiumRate) * 100) / 100;
+    const current = lotAllIn(lot);
+    const existing = lot.market_value_authoritative ? number(lot.verified_max_bid) : null;
+    const safe = hammer >= 0 ? (existing !== null ? Math.min(existing, hammer) : hammer) : null;
+    out.textContent = 'Half of delivered alternative: ' + money(max) +
+      ' · Current auction including extras: ' + (current === null ? 'unknown' : money(current + extra)) +
+      ' · Scenario maximum hammer: ' + (safe === null ? 'No feasible bid' : money(safe)) +
+      (existing !== null ? ' (also capped by independent valuation)' : ' (local quote only; independent value unverified)') +
+      '. Check actual fees, condition and final checkout before purchase.';
+  };
+  box.querySelectorAll('input').forEach(input => input.addEventListener('input', update));
+  update();
+}
+
 function verifiedMarkup(product, lot) {
   const status = product.market_price_status || lot.market_price_status || 'unverified';
   const market = product.market_value || {};
@@ -444,6 +488,7 @@ function openDetails(row) {
       <p class="muted">Sales tax is an estimate using the active catalog tax profile and current assumed taxable basis. MAC.BID stated retail is reference-only and does not establish savings or a purchase ceiling.</p>
       ${verifiedMarkup(product, lot)}
       ${protectedOfferMarkup(product)}
+      ${localProtectedQuoteMarkup()}
       ${historicalAcquisitionMarkup(product, lot)}
       ${compatibilityMarkup(product)}
       <div class="plan-box">
@@ -486,6 +531,7 @@ function openDetails(row) {
       </div>
     </div>
   </div>`;
+  wireLocalProtectedQuote(lot, premiumRate, fee, taxRate);
   detailContent.querySelector('#copy-web-link')?.addEventListener('click', (event) => {
     copyText(macProductUrl(product, lot), event.currentTarget);
   });

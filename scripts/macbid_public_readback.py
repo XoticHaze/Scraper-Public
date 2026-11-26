@@ -46,12 +46,26 @@ def main():
             card = page.locator(".card").filter(has_text=chosen["name"]).first
             card.wait_for(timeout=15000)
             assert card.get_attribute("data-identity") == chosen["identity"]
-            assert "Market verified" in card.inner_text()
+            # Chips use CSS uppercase. Assert visible text case-insensitively, not a raw case-sensitive DOM string.
+            assert "market verified" in card.inner_text().casefold(), card.inner_text()
             card.locator(".card-open").click()
             page.wait_for_selector("#detail-dialog[open] .verify-box")
             verification = page.locator("#detail-dialog .verify-box").filter(has_text="External market valuation").first
             assert verification.is_visible()
             assert verification.locator("a[href^='https://']").count() > 0
+            assert page.locator("#detail-dialog").get_by_text("Historical acquisition evidence", exact=False).first.is_visible()
+            quote = page.locator("#local-protected-quote")
+            assert quote.is_visible()
+            page.fill("#quote-total", "120")
+            page.fill("#quote-extra", "10")
+            page.fill("#quote-returns", "30")
+            assert "No bid ceiling yet" in page.locator("#quote-result").inner_text()
+            page.check("#quote-exact")
+            result = page.locator("#quote-result").inner_text()
+            assert "$60.00" in result or "$60" in result
+            assert "Scenario maximum hammer" in result
+            assert "independent valuation" in result
+            print("SERVED_LOCAL_PROTECTED_QUOTE=PASS")
             print(f"SERVED_MARKET_CARD=PASS identity={chosen['identity']} ice_pilot={'ice-makers' in (chosen.get('hunt_ids') or [])}")
         else:
             print("SERVED_MARKET_CARD=NO_CURRENT_VERIFIED_PRODUCT")
