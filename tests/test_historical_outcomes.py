@@ -173,3 +173,22 @@ def test_detail_only_evidence_does_not_become_training_outcome():
     assert evidence["training_eligible"] is False
     assert detail_only_evidence(row,detail_text=detail.replace("B0FM3PD49H","B0WRONG000"),**kwargs) is None
     assert detail_only_evidence(row,detail_text=detail.replace("Winner saved","Current bid"),**kwargs) is None
+
+
+def test_expanded_seed_and_selection():
+    from deal_engine.recovered_history import load_expanded_seed
+    from scripts.macbid_history_collect import make_state, select_candidates
+    rows=load_expanded_seed()
+    assert len(rows)==2617
+    assert all(r["status"]=="missing_unresolved" and "final_hammer" not in r for r in rows)
+    assert any("ice-makers" in r["hunt_ids"] for r in rows)
+    now=1795697782
+    current={"scope_id":"new","coverage_complete":True,"source_epoch_utc":now,"observations":[]}
+    state=make_state({},current,now=now,expanded_seed=rows)
+    assert len(state["pending"])==2617 and not state["outcomes"]
+    selected=select_candidates(state)
+    assert 0<len(selected)<=12 and len({r["auction_id"] for r in selected})<=3
+    assert any("ice-makers" in r["hunt_ids"] for r in selected)
+    assert any("ice-makers" not in r["hunt_ids"] for r in selected)
+    state["pending"]=[]
+    assert not make_state(state,current,now=now,expanded_seed=rows)["pending"]

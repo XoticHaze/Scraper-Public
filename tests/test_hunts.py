@@ -303,3 +303,10 @@ def test_refrigerator_profile_rejects_observed_accessories():
         assert not match_profile(profile, product(title), lot()), title
     assert match_profile(profile, product("Kenmore Refrigerator"), lot())
     assert match_profile(profile, product("Galanz Refrigerator"), lot())
+
+
+def test_aeitto_cb22c_exact_discovery_only():
+    profile=PROFILES["ice-makers-exact-direct-refill"]
+    assert match_profile(profile,product("Aeitto CB22C Nugget Ice Maker"),lot())
+    assert not match_profile(profile,product("Aeitto CB22D Nugget Ice Maker"),lot())
+    assert not match_profile(profile,product("Aeitto CB22C Ice Maker Replacement Tray"),lot())

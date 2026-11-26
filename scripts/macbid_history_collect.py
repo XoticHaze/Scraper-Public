@@ -19,6 +19,8 @@ from deal_engine.historical_reconciliation import (
     canonical_lot_url, lot_key, pending_closed_candidates, parse_closed_listing, reconcile_detail, detail_only_evidence,
 )
 
+from deal_engine.recovered_history import load_expanded_seed
+
 ARTIFACT = "macbid-public-history-state"
 STATE = Path("results/macbid-public-history-state.json")
 SNAPSHOT = Path("results/macbid-public-observations.json")
@@ -91,7 +93,7 @@ def previous_state(current):
                 "bootstrapped_from_observation_run":rid}
     return {"pending": [], "outcomes": [], "coverage_epochs": {}, "latest_complete": None}
 
-def make_state(old, current, *, now, recovered_seed=None):
+def make_state(old, current, *, now, recovered_seed=None, expanded_seed=None):
     latest = old.get("latest_complete") or {}
     pending = {lot_key(row): row for row in old.get("pending", []) if
                row.get("source_epoch_utc", 0) >= now - MAX_AGE}
@@ -104,10 +106,24 @@ def make_state(old, current, *, now, recovered_seed=None):
             if all(key) and key not in outcomes and row.get("scope_id") == "recovered-legacy-retail-floor-40" and row.get("source_epoch_utc",0) >= now-MAX_AGE:
                 pending.setdefault(key, row)
         seed_loaded=True
+    expanded_loaded = bool(old.get("expanded_seed_loaded"))
+    if not expanded_loaded and expanded_seed is not None:
+        for row in expanded_seed:
+            key = lot_key(row)
+            if key not in outcomes and row["source_epoch_utc"] >= now - MAX_AGE:
+                if key in pending:
+                    # Preserve pilot attempts and add newly reconstructed hunt tags.
+                    prior = pending[key]
+                    if prior.get("scope_id") == row["scope_id"]:
+                        pending[key] = {**row, **prior, "hunt_ids": sorted(set(row["hunt_ids"]) | set(prior.get("hunt_ids") or []))}
+                else:
+                    pending[key] = row
+        expanded_loaded = True
     for row in pending_closed_candidates(latest, current):
         key = lot_key(row)
         if key not in outcomes:
-            pending.setdefault(key, row)
+            if key not in pending or pending[key].get("scope_id") != row.get("scope_id"):
+                pending[key] = row
     # Reappearance invalidates a missing candidate; only an explicit closure is an outcome.
     if current.get("coverage_complete"):
         for row in current.get("observations", []):
@@ -126,19 +142,42 @@ def make_state(old, current, *, now, recovered_seed=None):
             "outcomes": list(outcomes.values())[-MAX_ROWS:], "coverage_epochs": coverage,
             "pending_overflow_count": int(old.get("pending_overflow_count") or 0) + overflow,
             "collector_status": "not_attempted", "recovered_seed_loaded": seed_loaded,
+            "expanded_seed_loaded": expanded_loaded,
             "bootstrapped_from_observation_run": old.get("bootstrapped_from_observation_run")}
+
+def select_candidates(state):
+    """Reserve actual auction capacity for current scope, pilot and general backlog."""
+    eligible = [r for r in state["pending"] if canonical_lot_url(r) and str(r.get("auction_id", "")).isdigit()]
+    scope = (state.get("latest_complete") or {}).get("scope_id")
+    pilot = lambda r: "ice-makers" in (r.get("hunt_ids") or [])
+    current = lambda r: scope and r.get("scope_id") == scope
+    order = lambda r: (r.get("last_attempt_epoch_utc", 0), r.get("source_epoch_utc", 0), lot_key(r))
+    selected, keys, auctions = [], set(), set()
+    def take(pool, limit):
+        count = 0
+        for row in sorted(pool, key=order):
+            key = lot_key(row)
+            if key in keys or (key[0] not in auctions and len(auctions) >= MAX_AUCTIONS):
+                continue
+            selected.append(row)
+            keys.add(key)
+            auctions.add(key[0])
+            count += 1
+            if count >= limit or len(selected) >= MAX_DETAIL:
+                break
+    # Pick a single auction in each lane before filling, to avoid exhausting all groups.
+    for predicate in (current, pilot, lambda r: not pilot(r)):
+        pool = [r for r in eligible if predicate(r) and lot_key(r) not in keys]
+        if pool:
+            first = min(pool, key=order)
+            take([r for r in pool if lot_key(r)[0] == lot_key(first)[0]], 4)
+    if len(selected) < MAX_DETAIL:
+        take(eligible, MAX_DETAIL-len(selected))
+    return selected
 
 def collect(state):
     from playwright.sync_api import sync_playwright
-    # Prefer the ice maker pilot, but reserve half the detail budget for all other hunts.
-    eligible = [r for r in state["pending"] if canonical_lot_url(r) and str(r.get("auction_id", "")).isdigit()]
-    pilot = [r for r in eligible if "ice-makers" in (r.get("hunt_ids") or [])]
-    general = [r for r in eligible if r not in pilot]
-    # Oldest last-attempt first, then original source epoch; avoid retry starvation.
-    order = lambda r: (r.get("last_attempt_epoch_utc", 0), r.get("source_epoch_utc", 0))
-    selected = sorted(pilot, key=order)[:MAX_DETAIL//2] + sorted(general, key=order)[:MAX_DETAIL//2]
-    selected_keys = {lot_key(row) for row in selected}
-    selected += [row for row in sorted(eligible,key=order) if lot_key(row) not in selected_keys][:MAX_DETAIL-len(selected)]
+    selected = select_candidates(state)
     state["collector_attempt_counts"] = {"selected": len(selected), "auction_pages": 0, "detail_pages": 0, "listing_missing": 0, "listing_unparsed": 0, "listing_scroll_advances": 0, "detail_only_evidence": 0, "detail_unverified": 0, "source_unavailable": 0, "robots_disallowed": 0}
     counts = state["collector_attempt_counts"]
     if not selected:
@@ -147,7 +186,7 @@ def collect(state):
     resolved = []
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
-        context = browser.new_context()
+        context = browser.new_context(timezone_id="America/Chicago")
         # Robots must be readable and permit the requested public pages. No bypass.
         try:
             response = context.request.get("https://www.mac.bid/robots.txt", timeout=10000)
@@ -240,10 +279,19 @@ def collect(state):
                         counts["source_unavailable"] += 1
                         row["last_attempt_status"] = "detail_http_or_redirect"
                         continue
+                    try:
+                        page.wait_for_function(
+                            """() => {const t=document.body.innerText;return /Mac\\.Bid ID:/i.test(t) && /Lot Number:/i.test(t) && /Auction Closed/i.test(t)}""",
+                            timeout=5000)
+                    except Exception:
+                        counts["detail_unverified"] += 1
+                        row["last_attempt_status"] = "detail_not_hydrated"
+                        continue
                     detail = page.locator("body").inner_text(timeout=5000)
+                    diagnostic = {}
                     checked = int(time.time())
                     result = reconcile_detail(row, listing, href=href, detail_text=detail,
-                                              verified_epoch_utc=checked, scope_id=row["scope_id"])
+                                              verified_epoch_utc=checked, scope_id=row["scope_id"], diagnostic=diagnostic)
                     if listing is None:
                         evidence = detail_only_evidence(row, href=href, detail_text=detail,
                                                         verified_epoch_utc=checked, scope_id=row["scope_id"])
@@ -256,7 +304,9 @@ def collect(state):
                         resolved.append(result)
                     else:
                         counts["detail_unverified"] += 1
-                        row["last_attempt_status"] = "detail_unverified"
+                        row["last_attempt_status"] = diagnostic.get("reason", "detail_unverified")
+                        reason = row["last_attempt_status"]
+                        counts[reason] = counts.get(reason, 0) + 1
                 except Exception:
                     stop = True
                     state["collector_status"] = "source_unavailable"
@@ -275,7 +325,7 @@ def main():
     current = json.loads(SNAPSHOT.read_text())
     old = previous_state(current)
     seed = json.loads(Path("data/macbid_recovered_pilot_pending.json").read_text())
-    state = make_state(old, current, now=int(time.time()), recovered_seed=seed)
+    state = make_state(old, current, now=int(time.time()), recovered_seed=seed, expanded_seed=None if old.get("expanded_seed_loaded") else load_expanded_seed())
     # Do not query closing outcomes from a degraded scan.
     if current.get("coverage_complete"):
         collect(state)
