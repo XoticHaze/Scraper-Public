@@ -35,48 +35,52 @@ def parse_closed_listing(row, *, href, text):
     return {"status": "closed_sold_verified" if hammer is not None else "closed_unsold_verified",
             "final_hammer": hammer, "date": match[3], "time": match[4]}
 
-def reconcile_detail(row, listing, *, href, detail_text, verified_epoch_utc, scope_id):
+def reconcile_detail(row, listing, *, href, detail_text, verified_epoch_utc, scope_id, diagnostic=None):
     """Require prior lot identity and detail evidence; use the conservative minute end."""
-    if listing is None or href != canonical_lot_url(row):
+    def reject(reason):
+        if diagnostic is not None:
+            diagnostic["reason"] = reason
         return None
+    if listing is None or href != canonical_lot_url(row):
+        return reject("listing_or_url_missing")
     if not re.search(r"Lot Number:\s*" + re.escape(str(row.get("auction_number"))) +
                      r"\s*/\s*" + re.escape(str(row.get("lot_number"))) + r"\b", detail_text, re.I):
-        return None
+        return reject("lot_number_mismatch")
     if not re.search(r"Mac\.Bid ID:\s*" + re.escape(str(row.get("lot_id"))) + r"\b", detail_text, re.I):
-        return None
+        return reject("lot_id_mismatch")
     token = str(row.get("upc") or row.get("asin") or "").strip().upper()
     if not re.fullmatch(r"[A-Z0-9]{8,14}", token):
-        return None
+        return reject("identity_token_missing")
     if not re.search(r"UPC:\s*" + re.escape(token) + r"\b", detail_text, re.I):
-        return None
+        return reject("upc_mismatch")
     condition = str(row.get("condition") or "")
     if condition not in {"LIKE NEW", "OPEN BOX"} or not re.search(r"Condition:\s*" + re.escape(condition) + r"\b", detail_text, re.I):
-        return None
+        return reject("condition_mismatch")
     close = re.search(r"Auction Closed\s+" + TIME_RE, detail_text, re.I)
     if not close or close[1] != listing["date"] or close[2].upper() != listing["time"].upper():
-        return None
+        return reject("close_time_mismatch")
     if listing["status"] == "closed_sold_verified":
         # The price displayed on the lot page must agree with the explicit past-auction result.
         prices = re.findall(r"(?m)^\s*\$" + MONEY + r"\s*$", detail_text)
         if "winner saved" not in detail_text.lower() or not prices or float(prices[0].replace(",", "")) != listing["final_hammer"]:
-            return None
+            return reject("hammer_mismatch")
     elif not re.search(r"\bLot Not Sold\b", detail_text, re.I):
-        return None
+        return reject("unsold_marker_missing")
     zone = LOCATION_ZONES.get(row.get("auction_location"))
     if not zone:
-        return None
+        return reject("location_unknown")
     local = datetime.strptime(close[1] + " " + close[2].upper(), "%m/%d/%Y %I:%M %p").replace(tzinfo=ZoneInfo(zone))
     # Display is minute precision. Reject ambiguous DST folds rather than guess.
     if local.utcoffset() != local.replace(fold=1).utcoffset():
-        return None
+        return reject("ambiguous_close_time")
     close_start = int(local.timestamp())
     close_end = close_start + 59
     observed = row.get("source_epoch_utc")
     if not isinstance(observed, int) or not observed < close_start <= close_end < verified_epoch_utc:
-        return None
+        return reject("observation_time_conflict")
     key = lot_key(row)
     if not all(key) or not key[0].isdigit():
-        return None
+        return reject("invalid_lot_key")
     return {"auction_id": key[0], "auction_number": row["auction_number"], "lot_number": key[1],
             "lot_id": row["lot_id"], "inventory_id": row.get("inventory_id"),
             "identity": row.get("identity"), "condition": condition,

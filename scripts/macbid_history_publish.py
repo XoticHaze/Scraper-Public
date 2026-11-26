@@ -34,6 +34,11 @@ def enrich_history(catalog, state, seed):
         key = (canonical(row.get("identity")), row.get("auction_location"), row.get("condition"))
         if all(key):
             cohorts[key].append(row)
+    legacy_cohorts = defaultdict(list)
+    for row in legacy:
+        key=(canonical(row.get("identity")),row.get("auction_location"),row.get("condition"))
+        if all(key) and key[0].startswith("upc:"):
+            legacy_cohorts[key].append(row)
     seed_cohorts = defaultdict(list)
     for row in seed_rows:
         if row.get("reconciliation_level") == "lot_detail_reconciled":
@@ -46,15 +51,18 @@ def enrich_history(catalog, state, seed):
         for location,condition in sorted({(lot.get("auction_location"),lot.get("condition")) for lot in product.get("lots",[]) if lot.get("auction_location") and lot.get("condition")}):
             key=(identity,location,condition)
             live, historical = cohorts.get(key,[]),seed_cohorts.get(key,[])
-            if live or historical:
+            recovered = legacy_cohorts.get(key,[])
+            if live or historical or recovered:
                 groups.append({"location":location,"condition":condition,"prospective":summary(live,fee),
-                               "selected_historical_sample":summary(historical,fee)})
+                               "selected_historical_sample":summary(historical,fee),"recovered_legacy_scope":summary(recovered,fee)})
         if groups:
             product["historical_acquisition"] = {"cohorts":groups,
                "note":"Exact identity, location and condition only. Estimated current fees; selected historical results are not a representative sample."}
     for profile in catalog.get("hunt_profiles",[]):
         hid=profile["id"]
         rows=[row for row in outcomes+pending if hid in (row.get("hunt_ids") or [])]
+        recovered = [row for row in legacy if hid in (row.get("hunt_ids") or [])]
+        profile["recovered_legacy_history"] = summary(recovered,fee)
         profile["history_coverage"]={"verified_sold":sum(row.get("status")=="closed_sold_verified" for row in rows),
           "verified_unsold":sum(row.get("status")=="closed_unsold_verified" for row in rows),
           "unresolved":sum(row.get("status")=="missing_unresolved" for row in rows)}

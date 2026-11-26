@@ -1,0 +1,100 @@
+{
+  "schema": "macbid-recovered-legacy-v2",
+  "scope_id": "recovered-legacy-retail-floor-40",
+  "scope_note": "Prior complete public scans used a $40 stated retail floor; missing lots are unresolved, not sales. Current hunt matches are retrospective projections, not contemporaneous recommendations.",
+  "count": 2617,
+  "sha256": "6310deab2e80521681091b4d1acf09bedcb2cab4e8920807e231ad75912a0f5e",
+  "fields": [
+    "auction_id",
+    "auction_number",
+    "lot_id",
+    "lot_number",
+    "inventory_id",
+    "auction_location",
+    "condition",
+    "upc",
+    "brand",
+    "product_name",
+    "current_bid",
+    "total_bids",
+    "unique_bidders",
+    "expected_closing_utc",
+    "estimated_post_tax_total",
+    "retail_price",
+    "source_epoch_utc",
+    "first_missing_epoch_utc"
+  ],
+  "source_artifacts": [
+    14986643023,
+    15023263797,
+    15069930427,
+    15086933967,
+    15091573926,
+    15092252329
+  ],
+  "parts": [
+    {
+      "path": "part-00.jsonl",
+      "count": 300,
+      "bytes": 58315,
+      "git_sha": "ca698b3ede1e9b60237fa3c02bc127fb71252bd0",
+      "sha256": "4e3f8be5a05cf01588d1d703a1b7dd8d46d9d44d73e5a12e52b701bb590e1dd2"
+    },
+    {
+      "path": "part-01.jsonl",
+      "count": 300,
+      "bytes": 58903,
+      "git_sha": "d0db775c4bbf8a6f6918422834213c60196881da",
+      "sha256": "bab48856673668620a79ef372262def502d15585253d90fd8029dce17d12179d"
+    },
+    {
+      "path": "part-02.jsonl",
+      "count": 300,
+      "bytes": 58091,
+      "git_sha": "8fad5c9ab99a735ba98732f568fcecb55b3ea351",
+      "sha256": "5f8bd3148c20e6b361ba594fda4a56fa4e6b1bdc94af6067f8459667bd36e05a"
+    },
+    {
+      "path": "part-03.jsonl",
+      "count": 300,
+      "bytes": 58049,
+      "git_sha": "9c213dd33ed8818daa35aa982478c57160f293de",
+      "sha256": "dc62ed405f1499871f40d0b82dedfe67dc492dc59c7417371d06335ddb29b39c"
+    },
+    {
+      "path": "part-04.jsonl",
+      "count": 300,
+      "bytes": 57905,
+      "git_sha": "dfade280490e78d09e0c3a585360eafa9b7d2b50",
+      "sha256": "b30e0ba496f78dce56d286a4a9350ff9d116c1ca4cc0c5a47fcf7c73db584321"
+    },
+    {
+      "path": "part-05.jsonl",
+      "count": 300,
+      "bytes": 57471,
+      "git_sha": "c76ed12f20c24994a74ba969d6cd52fd839c7540",
+      "sha256": "d0ff8c5f816f3ba9df8df446ba8bee32bbb4913812f5b563582e917cb6bfb3f0"
+    },
+    {
+      "path": "part-06.jsonl",
+      "count": 300,
+      "bytes": 58160,
+      "git_sha": "bc8e715ceff2f86552026293c3f6a4a370973f89",
+      "sha256": "8e8860e54b5503280563315fd3c4e3b966aa1448a6d592704164ce1bc49923b4"
+    },
+    {
+      "path": "part-07.jsonl",
+      "count": 300,
+      "bytes": 57771,
+      "git_sha": "c0d268729b9fc285186372eec3a4987fc4788dd9",
+      "sha256": "315259068ae18ac5b8d3845924767742083c13e2e25c1f7401c3eb2e7bb51063"
+    },
+    {
+      "path": "part-08.jsonl",
+      "count": 217,
+      "bytes": 42107,
+      "git_sha": "7a1d477009627b9a982c35e2d9d55f4a9e9fa0a2",
+      "sha256": "975696452e7e934904d92851625bf373c06ac22d400969bb4967d803996acd2c"
+    }
+  ]
+}
