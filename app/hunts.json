@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 17,
+  "version": 18,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -1677,7 +1677,17 @@
         "nim030ss00",
         "a-ice2",
         "nugget ice",
-        "clear ice"
+        "clear ice",
+        "aeitto",
+        "sencre",
+        "avalon",
+        "whynter",
+        "bxz002",
+        "b0g5ylwnfj",
+        "b0c6llpt9m",
+        "b0d4ln2qz6",
+        "b0dg245zrz",
+        "b0dqv3dtm1"
       ],
       "exclude_any": [
         "ice maker replacement",
@@ -1714,6 +1724,88 @@
         "reliability_and_leak_reports",
         "cleaning_access",
         "operational_condition"
+      ]
+    },
+    {
+      "id": "ice-makers-exact-direct-refill",
+      "label": "Ice Makers · Exact Direct-Refill Watchlist",
+      "kind": "semantic",
+      "required_any": [
+        "ice maker",
+        "icemaker",
+        "ice machine",
+        "nugget ice"
+      ],
+      "must_match_any": [
+        "imna0",
+        "imnb0",
+        "imc-491dc",
+        "a-ice2",
+        "nim030ss00",
+        "bxz002",
+        "b0g5ylwnfj",
+        "b0c6llpt9m",
+        "b0d4ln2qz6",
+        "b0dg245zrz",
+        "b0dqv3dtm1"
+      ],
+      "boost_any": [
+        "direct water connection",
+        "direct water line",
+        "automatic water refill",
+        "auto water refill",
+        "water inlet",
+        "nugget ice",
+        "imna0",
+        "imnb0",
+        "a-ice2",
+        "b0c6llpt9m",
+        "b0d4ln2qz6",
+        "b0dg245zrz",
+        "b0dqv3dtm1",
+        "bxz002",
+        "b0g5ylwnfj"
+      ],
+      "exclude_any": [
+        "ice maker replacement",
+        "replacement ice maker",
+        "ice maker kit",
+        "ice maker filter",
+        "ice maker cleaner",
+        "ice maker tubing",
+        "ice scoop",
+        "ice tray",
+        "knee ice machine",
+        "cold therapy",
+        "ice maker cover"
+      ],
+      "minimum_signal_score": 4,
+      "verification": [
+        "exact_model",
+        "verified_market_price",
+        "automatic_pressurized_water_refill",
+        "inlet_tubing_od",
+        "minimum_inlet_pressure",
+        "maximum_inlet_pressure",
+        "ro_water_compatibility",
+        "ice_type",
+        "ice_quality",
+        "daily_output",
+        "ice_storage_refrigerated",
+        "drain_requirement",
+        "consumer_rating",
+        "review_count",
+        "review_recency",
+        "rating_source_quality",
+        "recall_status",
+        "reliability_and_leak_reports",
+        "cleaning_access",
+        "operational_condition",
+        "manufacturer_inlet_pressure_evidence",
+        "measured_ro_delivery_pressure_under_flow",
+        "exact_variant_auto_refill",
+        "manufacturing_date_and_recall_remedy",
+        "working_inlet_valve_and_no_leaks"
       ]
     },
     {
