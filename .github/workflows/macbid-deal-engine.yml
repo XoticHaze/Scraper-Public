@@ -10,6 +10,8 @@ on:
         type: string
   repository_dispatch:
     types: [refresh]
+  issue_comment:
+    types: [created]
   workflow_run:
     workflows: ['Scraper Public CI']
     types: [completed]
@@ -24,14 +26,16 @@ permissions:
 
 # Branch/PR CI completion also emits workflow_run events, but those jobs
 # are skipped by the job gate. They must not cancel an already running main
-# publication at the workflow-level concurrency reservation.
+# publication at the workflow-level concurrency reservation. Untrusted issue
+# comments use isolated ignored groups and cannot reserve the live group.
+# Never interrupt an in-flight scan; GitHub may coalesce pending runs.
 concurrency:
-  group: macbid-live-refresh-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || 'main' }}
-  cancel-in-progress: true
+  group: macbid-live-refresh-${{ github.event_name == 'issue_comment' && !(github.event.issue.number == 72 && github.event.issue.state == 'open' && github.event.issue.pull_request == null && github.event.comment.author_association == 'OWNER' && github.event.comment.user.id == 152584286 && github.actor_id == '152584286' && github.event.comment.body == 'refresh-public-catalog-v1' && github.run_attempt == 1) && format('ignored-{0}', github.run_id) || github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || 'main' }}
+  cancel-in-progress: false
 
 jobs:
   engine:
-    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    if: ${{ (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')) && (github.event_name != 'issue_comment' || (github.event.issue.number == 72 && github.event.issue.state == 'open' && github.event.issue.pull_request == null && github.event.comment.author_association == 'OWNER' && github.event.comment.user.id == 152584286 && github.actor_id == '152584286' && github.event.comment.body == 'refresh-public-catalog-v1' && github.run_attempt == 1)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     outputs:
@@ -44,7 +48,7 @@ jobs:
           echo "event=${{ github.event_name }}"
           echo "actor=${{ github.actor }}"
           echo "ref=${{ github.ref }}"
-          echo "dispatch_reason=${{ github.event.inputs.reason || github.event.client_payload.reason || 'n/a' }}"
+          echo "refresh_request_id=${{ github.event.comment.id || github.run_id }}"
 
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
