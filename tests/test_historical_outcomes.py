@@ -61,12 +61,14 @@ def test_walk_forward_never_uses_future_verifications_or_missing_coverage():
     cutoff = base + 40*day
     rows.append(row(100, cutoff, cutoff+day, cutoff+day+1, 80))
     rows.append(row(101, base, base+day, cutoff+day, 10000))
-    coverage = [base+i*day for i in range(10, 40)]
+    coverage = [base+i*day+h*3600 for i in range(10, 40) for h in range(24)]
     result = walk_forward_sold_prices(rows, complete_scan_epochs=coverage)
     assert result["evaluated_cases"] == 1
     assert result["cases"][0]["training_samples"] == 20
     assert result["mean_absolute_error"] == 30
     assert walk_forward_sold_prices(rows, complete_scan_epochs=[])["evaluated_cases"] == 0
+    assert walk_forward_sold_prices(rows, complete_scan_epochs=[base+i*day for i in range(10,40)])["evaluated_cases"] == 0
+    assert result["observed_p25_p75_coverage"] == 0
     with pytest.raises(ValueError):
         walk_forward_sold_prices(rows, complete_scan_epochs=coverage, minimum_samples=1)
 
@@ -138,3 +140,36 @@ def test_recovered_pilot_is_not_mixed_with_current_scope_and_is_loaded_once():
     assert not out["outcomes"]
     out["pending"]=[]
     assert not make_state(out,current,now=now,recovered_seed=seed)["pending"]
+
+
+def test_hourly_scan_coverage_never_counts_partial_days_as_complete():
+    from deal_engine.historical_outcomes import scan_coverage
+    day=86400
+    base=day*100
+    epochs=[base+h*3600 for h in range(24)]
+    assert scan_coverage(epochs)["qualified_days"] == 1
+    assert scan_coverage(epochs[:-1])["qualified_days"] == 0
+    assert scan_coverage(epochs, as_of=base+23*3600+30)["qualified_days"] == 0
+    result=scan_coverage(epochs+[base+3*day])
+    assert result["observed_days"]==2
+    assert result["qualified_days"]==1
+    assert result["maximum_gap_seconds"]==49*3600
+
+
+def test_detail_only_evidence_does_not_become_training_outcome():
+    from datetime import datetime, timezone
+    from deal_engine.historical_reconciliation import detail_only_evidence
+    href="https://www.mac.bid/auction/SAA2601-29-A1/lot/1040N"
+    observed=int(datetime(2026,1,29,20,tzinfo=timezone.utc).timestamp())
+    verified=int(datetime(2026,1,30,5,tzinfo=timezone.utc).timestamp())
+    row={"auction_id":"71686","auction_number":"SAA2601-29-A1","lot_number":"1040N",
+         "lot_id":66737071,"upc":"B0FM3PD49H","identity":"upc:B0FM3PD49H",
+         "condition":"LIKE NEW","auction_location":"San Antonio","source_epoch_utc":observed}
+    detail="$50.00\n$199.99\nWinner saved 75.0% off retail price.\nAuction Closed 1/29/2026 at 8:16 PM\nCondition:\nLIKE NEW\nUPC:\nB0FM3PD49H\nLot Number:\nSAA2601-29-A1 / 1040N\nMac.Bid ID:\n66737071"
+    kwargs=dict(href=href,verified_epoch_utc=verified,scope_id="scope")
+    evidence=detail_only_evidence(row,detail_text=detail,**kwargs)
+    assert evidence["reported_hammer"] == 50
+    assert evidence["status"] == "detail_only_sold"
+    assert evidence["training_eligible"] is False
+    assert detail_only_evidence(row,detail_text=detail.replace("B0FM3PD49H","B0WRONG000"),**kwargs) is None
+    assert detail_only_evidence(row,detail_text=detail.replace("Winner saved","Current bid"),**kwargs) is None

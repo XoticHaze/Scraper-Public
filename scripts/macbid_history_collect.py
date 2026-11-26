@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 from urllib.robotparser import RobotFileParser
 
 from deal_engine.historical_reconciliation import (
-    canonical_lot_url, lot_key, pending_closed_candidates, parse_closed_listing, reconcile_detail,
+    canonical_lot_url, lot_key, pending_closed_candidates, parse_closed_listing, reconcile_detail, detail_only_evidence,
 )
 
 ARTIFACT = "macbid-public-history-state"
@@ -139,7 +139,7 @@ def collect(state):
     selected = sorted(pilot, key=order)[:MAX_DETAIL//2] + sorted(general, key=order)[:MAX_DETAIL//2]
     selected_keys = {lot_key(row) for row in selected}
     selected += [row for row in sorted(eligible,key=order) if lot_key(row) not in selected_keys][:MAX_DETAIL-len(selected)]
-    state["collector_attempt_counts"] = {"selected": len(selected), "auction_pages": 0, "detail_pages": 0, "listing_missing": 0, "listing_unparsed": 0, "detail_unverified": 0, "source_unavailable": 0, "robots_disallowed": 0}
+    state["collector_attempt_counts"] = {"selected": len(selected), "auction_pages": 0, "detail_pages": 0, "listing_missing": 0, "listing_unparsed": 0, "listing_scroll_advances": 0, "detail_only_evidence": 0, "detail_unverified": 0, "source_unavailable": 0, "robots_disallowed": 0}
     counts = state["collector_attempt_counts"]
     if not selected:
         state["collector_status"] = "no_due_candidates"
@@ -188,8 +188,24 @@ def collect(state):
                         row["last_attempt_status"] = "listing_http_or_redirect"
                     continue
                 page.locator("a[href*='/auction/']").first.wait_for(timeout=5000)
-                anchors = page.locator("a[href*='/auction/']").evaluate_all(
-                    "(els) => els.map(e => ({href:e.href, text:e.innerText}))")
+                locator = page.locator("a[href*='/auction/']")
+                anchors = locator.evaluate_all("(els) => els.map(e => ({href:e.href, text:e.innerText}))")
+                # Normal visible-page scrolling only. No hidden pagination endpoint,
+                # synthetic URL, or access bypass. Stop on no additional rows.
+                wanted = {canonical_lot_url(row) for row in rows}
+                for _ in range(3):
+                    if wanted.issubset({a["href"] for a in anchors}):
+                        break
+                    previous_count = len(anchors)
+                    locator.last.scroll_into_view_if_needed(timeout=3000)
+                    try:
+                        page.wait_for_function(
+                            "(n) => document.querySelectorAll(\"a[href*='/auction/']\").length > n",
+                            arg=previous_count, timeout=2500)
+                    except Exception:
+                        break
+                    anchors = locator.evaluate_all("(els) => els.map(e => ({href:e.href, text:e.innerText}))")
+                    counts["listing_scroll_advances"] += 1
             except Exception:
                 counts["source_unavailable"] += 1
                 for row in rows:
@@ -206,7 +222,9 @@ def collect(state):
                     reason = "listing_unparsed" if matching else "listing_missing"
                     counts[reason] += 1
                     row["last_attempt_status"] = reason
-                    continue
+                    # The exact previously observed public lot URL is already known.
+                    # A direct detail may be independently useful descriptive evidence,
+                    # but remains pending until the listing corroborates it.
                 if not robots.can_fetch("*", href):
                     counts["robots_disallowed"] += 1
                     row["last_attempt_status"] = "detail_robots_disallowed"
@@ -223,8 +241,17 @@ def collect(state):
                         row["last_attempt_status"] = "detail_http_or_redirect"
                         continue
                     detail = page.locator("body").inner_text(timeout=5000)
+                    checked = int(time.time())
                     result = reconcile_detail(row, listing, href=href, detail_text=detail,
-                                              verified_epoch_utc=int(time.time()), scope_id=row["scope_id"])
+                                              verified_epoch_utc=checked, scope_id=row["scope_id"])
+                    if listing is None:
+                        evidence = detail_only_evidence(row, href=href, detail_text=detail,
+                                                        verified_epoch_utc=checked, scope_id=row["scope_id"])
+                        if evidence:
+                            row["detail_evidence"] = evidence
+                            counts["detail_only_evidence"] += 1
+                            row["last_attempt_status"] = "detail_only_pending_corroboration"
+                            continue
                     if result:
                         resolved.append(result)
                     else:
