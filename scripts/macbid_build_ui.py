@@ -9,6 +9,7 @@ from typing import Any
 
 from deal_engine.compatibility import compatibility_allows_hunt, evaluate_compatibility
 from deal_engine.grouping import product_identity
+from deal_engine.model_evidence import match_model_evidence
 from deal_engine.hunts import match_profiles
 from deal_engine.valuation import derive_market_valuation, summarize_market_value, compare_protected_offers, rebuild_market_views
 from scripts.vehicle_price_history import build_and_write
@@ -158,6 +159,9 @@ def main() -> int:
                 lot.pop(key, None)
         product = product_metadata(lots)
 
+        model_evidence = match_model_evidence(product, finding_doc.get("model_evidence") or [])
+        if model_evidence:
+            product["model_evidence"] = model_evidence
         identity = str(product["identity"])
         valuation = market_map.get(identity)
         # Historical UPC-labelled ASINs and dedicated ASINs are the same exact token.
@@ -333,6 +337,7 @@ def main() -> int:
         "product_count": len(products),
         "lot_count": len(inventory),
         "hunt_profiles": public_profiles,
+        "model_watch_evidence": finding_doc.get("model_evidence") or [],
         "market_value_count": sum(1 for product in products if product.get("market_price_status") == "verified_external"),
         "stale_market_value_count": sum(1 for product in products if product.get("market_price_status") == "stale_external"),
         "unverified_market_value_count": sum(1 for product in products if product.get("market_price_status") == "unverified"),

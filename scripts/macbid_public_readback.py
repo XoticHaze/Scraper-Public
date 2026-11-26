@@ -80,9 +80,16 @@ def main():
         page.goto(f"{URL}finds.html?readback={args.epoch}",wait_until="domcontentloaded",timeout=30000)
         page.wait_for_selector("#ice-makers",timeout=30000)
         for profile in catalog.get("hunt_profiles",[]):
-            assert page.locator("#"+profile["id"]).count()==1, profile["id"]
+            assert page.locator("[id="+repr(profile["id"])+"]").count()==1, profile["id"]
         assert "legacy" in page.locator("#ice-makers .finds-section-head").inner_text()
         print("SERVED_ALL_HUNT_HISTORY=PASS profiles="+str(len(catalog["hunt_profiles"])))
+        evidence = page.locator("#ice-model-evidence")
+        assert evidence.is_visible()
+        assert "not current inventory" in evidence.inner_text()
+        assert "Whynter IMC-491DC" in evidence.inner_text()
+        assert "Avalon A-ICE2" in evidence.inner_text()
+        assert evidence.locator("a[href^=\'https://\']").count() >= 3
+        print("SERVED_ICE_MODEL_EVIDENCE=PASS")
         print(f"SERVED_CATALOG=PASS epoch={args.epoch} products={len(products)} lots={catalog['lot_count']} verified={catalog['market_value_count']}")
         browser.close()
 
