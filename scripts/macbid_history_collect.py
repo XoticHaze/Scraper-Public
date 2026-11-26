@@ -151,7 +151,8 @@ def select_candidates(state):
     scope = (state.get("latest_complete") or {}).get("scope_id")
     pilot = lambda r: "ice-makers" in (r.get("hunt_ids") or [])
     current = lambda r: scope and r.get("scope_id") == scope
-    order = lambda r: (r.get("last_attempt_epoch_utc", 0), r.get("source_epoch_utc", 0), lot_key(r))
+    # Retry the newly diagnosed identifier mapping once ahead of unattempted rows.
+    order = lambda r: (0 if r.get("detail_identity_evidence",{}).get("matches_inventory_id") and r.get("last_attempt_status")=="lot_id_mismatch" else 1, r.get("last_attempt_epoch_utc", 0), r.get("source_epoch_utc", 0), lot_key(r))
     selected, keys, auctions = [], set(), set()
     def take(pool, limit):
         count = 0
@@ -301,6 +302,8 @@ def collect(state):
                             row["last_attempt_status"] = "detail_only_pending_corroboration"
                             continue
                     if result:
+                        if result.get("public_detail_id_kind")=="inventory_id":
+                            counts["inventory_identity_reconciled"] = counts.get("inventory_identity_reconciled",0)+1
                         resolved.append(result)
                     else:
                         counts["detail_unverified"] += 1
