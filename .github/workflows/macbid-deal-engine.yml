@@ -347,6 +347,19 @@ jobs:
             echo 'No deal-engine report was produced.'
           fi
 
+      - name: Capture public historical observations
+        if: success()
+        run: python -m deal_engine.historical_observations
+
+      - name: Retain compact public observation snapshot
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macbid-public-observations
+          path: results/macbid-public-observations.json
+          retention-days: 90
+          if-no-files-found: error
+
       - name: Upload deal engine report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
