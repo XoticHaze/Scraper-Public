@@ -44,7 +44,33 @@ def choose_predecessor(states, current):
         valid.append((artifact,doc))
     if not valid:
         return None
-    return max(valid,key=lambda x:(x[1]["generated_epoch_utc"],x[1].get("latest_complete",{}).get("source_epoch_utc",0),int(x[0]["id"])))
+    return max(valid,key=lambda x:(x[1]["generated_epoch_utc"],(x[1].get("latest_complete") or {}).get("source_epoch_utc",0),int(x[0]["id"])))
+
+def recover_predecessor_evidence(selected, states):
+    """Recover coverage and independently verified outcomes from known prior states.
+
+    Do not union old pending queues: later complete observations may invalidate them.
+    Conflicting verified closing evidence fails closed rather than picking a winner.
+    """
+    artifact, newest = selected
+    doc = dict(newest)
+    coverage = {k:set(v) for k,v in newest.get("coverage_epochs",{}).items()}
+    outcomes = {}
+    fields = ("inventory_id","identity","condition","auction_location","status","final_hammer","closed_epoch_utc","scope_id")
+    for _,state in states:
+        for scope,epochs in state.get("coverage_epochs",{}).items():
+            coverage.setdefault(scope,set()).update(epochs)
+        for row in state.get("outcomes",[]):
+            key=lot_key(row)
+            old=outcomes.get(key)
+            if old and any(old.get(f)!=row.get(f) for f in fields):
+                raise RuntimeError("conflicting prior verified closure evidence: "+str(key))
+            if old is None or row.get("verified_epoch_utc",0)<old.get("verified_epoch_utc",0):
+                outcomes[key]=row
+    doc["coverage_epochs"]={k:sorted(v) for k,v in coverage.items()}
+    doc["outcomes"]=list(outcomes.values())
+    doc["pending"]=[row for row in newest.get("pending",[]) if lot_key(row) not in outcomes]
+    return doc
 
 def previous_state(current):
     """Read only a prior public main-branch workflow's own state artifact."""
@@ -77,10 +103,12 @@ def previous_state(current):
         states.append((artifact,doc))
     selected = choose_predecessor(states, current)
     if selected:
-        artifact,doc = selected
+        artifact,_ = selected
+        doc = recover_predecessor_evidence(selected,states)
         doc["predecessor_receipt"]={"artifact_id":artifact["id"],"run_id":artifact["workflow_run"]["id"],
             "generated_epoch_utc":doc["generated_epoch_utc"],"outcomes":len(doc.get("outcomes",[])),
-            "pending":len(doc.get("pending",[]))}
+            "pending":len(doc.get("pending",[])),
+            "inspected_artifact_ids":[a["id"] for a,_ in states]}
         print("PUBLIC_HISTORY_PREDECESSOR",json.dumps(doc["predecessor_receipt"],sort_keys=True))
         return doc
     # Bootstrap from the already deployed 90-day observation artifact if it has

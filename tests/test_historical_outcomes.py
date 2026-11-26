@@ -271,3 +271,13 @@ def test_history_predecessor_prefers_state_epoch_not_artifact_id():
     assert choose_predecessor([older,newer],current)==newer
     assert choose_predecessor([newer,older],current)==newer
     assert choose_predecessor([],current) is None
+
+
+def test_recover_predecessor_evidence_retains_actual_coverage():
+    from scripts.macbid_history_collect import recover_predecessor_evidence
+    a={"id":1}; b={"id":2}
+    prior={"coverage_epochs":{"scope":[100,200]},"outcomes":[],"pending":[]}
+    latest={"coverage_epochs":{"scope":[100,300]},"outcomes":[],"pending":[]}
+    doc=recover_predecessor_evidence((b,latest),[(b,latest),(a,prior)])
+    assert doc["coverage_epochs"]["scope"]==[100,200,300]
+    assert doc["outcomes"]==[]
