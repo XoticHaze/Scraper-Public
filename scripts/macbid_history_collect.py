@@ -31,33 +31,58 @@ MAX_AGE = 90 * 86400
 MAX_AUCTIONS = 3
 MAX_DETAIL = 12
 
+def choose_predecessor(states, current):
+    """Use actual state generation, not artifact ID or API ordering."""
+    valid=[]
+    for artifact,doc in states:
+        epoch=doc.get("generated_epoch_utc")
+        if not isinstance(epoch,int) or isinstance(epoch,bool) or epoch<=0 or epoch>int(time.time()):
+            raise RuntimeError("invalid predecessor epoch")
+        latest=(doc.get("latest_complete") or {}).get("source_epoch_utc",0)
+        if latest > current.get("source_epoch_utc",0) and current.get("coverage_complete"):
+            raise RuntimeError("predecessor observation newer than current complete scan")
+        valid.append((artifact,doc))
+    if not valid:
+        return None
+    return max(valid,key=lambda x:(x[1]["generated_epoch_utc"],x[1].get("latest_complete",{}).get("source_epoch_utc",0),int(x[0]["id"])))
+
 def previous_state(current):
     """Read only a prior public main-branch workflow's own state artifact."""
     repo = os.environ.get("GITHUB_REPOSITORY")
     if repo != "XoticHaze/Scraper-Public":
         raise RuntimeError("owning public repository required")
-    raw = subprocess.check_output(["gh", "api", f"repos/{repo}/actions/artifacts?name={ARTIFACT}&per_page=20"],
-                                  text=True, timeout=30)
-    rows = json.loads(raw).get("artifacts", [])
-    for artifact in rows:
-        run = artifact.get("workflow_run") or {}
-        if artifact.get("name") != ARTIFACT or artifact.get("expired") or run.get("head_branch") != "main":
-            continue
+    # Artifact-list ordering is not a continuity guarantee. Inspect recent main
+    # workflow runs directly and prefer the greatest committed state epoch.
+    candidates = {str(a["id"]):a for a in prior_public_artifacts(ARTIFACT)}
+    raw_runs = subprocess.check_output(["gh","api",f"repos/{repo}/actions/workflows/macbid-deal-engine.yml/runs?branch=main&per_page=15"],text=True,timeout=30)
+    runs = json.loads(raw_runs).get("workflow_runs", [])
+    inspected = 0
+    for run in runs:
         rid = str(run.get("id") or "")
-        if not rid.isdigit() or rid == os.environ.get("GITHUB_RUN_ID"):
+        if not rid.isdigit() or rid == os.environ.get("GITHUB_RUN_ID") or run.get("head_branch") != "main" or run.get("conclusion") == "skipped":
             continue
-        if artifact.get("size_in_bytes", 0) > 25_000_000:
-            raise RuntimeError("history state exceeds bound")
-        with tempfile.TemporaryDirectory() as tmp:
-            subprocess.run(["gh", "run", "download", rid, "--repo", repo, "--name", ARTIFACT, "--dir", tmp],
-                           check=True, timeout=60, capture_output=True)
-            path = Path(tmp) / STATE.name
-            if not path.exists() or path.stat().st_size > 80_000_000:
-                raise RuntimeError("invalid prior state artifact")
-            doc = json.loads(path.read_text())
-            if doc.get("schema") != "macbid-public-history-state-v1":
-                raise RuntimeError("unknown prior state schema")
-            return doc
+        if inspected >= 4:
+            break
+        inspected += 1
+        result = subprocess.check_output(["gh","api",f"repos/{repo}/actions/runs/{rid}/artifacts?per_page=20"],text=True,timeout=30)
+        for artifact in json.loads(result).get("artifacts", []):
+            if artifact.get("name") == ARTIFACT and not artifact.get("expired"):
+                # Run-scoped response may omit the workflow_run metadata.
+                candidates[str(artifact["id"])] = {**artifact,"workflow_run":{"id":run["id"],"head_branch":"main"}}
+    states = []
+    for artifact in sorted(candidates.values(),key=lambda a:(a.get("created_at",""),int(a["id"])),reverse=True)[:4]:
+        doc = read_public_artifact_json(artifact,name=ARTIFACT,max_bytes=80_000_000)
+        if doc.get("schema") != "macbid-public-history-state-v1":
+            raise RuntimeError("unknown prior state schema")
+        states.append((artifact,doc))
+    selected = choose_predecessor(states, current)
+    if selected:
+        artifact,doc = selected
+        doc["predecessor_receipt"]={"artifact_id":artifact["id"],"run_id":artifact["workflow_run"]["id"],
+            "generated_epoch_utc":doc["generated_epoch_utc"],"outcomes":len(doc.get("outcomes",[])),
+            "pending":len(doc.get("pending",[]))}
+        print("PUBLIC_HISTORY_PREDECESSOR",json.dumps(doc["predecessor_receipt"],sort_keys=True))
+        return doc
     # Bootstrap from the already deployed 90-day observation artifact if it has
     # identical discovery scope. Older snapshots have no per-row source epoch.
     raw = subprocess.check_output(["gh", "api", f"repos/{repo}/actions/artifacts?name=macbid-public-observations&per_page=20"],
@@ -145,7 +170,8 @@ def make_state(old, current, *, now, recovered_seed=None, expanded_seed=None):
             "pending_overflow_count": int(old.get("pending_overflow_count") or 0) + overflow,
             "collector_status": "not_attempted", "recovered_seed_loaded": seed_loaded,
             "expanded_seed_loaded": expanded_loaded,
-            "bootstrapped_from_observation_run": old.get("bootstrapped_from_observation_run")}
+            "bootstrapped_from_observation_run": old.get("bootstrapped_from_observation_run"),
+            "predecessor_receipt":old.get("predecessor_receipt")}
 
 def select_candidates(state):
     """Reserve actual auction capacity for current scope, pilot and general backlog."""
