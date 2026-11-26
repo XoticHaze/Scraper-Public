@@ -231,7 +231,7 @@ function renderCard(row) {
     ? (allInHeadroom >= 0 ? `${money(allInHeadroom)} headroom` : `${money(Math.abs(allInHeadroom))} over max`)
     : lot.market_price_status === 'verified_external'
       ? `${pct(lot.verified_discount_pct)} vs market`
-      : `${pct(lot.stated_retail_discount_pct)} off`;
+      : 'Independent value unverified';
   foot.append(left, right);
 
   if (state.watchlist.has(product.identity)) {
@@ -265,9 +265,9 @@ function verifiedMarkup(product, lot) {
   const sourceLinks = (market.sources || [])
     .filter((source) => source?.url && /^https:\/\//i.test(source.url))
     .slice(0, 8)
-    .map((source) => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.label || 'Source')} · ${money(source.price)} ↗</a>`)
+    .map((source) => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.label || 'Source')} · ${money(source.price)} · ${escapeHtml(source.condition || 'condition unknown')} · ${escapeHtml(source.observed_at || 'date unknown')} ↗</a>`)
     .join(' · ');
-  if (!['verified_external', 'stale_external'].includes(status) || verifiedNew == null) {
+  if (!['verified_external', 'stale_external'].includes(status) || (verifiedNew == null && openBoxValue == null)) {
     return `<div class="verify-box"><strong>External market verification</strong><p class="muted">Not verified yet. MAC.BID retail is discovery-only until exact identity is matched to external current-market observations.</p></div>`;
   }
   const freshness = product.market_value_freshness || lot.market_value_freshness || 'unknown';
@@ -535,7 +535,7 @@ async function loadCatalog() {
   const tax = Number(state.catalog.sales_tax_rate || 0) * 100;
   const verified = Number(state.catalog.market_value_count || 0);
   const stale = Number(state.catalog.stale_market_value_count || 0);
-  $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · ${verified} market-verified${stale ? ` · ${stale} stale` : ''} · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
+  $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · ${verified} market-verified${stale ? ` · ${stale} stale` : ''} · ${Number(state.catalog.unverified_market_value_count ?? Math.max(0, state.catalog.product_count - verified - stale))} unverified · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
   render();
 }
 

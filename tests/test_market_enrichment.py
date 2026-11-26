@@ -164,3 +164,19 @@ def test_best_tech_tier_beats_resale_but_not_specific():
         profile_priority=priority,
     )
     assert specific > tech > resale
+
+
+
+def test_candidate_accepts_dedicated_asin_and_exact_redirect_gate():
+    from scripts.macbid_market_enrich import _candidate_token, _exact_path_token
+    assert _candidate_token({"asin": "B0BZSD2L1W"}) == "B0BZSD2L1W"
+    assert _exact_path_token("https://example.com/dp/B0BZSD2L1W", "B0BZSD2L1W")
+    assert not _exact_path_token("https://example.com/dp/wrong?related=B0BZSD2L1W", "B0BZSD2L1W")
+    assert not _exact_path_token("https://example.com/dp/B0BZSD2L1WX", "B0BZSD2L1W")
+
+
+def test_runtime_merge_does_not_revert_fresher_observation():
+    old = {"identity": "upc:B0BZSD2L1W", "observations": [{"url": "https://example.com/item", "condition": "new", "price": 100, "observed_at": "2026-09-26"}]}
+    new = {"identity": old["identity"], "observations": [{"url": "https://example.com/item", "condition": "new", "price": 80, "observed_at": "2026-11-26"}]}
+    merged = merged_market_records({"valuations": [old]}, {"valuations": [new]})
+    assert merged["valuations"][0]["observations"][0]["price"] == 80

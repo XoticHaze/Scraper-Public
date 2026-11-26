@@ -375,11 +375,14 @@ def merged_market_records(
         prior = dict(prev_map.get(identity) or {})
         manual = dict(canon_map.get(identity) or {})
         merged = {**prior, **{k: v for k, v in manual.items() if k != "observations"}}
-        observations: dict[str, dict[str, Any]] = {}
+        observations: dict[tuple[str, str], dict[str, Any]] = {}
         for row in list(prior.get("observations") or []) + list(manual.get("observations") or []):
             url = str(row.get("url") or "")
             if url:
-                observations[url] = row
+                key = (url, str(row.get("condition") or ""))
+                previous_row = observations.get(key)
+                if previous_row is None or str(row.get("observed_at") or "") >= str(previous_row.get("observed_at") or ""):
+                    observations[key] = row
         merged["observations"] = list(observations.values())
         history = list(prior.get("observation_history") or [])
         if history:

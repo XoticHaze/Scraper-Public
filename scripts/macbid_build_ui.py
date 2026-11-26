@@ -150,7 +150,16 @@ def main() -> int:
         lots.sort(key=lambda row: float(row.get("expected_closing_utc") or float("inf")))
         product = product_metadata(lots)
 
-        valuation = market_map.get(str(product["identity"]))
+        identity = str(product["identity"])
+        valuation = market_map.get(identity)
+        # Historical UPC-labelled ASINs and dedicated ASINs are the same exact token.
+        prefix, _, token = identity.partition(":")
+        if not valuation and prefix in {"upc", "asin"} and len(token) == 10 and token.startswith("B") and token.isalnum():
+            alias = ("asin:" if prefix == "upc" else "upc:") + token
+            valuation = market_map.get(alias)
+        product["market_price_status"] = "unverified"
+        for lot in lots:
+            lot["market_price_status"] = "unverified"
         if valuation and str(valuation.get("status") or "").lower() == "verified_external":
             market_summary = summarize_market_value(valuation)
             product["market_value"] = market_summary
@@ -271,6 +280,7 @@ def main() -> int:
                 "verification": profile.get("verification") or [],
                 "compatibility_gate": profile.get("compatibility_gate"),
                 "count": profile_counts.get(str(profile["id"]), 0),
+                "market_coverage": {status: sum(str(profile["id"]) in (product.get("hunt_ids") or []) and product.get("market_price_status") == status for product in products) for status in ("verified_external", "stale_external", "unverified")},
             }
         )
 
@@ -293,6 +303,8 @@ def main() -> int:
         "hunt_profiles": public_profiles,
         "market_value_count": sum(1 for product in products if product.get("market_price_status") == "verified_external"),
         "stale_market_value_count": sum(1 for product in products if product.get("market_price_status") == "stale_external"),
+        "unverified_market_value_count": sum(1 for product in products if product.get("market_price_status") == "unverified"),
+        "market_enrichment": market_doc.get("runtime_enrichment") or {},
         "market_values_updated_at": market_doc.get("updated_at"),
         "market_value_authority": market_defaults.get("authority"),
         "compatibility_matrix_version": compatibility_doc.get("version"),
