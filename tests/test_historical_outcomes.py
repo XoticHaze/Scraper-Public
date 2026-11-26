@@ -261,3 +261,23 @@ def test_bid_trajectory_exact_identity_scope_dedupe_and_sparse_semantics():
     bad=update_bid_history(state,[snap(140,dict(row,inventory_id="3"))],**kw)
     assert "1:A" in bad["conflicts"] and not bad["tracks"]
     assert not update_bid_history(bad,[snap(160,row)],**kw)["tracks"]
+
+
+def test_history_predecessor_prefers_state_epoch_not_artifact_id():
+    from scripts.macbid_history_collect import choose_predecessor
+    current={"coverage_complete":True,"source_epoch_utc":300}
+    older=({"id":900},{"generated_epoch_utc":100,"latest_complete":{"source_epoch_utc":90}})
+    newer=({"id":10},{"generated_epoch_utc":200,"latest_complete":{"source_epoch_utc":190}})
+    assert choose_predecessor([older,newer],current)==newer
+    assert choose_predecessor([newer,older],current)==newer
+    assert choose_predecessor([],current) is None
+
+
+def test_recover_predecessor_evidence_retains_actual_coverage():
+    from scripts.macbid_history_collect import recover_predecessor_evidence
+    a={"id":1}; b={"id":2}
+    prior={"coverage_epochs":{"scope":[100,200]},"outcomes":[],"pending":[]}
+    latest={"coverage_epochs":{"scope":[100,300]},"outcomes":[],"pending":[]}
+    doc=recover_predecessor_evidence((b,latest),[(b,latest),(a,prior)])
+    assert doc["coverage_epochs"]["scope"]==[100,200,300]
+    assert doc["outcomes"]==[]

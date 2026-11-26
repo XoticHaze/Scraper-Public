@@ -103,6 +103,7 @@ def enrich_history(catalog, state, seed):
     catalog["historical_acquisition"] = {
         "schema":"macbid-public-history-summary-v1",
         "collector_status":state.get("collector_status","state_unavailable"),
+        "predecessor_receipt":state.get("predecessor_receipt"),
         "scope_id":scope,"complete_scan_count":len(scans),"complete_days":coverage["qualified_days"],
         "observed_days":coverage["observed_days"],"coverage":coverage,
         "pending_overflow_count":state.get("pending_overflow_count",0),
