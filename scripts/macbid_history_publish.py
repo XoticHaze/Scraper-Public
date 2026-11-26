@@ -4,6 +4,8 @@ from __future__ import annotations
 from collections import defaultdict
 import json
 from pathlib import Path
+from deal_engine.historical_reconciliation import canonical_lot_url
+from deal_engine.market_enrichment import identity_kind
 from deal_engine.historical_outcomes import summarize_outcomes, walk_forward_sold_prices, scan_coverage
 
 CATALOG = Path("site/catalog.json")
@@ -12,13 +14,31 @@ SEED = Path("data/macbid_public_outcome_seed.json")
 
 def canonical(identity):
     kind, _, token = str(identity or "").partition(":")
-    return "upc:" + token.upper() if kind in {"upc","asin"} and token else str(identity or "")
+    return "upc:" + token.upper() if kind in {"upc","asin"} and identity_kind(token) in {"asin","gtin"} else ""
 
 def summary(rows, fee):
     s = summarize_outcomes(rows, budget=100, **fee)
     return {k:s[k] for k in ("sample_lots","verified_sold","verified_unsold","unresolved",
                             "estimated_all_in_p25","estimated_all_in_p50","estimated_all_in_p75",
                             "estimated_all_in_p90")}
+
+def recent_closes(rows, limit=5):
+    """Small public projection, source URLs derived from previously captured lot identity."""
+    result=[]
+    for row in sorted(rows,key=lambda r:r.get("closed_epoch_utc") or 0,reverse=True):
+        if row.get("status") not in {"closed_sold_verified","closed_unsold_verified"} or row.get("reconciliation_level")!="lot_detail_reconciled":
+            continue
+        href=canonical_lot_url(row)
+        if not href or href!=row.get("lot_source_url"):
+            continue
+        result.append({"lot_url":href,"lot_number":row["lot_number"],"auction_number":row["auction_number"],
+                       "closed_epoch_utc":row.get("closed_epoch_utc"),"final_hammer":row.get("final_hammer"),
+                       "status":row["status"],"condition":row.get("condition"),
+                       "identity":canonical(row.get("identity")) or None,
+                       "scope":"recovered_legacy" if row.get("scope_id")=="recovered-legacy-retail-floor-40" else "selected_sample" if not row.get("scope_id") else "prospective"})
+        if len(result)>=limit:
+            break
+    return result
 
 def enrich_history(catalog, state, seed):
     fee = {"premium_rate": catalog["buyer_premium_rate"], "lot_fee":catalog["lot_fee"],
@@ -54,7 +74,8 @@ def enrich_history(catalog, state, seed):
             recovered = legacy_cohorts.get(key,[])
             if live or historical or recovered:
                 groups.append({"location":location,"condition":condition,"prospective":summary(live,fee),
-                               "selected_historical_sample":summary(historical,fee),"recovered_legacy_scope":summary(recovered,fee)})
+                               "selected_historical_sample":summary(historical,fee),"recovered_legacy_scope":summary(recovered,fee),
+                               "recent_verified_closes":recent_closes(live+recovered+historical)})
         if groups:
             product["historical_acquisition"] = {"cohorts":groups,
                "note":"Exact identity, location and condition only. Estimated current fees; selected historical results are not a representative sample."}
@@ -63,6 +84,7 @@ def enrich_history(catalog, state, seed):
         rows=[row for row in outcomes+pending if hid in (row.get("hunt_ids") or [])]
         recovered = [row for row in legacy if hid in (row.get("hunt_ids") or [])]
         profile["recovered_legacy_history"] = summary(recovered,fee)
+        profile["recent_verified_closes"] = recent_closes(rows+recovered)
         profile["history_coverage"]={"verified_sold":sum(row.get("status")=="closed_sold_verified" for row in rows),
           "verified_unsold":sum(row.get("status")=="closed_unsold_verified" for row in rows),
           "unresolved":sum(row.get("status")=="missing_unresolved" for row in rows)}

@@ -8,7 +8,7 @@
   if (!catalog || !root || !nav) return;
 
   const priority = [
-    '4k-projectors','curved-monitors','large-gaming-monitors','quality-speakers',
+    'ice-makers-exact-direct-refill','ice-makers','refrigerators-ice-maker','4k-projectors','curved-monitors','large-gaming-monitors','quality-speakers',
     'solar-panels','high-power-solar-panels','solar-batteries','solar-charge-controllers','solar-inverters',
     'ptz-cameras-haos','smart-door-locks-haos','large-area-rugs',
     'premium-dishwashers','compact-sinks','medicine-cabinet-mirrors',
@@ -205,18 +205,22 @@
     seeAll: '',
   });
 
-  for (const id of priority) {
+  for (const id of [...new Set([...priority, ...profileMap.keys()])]) {
     const profile = profileMap.get(id);
     if (!profile) continue;
     const products = (catalog.products || []).filter((p) => (p.hunt_ids || []).includes(id));
     products.sort((a,b) => scoreFor(b,id) - scoreFor(a,id));
+    const history = profile.history_coverage || {};
+    const legacy = profile.recovered_legacy_history || {};
+    const coverage = profile.market_coverage || {};
+    const historyNote = ` · ${Number(coverage.verified_external || 0)} independently priced · prospective ${Number(history.verified_sold || 0)} sold / ${Number(history.unresolved || 0)} unresolved · legacy ${Number(legacy.verified_sold || 0)} sold / ${Number(legacy.unresolved || 0)} unresolved`;
     const resaleNote = id === 'resale-watch' ? ' · preliminary until real market value, liquidity, fees and net margin are verified' : '';
     addSection({
       id,
       label: profile.label,
       products,
       profileId: id,
-      subtitle: `Top current discovery candidates${profile.compatibility_gate === 'haos' ? ' · HAOS compatibility must clear before recommendation' : ''}${resaleNote}.`,
+      subtitle: `Top current discovery candidates${profile.compatibility_gate === 'haos' ? ' · HAOS compatibility must clear before recommendation' : ''}${resaleNote}${historyNote}.`,
       seeAll: `./?hunt=${encodeURIComponent(id)}`,
     });
   }

@@ -229,3 +229,15 @@ def test_replay_deduplicates_relisted_inventory_and_compares_legacy_proxy():
     assert out["evaluated_cases"]==1 and out["cases"][0]["training_samples"]==20
     assert out["legacy_msrp_baseline_mae"]==20 and out["legacy_paired_model_mae"]==30
     assert walk_forward_sold_prices(prior[:-1]+[duplicate,target],complete_scan_epochs=coverage)["evaluated_cases"]==0
+
+
+def test_public_history_projection_exact_identity_only_and_source_links():
+    from scripts.macbid_history_publish import canonical,recent_closes
+    assert canonical("asin:B0FM3PD49H") == "upc:B0FM3PD49H"
+    assert canonical("name:generic:retail:20") == ""
+    assert canonical("upc:ABC") == ""
+    seed=json.loads(Path("data/macbid_public_outcome_seed.json").read_text())
+    rows=recent_closes(seed["outcomes"])
+    assert rows and len(rows)<=5
+    assert all(r["scope"]=="selected_sample" and r["lot_url"].startswith("https://www.mac.bid/auction/") for r in rows)
+    assert recent_closes([dict(seed["outcomes"][0],lot_source_url="https://example.com/")]) == []

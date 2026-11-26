@@ -251,10 +251,10 @@ function renderCard(row) {
 
 function protectedOfferMarkup(product) {
   const comparison = product.protected_offer_comparison;
-  if (!comparison?.offers?.length) return '';
+  if (!comparison?.offers?.length) return '<div class="verify-box"><strong>Protected purchase alternatives</strong><p class="muted">No independently verified delivered offer for this exact product. External market references are not purchase-ready quotes.</p></div>';
   const rows = comparison.offers.filter(o => /^https:\/\//i.test(o.url || '')).map(o =>
     `<div class="cost-row"><a href="${escapeHtml(o.url)}" target="_blank" rel="noreferrer">${escapeHtml(o.source_label || 'External offer')}</a><strong>${money(o.price)} · ${escapeHtml(o.availability || 'unknown')}</strong></div><p class="muted">${escapeHtml(o.condition || 'unknown condition')} · Shipping ${money(o.shipping)} · Fees ${money(o.mandatory_fees)} · ${o.eligible ? 'Verified delivered' : 'Est. delivered'} ${money(o.eligible ? o.verified_delivered_total : o.estimated_delivered_total)} · Returns ${o.return_days ?? 'unknown'} days · Warranty ${o.warranty_days ?? 'unknown'} days · ${o.eligible ? 'Protected comparator' : 'Not verified for bidding'} · ${escapeHtml(o.evidence_note || '')}</p>`).join('');
-  return `<div class="verify-box"><strong>Protected purchase alternatives</strong>${rows}<div class="cost-row"><span>More than 50% savings auction ceiling</span><strong>${money(comparison.max_auction_all_in)}</strong></div><div class="cost-row"><span>Max hammer before additional risk adjustments</span><strong>${money(comparison.max_auction_hammer)}</strong></div><p class="muted">No ceiling from cached, unavailable or incomplete offers. Comparator checkout total verified; auction fees and tax estimated. Recheck item and condition.</p></div>`;
+  return `<div class="verify-box"><strong>Protected purchase alternatives</strong>${rows}<div class="cost-row"><span>More than 50% savings auction ceiling</span><strong>${money(comparison.max_auction_all_in)}</strong></div><div class="cost-row"><span>Max hammer before additional risk adjustments</span><strong>${money(comparison.max_auction_hammer)}</strong></div><p class="muted">No ceiling from cached, unavailable or incomplete offers. Only eligible offers have a verified checkout total; auction fees and tax are estimated. Recheck item and condition.</p></div>`;
 }
 
 function localProtectedQuoteMarkup() {
@@ -349,14 +349,19 @@ function historicalAcquisitionMarkup(product, lot) {
   const group = (product.historical_acquisition?.cohorts || []).find(c => c.location === lot.auction_location && c.condition === lot.condition);
   const live = group?.prospective || {};
   const sample = group?.selected_historical_sample || {};
+  const legacy = group?.recovered_legacy_scope || {};
   const rows = [
     ['Comparable verified closes', Number(live.verified_sold || 0)],
     ['Comparable confirmed unsold', Number(live.verified_unsold || 0)],
     ['Comparable unresolved', Number(live.unresolved || 0)],
     ['Observed all-in median (current fee estimate)', live.verified_sold ? money(live.estimated_all_in_p50) : 'Insufficient evidence'],
-    ['Selected older sample / sold', Number(sample.verified_sold || 0)]
+    ['Selected older sample / sold', Number(sample.verified_sold || 0)],
+    ['Recovered legacy / verified sold', Number(legacy.verified_sold || 0)],
+    ['Recovered legacy / unresolved', Number(legacy.unresolved || 0)],
+    ['Recovered legacy all-in median', legacy.verified_sold ? money(legacy.estimated_all_in_p50) : 'Insufficient evidence']
   ].map(([label,value]) => `<div class="cost-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`).join('');
-  return `<div class="verify-box"><strong>Historical acquisition evidence</strong>${rows}<p class="muted">Same exact identity, location and condition only. Selected older sample is not representative. ${Number(coverage.complete_days || 0)} hourly-covered UTC days in retained scope; at least 30 consecutive hourly-covered days and 20 comparable prior verified sales required for chronological evaluation. No sale probability or expected wait inferred.</p></div>`;
+  const links = (group?.recent_verified_closes || []).filter(r => /^https:\/\/www\.mac\.bid\/auction\/[A-Z0-9-]+\/lot\/[A-Z0-9-]+$/.test(r.lot_url || "")).map(r => `<div class="cost-row"><a href="${escapeHtml(r.lot_url)}" target="_blank" rel="noreferrer">${escapeHtml(r.auction_number)} / ${escapeHtml(r.lot_number)}</a><strong>${r.status === "closed_sold_verified" ? money(r.final_hammer) : "Not sold"} · ${escapeHtml(r.scope.replaceAll("_"," "))}</strong></div>`).join("");
+  return `<div class="verify-box"><strong>Historical acquisition evidence</strong>${rows}${links ? `<p class="muted">Recent verified hammer prices (source links)</p>${links}` : ""}<p class="muted">Same exact identity, location and condition only. Older selected and recovered scopes are descriptive, not prospective training evidence. ${Number(coverage.complete_days || 0)} hourly-covered UTC days in retained scope; at least 30 consecutive hourly-covered days and 20 comparable prior verified sales required for chronological evaluation. No sale probability or expected wait inferred.</p></div>`;
 }
 
 function compatibilityMarkup(product) {
@@ -608,7 +613,7 @@ async function loadCatalog() {
   const stale = Number(state.catalog.stale_market_value_count || 0);
   $('#catalog-meta').textContent = `${state.catalog.product_count.toLocaleString()} products · ${state.catalog.lot_count.toLocaleString()} active lots · ${verified} market-verified${stale ? ` · ${stale} stale` : ''} · ${Number(state.catalog.unverified_market_value_count ?? Math.max(0, state.catalog.product_count - verified - stale))} unverified · est. tax ${tax.toFixed(2)}% · updated ${generated}`;
   const historical = state.catalog.historical_acquisition;
-  if (historical) $('#catalog-meta').textContent += ` · history: ${Number(historical.complete_scan_count || 0)} complete scans · ${Number(historical.complete_days || 0)} hourly-covered days · ${Number(historical.prospective?.verified_sold || 0)} verified closes`;
+  if (historical) $('#catalog-meta').textContent += ` · history: ${Number(historical.complete_scan_count || 0)} complete scans · ${Number(historical.complete_days || 0)} hourly-covered days · ${Number(historical.prospective?.verified_sold || 0)} verified closes · ${Number(historical.recovered_legacy_scope?.verified_sold || 0)} legacy sold · ${Number(historical.recovered_legacy_scope?.unresolved || 0)} legacy unresolved`;
   render();
 }
 
