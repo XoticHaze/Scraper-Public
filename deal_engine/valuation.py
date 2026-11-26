@@ -251,7 +251,7 @@ def compare_protected_offers(product: dict[str, Any], offers: list[dict[str, Any
     def norm(value):
         return str(value or "").strip().casefold()
     def cost(value):
-        n = _number(value)
+        n = _number(value) if not isinstance(value, bool) else None
         return n if n is not None and isfinite(n) and n >= 0 else None
     def timestamp(value):
         try:
@@ -273,6 +273,8 @@ def compare_protected_offers(product: dict[str, Any], offers: list[dict[str, Any
         exact_id = bool(identity and identity == offer_id)
         exact_model = bool(brand and model and brand == obrand and model == omodel)
         if not (exact_id or exact_model):
+            continue
+        if not safe_url(offer.get("url")):
             continue
         if (identity and offer_id and identity != offer_id) or (brand and obrand and brand != obrand) or (model and omodel and model != omodel):
             continue
@@ -299,10 +301,11 @@ def compare_protected_offers(product: dict[str, Any], offers: list[dict[str, Any
                         and offer.get("condition") in {"new", "open_box", "used", "refurbished", "certified_refurbished"}
                         and offer.get("currency") == "USD"
                         and safe_url(offer.get("url")) and safe_url(offer.get("policy_url")))
-        rows.append({**{k: offer.get(k) for k in ("source_label", "url", "policy_url", "condition", "price",
+        rows.append({**{k: offer.get(k) for k in ("source_label", "url", "condition", "price",
                     "shipping", "mandatory_fees", "return_days", "warranty_days", "availability", "observed_at",
                     "evidence_note")}, "estimated_delivered_total": estimated,
                     "verified_delivered_total": delivered if eligible else None,
+                    "policy_url": offer.get("policy_url") if safe_url(offer.get("policy_url")) else None,
                     "eligibility_status": "verified" if eligible else "context_only",
                     "eligible": eligible})
     eligible_rows = [r for r in rows if r["eligible"]]

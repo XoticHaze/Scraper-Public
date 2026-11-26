@@ -143,6 +143,8 @@ def test_protected_offer_comparison_requires_exact_live_and_complete_costs():
     for change in ({"live_verified": False}, {"shipping": None}, {"return_days": None},
                    {"observed_at": "2026-11-23"}, {"observed_at": "2026-11-27"}, {"checkout_tax":None},
                    {"item_return_eligible":False}, {"fixed_price":False}, {"source_id":"unadmitted"},
+                   {"checkout_tax":True}, {"identity":"upc:contradictory","model":"CB22D"},
+                   {"url":"https://example.com/item?secret=bad"},
                    {"delivery_scope":"unknown"}, {"observed_at":"2026-11-26T14:00:00Z"}):
         assert compare_protected_offers(product, [dict(offer, **change)], **kwargs)["max_auction_all_in"] is None
 

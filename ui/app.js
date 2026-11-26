@@ -253,8 +253,8 @@ function protectedOfferMarkup(product) {
   const comparison = product.protected_offer_comparison;
   if (!comparison?.offers?.length) return '';
   const rows = comparison.offers.filter(o => /^https:\/\//i.test(o.url || '')).map(o =>
-    `<div class="cost-row"><a href="${escapeHtml(o.url)}" target="_blank" rel="noreferrer">${escapeHtml(o.source_label || 'External offer')}</a><strong>${money(o.price)} · ${escapeHtml(o.availability || 'unknown')}</strong></div><p class="muted">${escapeHtml(o.condition || 'unknown condition')} · Shipping ${money(o.shipping)} · Fees ${money(o.mandatory_fees)} · Est. delivered ${money(o.estimated_delivered_total)} · Returns ${o.return_days ?? 'unknown'} days · Warranty ${o.warranty_days ?? 'unknown'} days · ${o.eligible ? 'Protected comparator' : 'Not verified for bidding'} · ${escapeHtml(o.evidence_note || '')}</p>`).join('');
-  return `<div class="verify-box"><strong>Protected purchase alternatives</strong>${rows}<div class="cost-row"><span>50% delivered-cost auction ceiling</span><strong>${money(comparison.max_auction_all_in)}</strong></div><div class="cost-row"><span>Max hammer before additional risk adjustments</span><strong>${money(comparison.max_auction_hammer)}</strong></div><p class="muted">No ceiling from cached, unavailable or incomplete offers. Estimated tax; verify checkout and condition.</p></div>`;
+    `<div class="cost-row"><a href="${escapeHtml(o.url)}" target="_blank" rel="noreferrer">${escapeHtml(o.source_label || 'External offer')}</a><strong>${money(o.price)} · ${escapeHtml(o.availability || 'unknown')}</strong></div><p class="muted">${escapeHtml(o.condition || 'unknown condition')} · Shipping ${money(o.shipping)} · Fees ${money(o.mandatory_fees)} · ${o.eligible ? 'Verified delivered' : 'Est. delivered'} ${money(o.eligible ? o.verified_delivered_total : o.estimated_delivered_total)} · Returns ${o.return_days ?? 'unknown'} days · Warranty ${o.warranty_days ?? 'unknown'} days · ${o.eligible ? 'Protected comparator' : 'Not verified for bidding'} · ${escapeHtml(o.evidence_note || '')}</p>`).join('');
+  return `<div class="verify-box"><strong>Protected purchase alternatives</strong>${rows}<div class="cost-row"><span>More than 50% savings auction ceiling</span><strong>${money(comparison.max_auction_all_in)}</strong></div><div class="cost-row"><span>Max hammer before additional risk adjustments</span><strong>${money(comparison.max_auction_hammer)}</strong></div><p class="muted">No ceiling from cached, unavailable or incomplete offers. Comparator checkout total verified; auction fees and tax estimated. Recheck item and condition.</p></div>`;
 }
 
 function localProtectedQuoteMarkup() {
@@ -285,13 +285,13 @@ function wireLocalProtectedQuote(lot, premiumRate, fee, taxRate) {
       out.textContent = 'Complete all fields and confirm return eligibility and exact identity. No bid ceiling yet.';
       return;
     }
-    const max = Math.floor(delivered * 50) / 100;
+    const max = Math.max(0, Math.ceil(delivered * 50 - 1e-8) - 1) / 100;
     const auctionOnly = Math.max(0, max - extra);
     const hammer = Math.floor((auctionOnly / (1 + taxRate) - fee) / (1 + premiumRate) * 100) / 100;
     const current = lotAllIn(lot);
     const existing = lot.market_value_authoritative ? number(lot.verified_max_bid) : null;
     const safe = hammer >= 0 ? (existing !== null ? Math.min(existing, hammer) : hammer) : null;
-    out.textContent = 'Half of delivered alternative: ' + money(max) +
+    out.textContent = 'Strictly below half of delivered alternative: ' + money(max) +
       ' · Current auction including extras: ' + (current === null ? 'unknown' : money(current + extra)) +
       ' · Scenario maximum hammer: ' + (safe === null ? 'No feasible bid' : money(safe)) +
       (existing !== null ? ' (also capped by independent valuation)' : ' (local quote only; independent value unverified)') +
