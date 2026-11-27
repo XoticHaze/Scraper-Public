@@ -1,6 +1,6 @@
 {
   "schema": "macbid-research-findings-v1",
-  "version": 3,
+  "version": 4,
   "updated_at": "2026-11-27",
   "findings": [
     {
@@ -252,10 +252,27 @@
       "brand": "SenCre",
       "model": "BXZ002",
       "watch": true,
-      "water_feed": "Unverified",
-      "status": "EXACT MODEL EVIDENCE NEEDED",
-      "note": "Exact manufacturer documentation and pressure range remain unverified. Do not infer direct feed from title or family alone.",
-      "sources": []
+      "water_feed": "Automatic external water connection",
+      "status": "DIRECT FEED DOCUMENTED",
+      "note": "42 lb auto-refill SKU: exact-ASIN instructions and seller specifications agree on rear supply hose. Other BXZ002-labelled variants exist; do not qualify on model family alone. Inlet pressure unverified.",
+      "sources": [
+        {
+          "label": "Exact-ASIN installation guide",
+          "url": "https://manuals.plus/asin/B0G5YLWNFJ"
+        },
+        {
+          "label": "Exact-model automatic-refill product description",
+          "url": "https://www.shopabunda.com/products/nugget-ice-maker-countertop-with-auto-water-refill-42lbs-day-stainless-steel-ice-machine-with-pull-out-drawer-one-click-self-cleaning-portable-ice-makers-for-home-kitchen-office"
+        }
+      ],
+      "identities": [
+        "upc:B0G5YLWNFJ",
+        "asin:B0G5YLWNFJ"
+      ],
+      "reviewed_at": "2026-11-27",
+      "require_exact_identifier": true,
+      "ice_type": "nugget",
+      "rated_lb_day": 42
     },
     {
       "brand": "Gevi",
@@ -307,8 +324,8 @@
       ],
       "watch": false,
       "water_feed": "Unconfirmed",
-      "status": "EXACT MODEL EVIDENCE NEEDED",
-      "note": "Exact ASIN seller identifies M27-BLK (part number M27-GRY is inconsistent); manufacturer 40lb product describes compact unit and drainage but no direct connection. Do not transfer CB-series inlet evidence to M27. Contact manufacturer for exact manual.",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact ASIN seller identifies M27-BLK (part number M27-GRY is inconsistent); manufacturer 40lb product describes compact unit and drainage but no direct connection. Do not transfer CB-series inlet evidence to M27. Contact manufacturer for exact manual. Excluded operationally after review; reopen only on materially new exact inlet evidence.",
       "sources": [
         {
           "label": "Exact ASIN identity",
@@ -334,8 +351,8 @@
       ],
       "watch": false,
       "water_feed": "Unconfirmed",
-      "status": "EXACT MODEL EVIDENCE NEEDED",
-      "note": "Exact ASIN is 26.5 lb portable bullet ice maker; manufacturer documentation of inlet not located. Not the 42lb automatic-refill BXZ002 variant. No purchase qualification.",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact ASIN is 26.5 lb portable bullet ice maker; manufacturer documentation of inlet not located. Not the 42lb automatic-refill BXZ002 variant. No purchase qualification. Excluded operationally after review; reopen only on materially new exact inlet evidence.",
       "sources": [
         {
           "label": "Exact identifier",
@@ -417,6 +434,338 @@
         {
           "label": "Manufacturer",
           "url": "https://www.vevor.com/freestanding-ice-machine-c_40409/vevor-commercial-ice-maker-machine-300-lbs-24h-with-85-lbs-storage-capacity-built-in-freestanding-under-counter-stainless-steel-ice-maker-with-led-display-self-cleaning-for-home-bar-restaurant-p_010802348025"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "EUHOMY",
+      "model": "IM-10S",
+      "identities": [
+        "upc:B0BBFC9N64",
+        "asin:B0BBFC9N64"
+      ],
+      "watch": true,
+      "water_feed": "Automatic external water connection",
+      "status": "DIRECT FEED DOCUMENTED",
+      "note": "Model-specific operation manual specifies filtered drinking water and automatic external water supply 100–800 kPa (14.5–116 PSI). Verify RO delivery under flow and complete inlet hardware.",
+      "sources": [
+        {
+          "label": "Operation manual",
+          "url": "https://www.manualslib.com/guide/4237536/euhomy-im-10s-ice-maker-operation-and-maintenance-manual.html"
+        },
+        {
+          "label": "Exact identifier manual",
+          "url": "https://manuals.plus/asin/B0BBFC9N64"
+        }
+      ],
+      "reviewed_at": "2026-11-27",
+      "ice_type": "nugget",
+      "rated_lb_day": 33,
+      "min_inlet_psi": 14.5,
+      "max_inlet_psi": 116
+    },
+    {
+      "brand": "EUHOMY",
+      "model": "IM-03S",
+      "identities": [
+        "upc:B09D2V5C8N",
+        "asin:B09D2V5C8N",
+        "upc:B0DRFRVX71",
+        "asin:B0DRFRVX71"
+      ],
+      "watch": true,
+      "water_feed": "Automatic external water connection",
+      "status": "DIRECT FEED DOCUMENTED",
+      "note": "Model-specific instructions document automatic refill through external 1/4-inch PE supply tube; inlet pressure not verified.",
+      "sources": [
+        {
+          "label": "Operation manual",
+          "url": "https://manuals.plus/euhomy/im-03s-countertop-nugget-ice-maker-manual"
+        },
+        {
+          "label": "Exact variant manual",
+          "url": "https://manuals.plus/asin/B0DRFRVX71"
+        }
+      ],
+      "reviewed_at": "2026-11-27",
+      "ice_type": "nugget",
+      "rated_lb_day": 34,
+      "inlet_tubing_od_inches": 0.25
+    },
+    {
+      "brand": "Aeitto",
+      "model": "CB23D",
+      "identities": [
+        "upc:B0C6LLPT9M",
+        "asin:B0C6LLPT9M"
+      ],
+      "watch": true,
+      "water_feed": "Automatic external water connection",
+      "status": "DIRECT FEED DOCUMENTED",
+      "note": "Exact-ASIN instructions and product illustrations show rear water inlet and automatic refill. Do not infer from CB-series family. Pressure unknown.",
+      "sources": [
+        {
+          "label": "Exact-ASIN installation instructions",
+          "url": "https://manuals.plus/asin/B0C6LLPT9M"
+        }
+      ],
+      "reviewed_at": "2026-11-27",
+      "require_exact_identifier": true,
+      "ice_type": "nugget"
+    },
+    {
+      "brand": "Aeitto",
+      "model": "CB23D-C",
+      "identities": [
+        "upc:B0F1MGZ2JR",
+        "asin:B0F1MGZ2JR"
+      ],
+      "watch": true,
+      "water_feed": "Automatic external water connection",
+      "status": "DIRECT FEED DOCUMENTED",
+      "note": "Exact-ASIN instructions document external water supply hose and automatic refill; pressure unknown.",
+      "sources": [
+        {
+          "label": "Exact-ASIN instructions",
+          "url": "https://manuals.plus/asin/B0F1MGZ2JR"
+        }
+      ],
+      "reviewed_at": "2026-11-27",
+      "require_exact_identifier": true,
+      "ice_type": "nugget"
+    },
+    {
+      "brand": "Whynter",
+      "model": "IMC-490SS",
+      "identities": [
+        "upc:B00G23MKHA",
+        "asin:B00G23MKHA"
+      ],
+      "watch": false,
+      "water_feed": "Manual reservoir",
+      "status": "MANUAL FILL DOCUMENTED",
+      "note": "Manufacturer specifies manually filling 5L reservoir. Do not confuse with IMC-491DC.",
+      "sources": [
+        {
+          "label": "Manufacturer",
+          "url": "https://whynter.com/product/imc-490ss/"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "Frigidaire",
+      "model": "EFIC2320BLK",
+      "identities": [
+        "upc:B0GHTGPBRH",
+        "asin:B0GHTGPBRH",
+        "upc:058465839635"
+      ],
+      "watch": false,
+      "water_feed": "Manual reservoir",
+      "status": "MANUAL FILL DOCUMENTED",
+      "note": "Exact ASIN and UPC correspond to manual-fill 1.8L tank.",
+      "sources": [
+        {
+          "label": "Exact model/ASIN",
+          "url": "https://device.report/frigidaire/efic2320blk"
+        },
+        {
+          "label": "Exact UPC and fill specification",
+          "url": "https://hibid.com/lot/326327927/frigidaire-nugget-ice-maker--countertop-slate"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "Zstar",
+      "model": "IB01",
+      "identities": [
+        "upc:B09YTSTDL5",
+        "asin:B09YTSTDL5"
+      ],
+      "watch": false,
+      "water_feed": "No documented direct feed",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact model identity and low-water refill alert; no evidence establishing automatic plumbed inlet in current review.",
+      "sources": [
+        {
+          "label": "Exact-model listing",
+          "url": "https://hibid.com/lot/258673359/zstar-nugget-ice-maker--44lbs-24h-output"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "EUHOMY",
+      "model": "IM-06D",
+      "identities": [
+        "upc:B0BWHZJHPL",
+        "asin:B0BWHZJHPL"
+      ],
+      "watch": false,
+      "water_feed": "Manual reservoir",
+      "status": "MANUAL FILL DOCUMENTED",
+      "note": "Exact ASIN matches IM-06D portable model; operation manual instructs manual fill.",
+      "sources": [
+        {
+          "label": "Model/ASIN cross-reference",
+          "url": "https://device.report/euhomy/IM-06D"
+        },
+        {
+          "label": "Model operation manual",
+          "url": "https://www.manualslib.com/guide/3472315/euhomy-im-06d-ice-maker-manual.html"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "CyberChill",
+      "model": "IM-NS452C",
+      "identities": [
+        "upc:B0FYDVY9T5",
+        "asin:B0FYDVY9T5"
+      ],
+      "watch": false,
+      "water_feed": "Manual reservoir",
+      "status": "MANUAL FILL DOCUMENTED",
+      "note": "Exact model manual describes detachable tank refilling; no documented direct supply.",
+      "sources": [
+        {
+          "label": "Exact-ASIN manual",
+          "url": "https://manuals.plus/asin/B0FYDVY9T5"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "SenCre",
+      "model": null,
+      "identities": [
+        "upc:B0HG96HJRL",
+        "asin:B0HG96HJRL",
+        "upc:B0H2GVS8M1",
+        "asin:B0H2GVS8M1"
+      ],
+      "watch": false,
+      "water_feed": "No documented direct feed",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact listings identify 40 lb countertop models; corresponding manufacturer product describes 1L reservoir without automatic inlet. Not the verified BXZ002 ASIN. Exclude until new exact evidence.",
+      "sources": [
+        {
+          "label": "Grey ASIN",
+          "url": "https://parseshelf.com/best-sellers/asin/B0HG96HJRL/"
+        },
+        {
+          "label": "Silver ASIN",
+          "url": "https://www.ubuy.com.pr/es/product/UCKKDWOJO-nugget-ice-maker-countertop-40lbs-24h-soft-chewable-ice-machine-pellet-crushed-ice-makers-one-click-operation-auto-self-cleaning-stainless-steel"
+        },
+        {
+          "label": "Manufacturer 40 lb product",
+          "url": "https://mysencre.com/products/nugget-ice-maker-40lbs-day-countertop-ice-maker-soft-chewable-ice"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "SenCre",
+      "model": null,
+      "identities": [
+        "upc:B0H2GYRTLB",
+        "asin:B0H2GYRTLB",
+        "upc:B0H413TL2X",
+        "asin:B0H413TL2X"
+      ],
+      "watch": false,
+      "water_feed": "No documented direct feed",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact portable models identified; manufacturer catalogue and model search did not establish plumbed feed. Do not infer from other SenCre models.",
+      "sources": [
+        {
+          "label": "ASIN B0H2GYRTLB",
+          "url": "https://app.parseshelf.com/best-sellers/asin/B0H2GYRTLB/"
+        },
+        {
+          "label": "ASIN B0H413TL2X",
+          "url": "https://www.justbid.com/item/JB0382898/10158877"
+        },
+        {
+          "label": "Manufacturer catalogue",
+          "url": "https://mysencre.com/collections/all"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "Mainstays",
+      "model": "MS9502550614-05",
+      "identities": [
+        "upc:4897074555149"
+      ],
+      "watch": false,
+      "water_feed": "No documented direct feed",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact UPC corresponds to portable 1.2L reservoir machine; no documented direct feed in reviewed specifications.",
+      "sources": [
+        {
+          "label": "Exact UPC/model",
+          "url": "https://hibid.com/lot/316093163/mainstays-countertop-ice-maker--grey"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "Mainstays",
+      "model": null,
+      "identities": [
+        "upc:4897074555361"
+      ],
+      "watch": false,
+      "water_feed": "No documented direct feed",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact UPC identifies 35 lb nugget countertop model. No automatic-feed evidence found in reviewed listing.",
+      "sources": [
+        {
+          "label": "Exact UPC listing",
+          "url": "https://gowholesale.com/p/mainstays-countertop-ice-maker-nugget-ice-35-lb-per-day-black-new-damaged-box/GWS4897074555361ND"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "Iceman",
+      "model": null,
+      "identities": [
+        "upc:810170924156"
+      ],
+      "watch": false,
+      "water_feed": "No documented direct feed",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact UPC portable Chefman Iceman with 1.1L reservoir and refill alerts; no direct feed documented.",
+      "sources": [
+        {
+          "label": "Exact UPC specs",
+          "url": "https://ewirelessgear.com/products/iceman-by-chefman-dual-sized-compact-ice-machine-includes-ice-basket-scoop"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "ORFLROA",
+      "model": null,
+      "identities": [
+        "upc:B0GPWY1FHL",
+        "asin:B0GPWY1FHL"
+      ],
+      "watch": false,
+      "water_feed": "No documented direct feed",
+      "status": "NO DIRECT FEED EVIDENCE",
+      "note": "Exact ASIN portable camping bullet maker; no documented automatic supply in reviewed listings.",
+      "sources": [
+        {
+          "label": "Exact ASIN",
+          "url": "https://www.justbid.com/item/OLARRF0067008/10207774"
         }
       ],
       "reviewed_at": "2026-11-27"
