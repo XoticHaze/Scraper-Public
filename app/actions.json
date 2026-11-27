@@ -11,6 +11,15 @@
   },
   "actions": [
     {
+      "id": "native-account",
+      "label": "Native MAC.BID account",
+      "description": "Open the authenticated Scraper account panel. Native account executor enrollment is pending; no account write is performed by navigation.",
+      "kind": "link",
+      "risk": "none",
+      "fallback_url": "https://cc-app-scraper-account.cc-ordinary-deployments.workers.dev/account/macbid",
+      "inputs": []
+    },
+    {
       "id": "refresh",
       "label": "Refresh catalog",
       "description": "Run a fresh configured catalog scan, scoring pass, UI build, browser validation, and Pages deployment.",
