@@ -11,6 +11,6 @@ def match_model_evidence(product, rows):
         exact_model = brand and model and brand == str(row.get("brand") or "").casefold() and model == str(row.get("model") or "").casefold()
         if exact_id and ((brand and brand != str(row.get('brand') or '').casefold()) or (model and model != str(row.get('model') or '').casefold())):
             continue
-        if exact_id or exact_model:
+        if exact_id or (exact_model and not row.get("require_exact_identifier")):
             matches.append({**row, "identity_basis": "exact_identifier" if exact_id else "structured_brand_model"})
     return matches[0] if len(matches) == 1 else None
