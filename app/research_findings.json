@@ -1,6 +1,6 @@
 {
   "schema": "macbid-research-findings-v1",
-  "version": 4,
+  "version": 5,
   "updated_at": "2026-11-27",
   "findings": [
     {
@@ -413,7 +413,10 @@
           "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=35274"
         }
       ],
-      "reviewed_at": "2026-11-27"
+      "reviewed_at": "2026-11-27",
+      "exact_id_brand_aliases": [
+        "Profile"
+      ]
     },
     {
       "brand": "VEVOR",
