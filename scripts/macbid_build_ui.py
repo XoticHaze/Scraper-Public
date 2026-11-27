@@ -315,7 +315,7 @@ def main() -> int:
         for product in products:
             evidence = product.get("model_evidence") or {}
             if evidence.get("status") in {"DIRECT FEED DOCUMENTED", "MANUAL FILL DOCUMENTED",
-                                           "COMMERCIAL DIRECT FEED DOCUMENTED"}:
+                                           "COMMERCIAL DIRECT FEED DOCUMENTED", "NO DIRECT FEED EVIDENCE"}:
                 continue
             if not any(match_profiles([discovery], product, lot) for lot in product["lots"]):
                 continue
