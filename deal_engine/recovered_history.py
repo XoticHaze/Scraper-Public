@@ -17,6 +17,10 @@ def load_expanded_seed(root=ROOT, profiles=None):
     fields = manifest["fields"]
     if profiles is None:
         profiles = json.loads(Path("app/hunts.json").read_text())["profiles"]
+    # Legacy rows are historical discovery observations, not live purchase candidates.
+    # Preserve broad ice-maker history without claiming exact-feed qualification.
+    profiles = [{**p, "requires_confirmed_direct_feed": False} if p["id"] == "ice-makers" else p
+                for p in profiles]
     rows, seen = [], set()
     digest = hashlib.sha256()
     for i, part in enumerate(manifest["parts"]):
@@ -43,7 +47,7 @@ def load_expanded_seed(root=ROOT, profiles=None):
             row.update(identity=product_identity(row), macbid_url=url,
                        hunt_ids=list(match_profiles(profiles, row, row)),
                        scope_id=SCOPE, status="missing_unresolved",
-                       hunt_match_provenance="retrospective_current_profiles")
+                       hunt_match_provenance="retrospective_historical_discovery_only")
             rows.append(row)
     if len(rows) != manifest["count"] or digest.hexdigest() != manifest["sha256"]:
         raise ValueError("recovered aggregate mismatch")
