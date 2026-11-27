@@ -289,8 +289,8 @@ def test_retired_bathroom_hunts_stay_retired():
 def test_ice_maker_profiles_reject_observed_replacement_tray():
     for key in ("ice-makers", "ice-makers-exact-direct-refill"):
         assert not match_profile(PROFILES[key], product("DA97-11117A Ice Bucket Replacement for Samsung Ice Maker Tray"), lot())
-    assert match_profile(PROFILES["ice-makers"], product("SenCre Nugget Ice Maker"), lot())
-    assert match_profile(PROFILES["ice-makers-exact-direct-refill"], product("Gevi IMNA0 Nugget Ice Maker"), lot())
+    assert not match_profile(PROFILES["ice-makers"], product("SenCre Nugget Ice Maker"), lot())
+    assert not match_profile(PROFILES["ice-makers-exact-direct-refill"], product("Gevi IMNA0 Nugget Ice Maker"), lot())
 
 
 def test_refrigerator_profile_rejects_observed_accessories():
@@ -307,6 +307,20 @@ def test_refrigerator_profile_rejects_observed_accessories():
 
 def test_aeitto_cb22c_exact_discovery_only():
     profile=PROFILES["ice-makers-exact-direct-refill"]
-    assert match_profile(profile,product("Aeitto CB22C Nugget Ice Maker"),lot())
+    assert not match_profile(profile,product("Aeitto CB22C Nugget Ice Maker"),lot())
     assert not match_profile(profile,product("Aeitto CB22D Nugget Ice Maker"),lot())
     assert not match_profile(profile,product("Aeitto CB22C Ice Maker Replacement Tray"),lot())
+
+
+def test_ice_hunts_require_source_linked_exact_direct_feed_evidence():
+    from deal_engine.model_evidence import match_model_evidence
+    rows = json.loads(Path("app/research_findings.json").read_text(encoding="utf-8"))["model_evidence"]
+    for key in ("ice-makers", "ice-makers-exact-direct-refill"):
+        profile = PROFILES[key]
+        for brand, model, expected in [("Whynter", "IMC-491DC", True), ("Avalon", "A-ICE2", True), ("Whynter", "IMC-490SS", False), ("Gevi", "IMNA0", False), ("Aeitto", "CB22C", False), ("SenCre", "BXZ002", False)]:
+            item = product(f"{brand} {model} Ice Maker", brand=brand)
+            item["model"] = model
+            item["model_evidence"] = match_model_evidence(item, rows)
+            assert bool(match_profile(profile, item, lot())) is expected, (key, brand, model)
+        assert not match_profile(profile, product("Automatic water refill ice maker"), lot())
+        assert not match_profile(profile, product("Whynter IMC-491DC Ice Maker"), lot())
