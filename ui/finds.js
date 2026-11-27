@@ -33,6 +33,9 @@
   };
   const lotRef = (lot) => [lot?.auction_number, lot?.lot_number ? `lot ${lot.lot_number}` : ''].filter(Boolean).join(' · ');
   const macLookupKey = (product, lot = {}) => String(product?.upc || lot?.upc || product?.asin || lot?.asin || product?.name || '').trim();
+  const macSearchText = (product) => [product?.brand, product?.model].every(v => String(v ?? '').trim())
+    ? [product.brand, product.model].map(v => String(v).trim()).join(' ')
+    : String(product?.name || '').trim();
   const copyText = async (value, button) => {
     if (!value) return;
     try {
@@ -145,6 +148,7 @@
         ${lotRef(lot) ? `<div class="verify-line">Target: ${esc(lotRef(lot))}</div>` : ''}
         <div class="find-links">
           ${productUrl ? `<a href="${esc(productUrl)}" target="_blank" rel="noreferrer">MAC.BID page ↗</a><button type="button" class="copy-web-link">Copy web link</button>` : ''}
+          <button type="button" class="copy-search">Copy search</button>
           <button type="button" class="copy-mac-id">Copy item ID</button>
           <button type="button" class="copy-lot-ref">Copy lot ref</button>
           ${profileId ? `<a href="./?hunt=${encodeURIComponent(profileId)}">Open hunt →</a>` : '<a href="./">Open catalog →</a>'}
@@ -152,6 +156,9 @@
       </div>`;
     article.querySelector('.copy-web-link')?.addEventListener('click', (event) => {
       copyText(productUrl, event.currentTarget);
+    });
+    article.querySelector('.copy-search')?.addEventListener('click', (event) => {
+      copyText(macSearchText(product), event.currentTarget);
     });
     article.querySelector('.copy-mac-id')?.addEventListener('click', (event) => {
       copyText(macLookupKey(product, lot), event.currentTarget);
