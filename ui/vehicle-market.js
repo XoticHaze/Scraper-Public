@@ -265,7 +265,8 @@
       return;
     }
     $('copy-request').disabled=false;
-    const observedAt=current?catalog.generated_utc:row.observed_at;
+    // A freshly published catalog does not make an older dealer observation fresh.
+    const observedAt=row.observed_at||null;
     const ageHours=(Date.now()-Date.parse(observedAt))/3600000;
     const stale=!Number.isFinite(ageHours)||ageHours>24;
     const year=String(row.year||'');
