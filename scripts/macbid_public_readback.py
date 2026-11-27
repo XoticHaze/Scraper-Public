@@ -91,6 +91,47 @@ def main():
         assert evidence.locator("a[href^=\'https://\']").count() >= 3
         print("SERVED_ICE_MODEL_EVIDENCE=PASS")
         print(f"SERVED_CATALOG=PASS epoch={args.epoch} products={len(products)} lots={catalog['lot_count']} verified={catalog['market_value_count']}")
+
+        # Fresh mobile Chromium acceptance of the real served generation.
+        # The clipboard shim observes the app's writeText calls; this does NOT
+        # claim native iOS/Safari clipboard permission or device acceptance.
+        mobile = browser.new_context(viewport={"width": 390, "height": 844},
+                                     is_mobile=True, has_touch=True, device_scale_factor=3)
+        mobile.add_init_script("""
+window.__copyLog = [];
+Object.defineProperty(navigator, 'clipboard', {
+  configurable: true,
+  value: {writeText: async (text) => window.__copyLog.push(String(text))}
+});
+""")
+        mobile_page = mobile.new_page()
+        mobile_page.goto(f"{URL}?mobile_readback={args.epoch}", wait_until="domcontentloaded", timeout=30000)
+        mobile_page.wait_for_selector(".card-open", timeout=30000)
+        assert mobile_page.evaluate("state.catalog.generated_epoch_utc") == args.epoch, "Mobile UI loaded different generation"
+        first = mobile_page.locator(".card").first
+        identity = first.get_attribute("data-identity")
+        selected = next((item for item in products if item.get("identity") == identity), None)
+        assert selected is not None, "Mobile card does not bind a served product"
+        first.locator(".card-open").click()
+        copy_search = mobile_page.locator("#detail-dialog[open] #copy-search")
+        assert copy_search.is_visible(), "Mobile Copy search action not visible"
+        assert mobile_page.locator("#copy-mac-id").is_visible()
+        assert mobile_page.locator("#copy-lot-ref").is_visible()
+        copy_search.click()
+        copied = mobile_page.evaluate("window.__copyLog[window.__copyLog.length - 1]")
+        brand, model = str(selected.get("brand") or "").strip(), str(selected.get("model") or "").strip()
+        expected = (brand + " " + model) if brand and model else str(selected.get("name") or "").strip()
+        assert copied == expected and expected, f"Mobile copied search text mismatch: {copied!r} != {expected!r}"
+        # Existing watchlist is browser-local, no native MAC.BID account action.
+        mobile_page.locator("#detail-watch").click()
+        mobile_page.goto(f"{URL}finds.html?mobile_readback={args.epoch}",
+                         wait_until="domcontentloaded", timeout=30000)
+        finds_copy = mobile_page.locator("#my-watchlist .copy-search").first
+        finds_copy.wait_for(timeout=30000)
+        finds_copy.click()
+        assert mobile_page.evaluate("window.__copyLog[window.__copyLog.length - 1]") == expected
+        print("SERVED_MOBILE_CHROMIUM_COPY_SEARCH=PASS viewport=390x844 cards=Hunt+Finds")
+        mobile.close()
         browser.close()
 
 if __name__ == "__main__":
