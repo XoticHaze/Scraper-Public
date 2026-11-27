@@ -229,8 +229,22 @@ async function publicRequest(token, publicRepo, exchangeRef, runId, contractId) 
 async function privateRegistry(token, privateRepo) {
   const raw = await readFile(token, privateRepo, 'producer/workloads.json', 'main');
   const doc = JSON.parse(raw.toString('utf8'));
-  if (doc.schema !== 'repo-app-private-workload-registry-v2') throw new Error('private_registry_schema');
-  if (!doc.trusted_public_runtime) throw new Error('trusted_runtime_missing');
+  return validatePrivateRegistry(doc, privateRepo);
+}
+
+export function validatePrivateRegistry(doc, privateRepo) {
+  if (privateRepo !== PRIVATE_REPO_DEFAULT || doc?.schema !== 'repo-app-private-workload-registry-v3'
+      || doc.version !== 3 || doc.private_actions_compute_selectable !== false
+      || doc.execution_route_policy !== 'config/execution_route_mode_current.v1.json') {
+    throw new Error('private_registry_schema_or_policy');
+  }
+  const trusted = doc.trusted_public_runtime;
+  if (trusted?.repository !== PUBLIC_REPO_DEFAULT
+      || trusted.workflow_path !== '.github/workflows/encrypted-private-compute-runtime.yml'
+      || !/^[0-9a-f]{40}$/.test(trusted.workflow_sha || '')
+      || !/^[0-9a-f]{40}$/.test(trusted.runtime_source_sha || '')) {
+    throw new Error('trusted_runtime_missing_or_invalid');
+  }
   return doc;
 }
 
@@ -261,8 +275,20 @@ export async function processRun(env, runId, contractId) {
   const request = await publicRequest(token, publicRepo, exchangeRef, runId, contractId);
   const registry = await privateRegistry(token, privateRepo);
   await assertTrustedRuntime(token, publicRepo, registry, request);
+  const policy = JSON.parse((await readFile(token, privateRepo, registry.execution_route_policy, 'main')).toString('utf8'));
+  const pinned = registry.trusted_public_runtime;
+  if (policy.mode !== 'PUBLIC_ENCRYPTED_COMPUTE_ONLY' || policy.private_actions_compute_selectable !== false
+      || policy.authority !== PRIVATE_REPO_DEFAULT || policy.execution_plane !== PUBLIC_REPO_DEFAULT
+      || policy.trusted_public_runtime?.workflow_sha !== pinned.workflow_sha
+      || policy.trusted_public_runtime?.runtime_source_sha !== pinned.runtime_source_sha
+      || policy.trusted_public_runtime?.workflow_path !== pinned.workflow_path) throw new Error('execution_policy_mismatch');
   const spec = registry.workloads?.[request.workload_id];
-  if (!spec?.enabled || spec.contract_id !== contractId) throw new Error('workload_not_allowed');
+  // A public workflow invocation is not authority to release account credentials.
+  // Only the harmless existing self-test is admitted by this compatibility fix.
+  if (request.workload_id !== 'producer-selftest-v1' || spec?.enabled !== true
+      || contractId !== 'python-bundle-v1' || spec.contract_id !== contractId
+      || spec.path !== 'private_workloads/producer-selftest-v1'
+      || spec.entrypoint !== 'entrypoint.py') throw new Error('workload_not_allowed');
 
   const recipientRaw = await readFile(token, publicRepo, `rendezvous/recipients/${runId}/${contractId}.json`, exchangeRef);
   const recipient = JSON.parse(recipientRaw.toString('utf8'));
@@ -292,13 +318,35 @@ export async function processRun(env, runId, contractId) {
   return { status: 'workload_published' };
 }
 
+export function validateResultBinding(envelope, state) {
+  if (envelope?.schema !== SCHEMA || envelope.authority !== AUTHORITY
+      || envelope.direction !== 'result' || String(envelope.run_id) !== String(state.run_id)
+      || envelope.contract_id !== state.contract_id
+      || String(envelope.contract_version) !== String(state.contract_version)
+      || state.result_root !== `rendezvous/results/${state.run_id}/${state.contract_id}`
+      || !state.result_private_jwk?.x
+      || envelope.recipient_key_id !== keyId(Buffer.from(state.result_private_jwk.x, 'base64url'))
+      || !Array.isArray(envelope.chunks) || !envelope.chunks.length || envelope.chunks.length > 32) {
+    throw new Error('result_binding_mismatch');
+  }
+  let total = 0;
+  for (const [i, node] of envelope.chunks.entries()) {
+    if (node?.path !== `${state.result_root}/chunk-${String(i).padStart(4, '0')}.b64`
+        || !Number.isSafeInteger(node.chars) || node.chars < 1 || node.chars > 900000
+        || !/^[0-9a-f]{64}$/.test(node.sha256 || '')) throw new Error('result_chunk_descriptor');
+    total += node.chars;
+  }
+  if (total > 22000000) throw new Error('result_chunks_too_large');
+}
+
 async function collectOne(env, token, publicRepo, privateRepo, exchangeRef, statePath, state) {
   if (state.status !== 'workload_published') return false;
   const envelopeRaw = await readFile(token, publicRepo, `${state.result_root}/result-envelope.json`, exchangeRef, true);
   if (!envelopeRaw) return false;
   const envelope = JSON.parse(envelopeRaw.toString('utf8'));
+  validateResultBinding(envelope, state);
   const parts = [];
-  for (const node of envelope.chunks || []) {
+  for (const node of envelope.chunks) {
     const chunk = await readFile(token, publicRepo, node.path, exchangeRef);
     const body = chunk.toString('ascii').trim();
     if (body.length !== Number(node.chars) || sha256(Buffer.from(body, 'ascii')) !== node.sha256) throw new Error('result_chunk_mismatch');
