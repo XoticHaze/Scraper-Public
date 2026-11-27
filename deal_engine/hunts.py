@@ -133,6 +133,16 @@ def match_profile(
     kind = profile.get("kind", "semantic")
 
     if kind == "semantic":
+        # Automatic-feed is a hard purchase-hunt gate, not a title keyword.
+        # The catalog attaches only uniquely matched structured model/identifier evidence.
+        if profile.get("requires_confirmed_direct_feed"):
+            evidence = product.get("model_evidence") or {}
+            if (evidence.get("status") != "DIRECT FEED DOCUMENTED"
+                    or evidence.get("identity_basis") not in {"exact_identifier", "structured_brand_model"}
+                    or not evidence.get("sources")
+                    or evidence.get("watch") is not True):
+                return None
+
         # Explicit title-only accessory exclusions avoid description text that merely mentions included accessories.
         title = str(product.get("name") or lot.get("product_name") or lot.get("title") or lot.get("name") or "").lower()
         if _any(title, profile.get("exclude_title_any")):
