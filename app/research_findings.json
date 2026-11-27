@@ -1,7 +1,7 @@
 {
   "schema": "macbid-research-findings-v1",
-  "version": 2,
-  "updated_at": "2026-11-26",
+  "version": 3,
+  "updated_at": "2026-11-27",
   "findings": [
     {
       "identity": "upc:796435814533",
@@ -270,6 +270,156 @@
           "url": "https://www.cpsc.gov/Recalls/2024/Countertop-Nugget-Ice-Makers-Recalled-Due-to-Laceration-Hazard-Sold-Exclusively-through-Amazon-Distributed-by-Far-Success-Trading"
         }
       ]
+    },
+    {
+      "brand": "Silonn",
+      "model": "SLIM17B",
+      "identities": [
+        "upc:B0C9SWH3RC",
+        "asin:B0C9SWH3RC"
+      ],
+      "watch": false,
+      "water_feed": "Manual reservoir",
+      "status": "MANUAL FILL DOCUMENTED",
+      "note": "Exact ASIN maps to SLIM17B; manufacturer product and model-specific instruction manual describe reservoir filling, not a pressurized inlet.",
+      "sources": [
+        {
+          "label": "Manufacturer",
+          "url": "https://www.silonn.com/products/countertop-nugget-ice-maker-33-lbs"
+        },
+        {
+          "label": "Exact ASIN manual",
+          "url": "https://manuals.plus/asin/B0C9SWH3RC"
+        },
+        {
+          "label": "Manufacturer manual mirror",
+          "url": "https://www.manualslib.com/manual/3314563/Silonn-Slim17b.html"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "Aeitto",
+      "model": "M27-BLK",
+      "identities": [
+        "upc:B0H75DVBZC",
+        "asin:B0H75DVBZC"
+      ],
+      "watch": false,
+      "water_feed": "Unconfirmed",
+      "status": "EXACT MODEL EVIDENCE NEEDED",
+      "note": "Exact ASIN seller identifies M27-BLK (part number M27-GRY is inconsistent); manufacturer 40lb product describes compact unit and drainage but no direct connection. Do not transfer CB-series inlet evidence to M27. Contact manufacturer for exact manual.",
+      "sources": [
+        {
+          "label": "Exact ASIN identity",
+          "url": "https://www.desertcart.co.za/products/886306837-aeitto-nugget-ice-maker-countertop-40lbs-day-ice-machine-soft"
+        },
+        {
+          "label": "Manufacturer product",
+          "url": "https://www.aeitto.com/products/aeitto-nugget-ice-maker-countertop-pellet-ice-machine-soft-chewable-ice-40lbs-day-one-click-operation-auto-self-cleaning-crushed-ice-makers-stainless-with-scoop-for-home-kitchen-office"
+        },
+        {
+          "label": "Support",
+          "url": "https://www.aeitto.com/pages/service"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "SenCre",
+      "model": null,
+      "identities": [
+        "upc:B0HJ7W2JHH",
+        "asin:B0HJ7W2JHH"
+      ],
+      "watch": false,
+      "water_feed": "Unconfirmed",
+      "status": "EXACT MODEL EVIDENCE NEEDED",
+      "note": "Exact ASIN is 26.5 lb portable bullet ice maker; manufacturer documentation of inlet not located. Not the 42lb automatic-refill BXZ002 variant. No purchase qualification.",
+      "sources": [
+        {
+          "label": "Exact identifier",
+          "url": "https://app.parseshelf.com/best-sellers/asin/B0HJ7W2JHH/"
+        },
+        {
+          "label": "Manufacturer",
+          "url": "https://mysencre.com/"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "GE Profile",
+      "model": "XPIOX3SZBT",
+      "identities": [
+        "upc:B0GSBJNTXM",
+        "asin:B0GSBJNTXM"
+      ],
+      "watch": false,
+      "water_feed": "Manual reservoir",
+      "status": "MANUAL FILL DOCUMENTED",
+      "note": "Exact ASIN maps to Opal Ultra with side tank; GE instructs filling potable-water reservoir. Side tank does not constitute manufacturer-approved pressurized supply.",
+      "sources": [
+        {
+          "label": "Identity",
+          "url": "https://hibid.com/oklahoma/lot/309881858/ge-profile-opal-nugget-ice-maker--38-lb-day--wifi"
+        },
+        {
+          "label": "Manufacturer fill instructions",
+          "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=35274"
+        },
+        {
+          "label": "Manufacturer side tank",
+          "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=000060666"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "GE Profile",
+      "model": null,
+      "identities": [
+        "upc:B0FWLSYPN9",
+        "asin:B0FWLSYPN9"
+      ],
+      "watch": false,
+      "water_feed": "Manual reservoir",
+      "status": "MANUAL FILL DOCUMENTED",
+      "note": "Exact ASIN maps to Opal Ultra; GE's reservoir and side tank guidance excludes assuming a pressurized inlet.",
+      "sources": [
+        {
+          "label": "Identity",
+          "url": "https://pricehistory.app/p/ge-profile-opal-2-0-ultra-nugget-MuYHfow8"
+        },
+        {
+          "label": "Manufacturer",
+          "url": "https://products.geappliances.com/appliance/gea-support-search-content?contentId=35274"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
+    },
+    {
+      "brand": "VEVOR",
+      "model": null,
+      "identities": [
+        "upc:B0GRJXR5FD",
+        "asin:B0GRJXR5FD"
+      ],
+      "watch": false,
+      "water_feed": "Automatic inlet and drain; residential suitability unverified",
+      "status": "COMMERCIAL DIRECT FEED DOCUMENTED",
+      "note": "Exact ASIN description matches manufacturer's 360 lb/day 55–85 lb storage commercial machine; inlet and drain hoses automatically manage water. Exact model/pressure and residential RO production, drainage, space and power need verification. Commercial unit is not a recommendation for countertop use.",
+      "sources": [
+        {
+          "label": "Exact ASIN identity",
+          "url": "https://trackpin.co/p/B0GRJXR5FD"
+        },
+        {
+          "label": "Manufacturer",
+          "url": "https://www.vevor.com/freestanding-ice-machine-c_40409/vevor-commercial-ice-maker-machine-300-lbs-24h-with-85-lbs-storage-capacity-built-in-freestanding-under-counter-stainless-steel-ice-maker-with-led-display-self-cleaning-for-home-bar-restaurant-p_010802348025"
+        }
+      ],
+      "reviewed_at": "2026-11-27"
     }
   ]
 }
