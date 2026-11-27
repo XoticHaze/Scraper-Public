@@ -306,6 +306,42 @@ def main() -> int:
         )
     )
 
+    # Discovery is distinct from buyer qualification: research every unfamiliar
+    # model even when the confirmed-feed profile deliberately refuses it.
+    ice_discovery = next((p for p in profiles if p["id"] == "ice-makers"), None)
+    ice_research_queue = []
+    if ice_discovery:
+        discovery = {**ice_discovery, "requires_confirmed_direct_feed": False}
+        for product in products:
+            evidence = product.get("model_evidence") or {}
+            if evidence.get("status") in {"DIRECT FEED DOCUMENTED", "MANUAL FILL DOCUMENTED",
+                                           "COMMERCIAL DIRECT FEED DOCUMENTED"}:
+                continue
+            if not any(match_profiles([discovery], product, lot) for lot in product["lots"]):
+                continue
+            lots = [lot for lot in product["lots"]
+                    if float(lot.get("expected_closing_utc") or 0) > max(final_epoch, time.time())]
+            if not lots:
+                continue
+            next_lot = min(lots, key=lambda lot: float(lot["expected_closing_utc"]))
+            terms = [str(product.get(k) or "").strip() for k in ("brand", "model", "upc")]
+            if not any(terms):
+                terms = [product["name"]]
+            ice_research_queue.append({
+                "identity": product["identity"], "name": product["name"],
+                "brand": product.get("brand"), "model": product.get("model"),
+                "upc": product.get("upc"), "next_close_utc": next_lot["expected_closing_utc"],
+                "active_lot_count": len(lots), "lot_url": next_lot.get("macbid_url"),
+                "status": evidence.get("status", "UNRESEARCHED"),
+                "sources": evidence.get("sources", []),
+                "research_query": " ".join(filter(None, terms)) + " ice maker manufacturer manual automatic water inlet",
+                "purchase_eligible": False,
+            })
+        ice_research_queue.sort(key=lambda row: (float(row["next_close_utc"]), row["identity"]))
+    ice_research = {"schema": "macbid-ice-feed-research-queue-v1",
+                    "source_scan_epoch_utc": scan.get("inventory_source_epoch_utc") or scan.get("scan_epoch_utc"),
+                    "pending_count": len(ice_research_queue), "items": ice_research_queue}
+
     public_profiles = []
     for profile in profiles:
         public_profiles.append(
@@ -410,6 +446,7 @@ def main() -> int:
         )
     compact_json = json.dumps(catalog, separators=(",", ":"), ensure_ascii=False)
     (SITE / "catalog.json").write_text(compact_json, encoding="utf-8")
+    (SITE / "ice-feed-research-queue.json").write_text(json.dumps(ice_research, indent=2) + "\n", encoding="utf-8")
     (SITE / "catalog.js").write_text(
         "window.MACBID_CATALOG=" + compact_json + ";\n",
         encoding="utf-8",
@@ -497,6 +534,7 @@ def main() -> int:
     # The uploaded scan report is the same enriched inventory used in the UI.
     rebuild_market_views(data, active_inventory=inventory)
     data["market_publication"]["runtime_enrichment"] = market_doc.get("runtime_enrichment") or {}
+    data["ice_feed_research_queue"] = ice_research
     REPORT.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     print(f"UI_PRODUCTS={len(products)}")
