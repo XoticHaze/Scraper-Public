@@ -12,6 +12,7 @@ from deal_engine.grouping import product_identity
 from deal_engine.valuation import summarize_market_value
 from deal_engine.public_artifact_state import prior_public_artifacts, read_public_artifact_json
 from deal_engine.hunts import match_profiles
+from deal_engine.model_evidence import match_model_evidence
 from deal_engine.market_enrichment import (
     candidate_priority_score,
     identity_kind,
@@ -146,6 +147,7 @@ def _candidate_rows(
     profile_priority: dict[str, list[str]] | None = None,
     profile_attempts: dict[str, float] | None = None,
     coverage: dict[str, int] | None = None,
+    model_evidence_rows: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     ranked: list[tuple[float, dict[str, Any]]] = []
     seen: set[str] = set()
@@ -164,6 +166,9 @@ def _candidate_rows(
             if not token:
                 continue
             product = _candidate_product(lot)
+            evidence = match_model_evidence(product, model_evidence_rows or [])
+            if evidence:
+                product["model_evidence"] = evidence
             matches = match_profiles(profiles, product, lot)
             if pool_index == 0 and not matches:
                 continue
@@ -391,6 +396,7 @@ def main() -> int:
         int(config.get("max_candidates_per_run") or 16),
         profile_priority=dict(config.get("profile_priority") or {}),
         profile_attempts=profile_attempts, coverage=eligible_counts,
+        model_evidence_rows=_read_json(Path("app/research_findings.json"), {}).get("model_evidence", []),
     )
 
     searched = 0
