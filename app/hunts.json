@@ -1,6 +1,6 @@
 {
   "schema": "macbid-hunt-profiles-v1",
-  "version": 19,
+  "version": 20,
   "profiles": [
     {
       "id": "4k-projectors",
@@ -1655,7 +1655,7 @@
     },
     {
       "id": "ice-makers",
-      "label": "Ice Makers · Direct Water Line Priority",
+      "label": "Ice Makers · Confirmed Automatic Water Feed",
       "kind": "semantic",
       "required_any": [
         "ice maker",
@@ -1734,32 +1734,18 @@
         "ice bin replacement",
         "ice maker mold",
         "ice maker motor"
-      ]
+      ],
+      "requires_confirmed_direct_feed": true
     },
     {
       "id": "ice-makers-exact-direct-refill",
-      "label": "Ice Makers · Exact Direct-Refill Watchlist",
+      "label": "Ice Makers · Confirmed Exact Direct-Refill",
       "kind": "semantic",
       "required_any": [
         "ice maker",
         "icemaker",
         "ice machine",
         "nugget ice"
-      ],
-      "must_match_any": [
-        "imna0",
-        "imnb0",
-        "imc-491dc",
-        "a-ice2",
-        "nim030ss00",
-        "bxz002",
-        "b0g5ylwnfj",
-        "b0c6llpt9m",
-        "b0d4ln2qz6",
-        "b0dg245zrz",
-        "b0dqv3dtm1",
-        "cb22c",
-        "850956003668"
       ],
       "boost_any": [
         "direct water connection",
@@ -1793,7 +1779,7 @@
         "cold therapy",
         "ice maker cover"
       ],
-      "minimum_signal_score": 4,
+      "minimum_signal_score": 2,
       "verification": [
         "exact_model",
         "verified_market_price",
@@ -1828,7 +1814,8 @@
         "ice bin replacement",
         "ice maker mold",
         "ice maker motor"
-      ]
+      ],
+      "requires_confirmed_direct_feed": true
     },
     {
       "id": "refrigerators-ice-maker",
